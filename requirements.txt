@@ -1,0 +1,4 @@
+PySide6==6.12.0
+openai==2.54.0
+keyring==25.7.0
+

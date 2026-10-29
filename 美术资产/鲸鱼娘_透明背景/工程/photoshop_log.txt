@@ -1,0 +1,4 @@
+Photoshop 25.9.0
+Removed outer background and three enclosed hair gaps.
+Defringed edge by one pixel.
+SUCCESS: 1259 x 1259 transparent PNG and layered PSD.
