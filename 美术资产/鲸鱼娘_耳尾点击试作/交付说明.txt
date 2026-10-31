@@ -1,0 +1,27 @@
+鲸鱼娘 · 耳朵/尾巴点击轻晃试作
+
+原图：assets/expressions/neutral.png
+SHA256：8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b
+原图、既有表情、眼睛分层均保持原文件未改。
+
+美术制作使用本机 Adobe Photoshop 2024 (25.9.0) 原生脚本完成。
+PSD/neutral_interaction_rig.psd 保留隐藏原图、静止前景 base、三个可动图层、隐藏 cutout_mask。
+三个可动图层取自原画；仅在被头发/蝴蝶结遮住的根部延伸原有蓝色及耳腹浅色，供微小旋转露底。
+透明分层/ 包含 base.png、cutout_mask.png、3个裁切RGBA部件、3个全画布点击mask及rig.json。
+
+画布为1024×1024，全部坐标是原图像素坐标：
+左侧鳍耳：origin [228,487]，pivot [305,520]，幅度5度。
+右侧鳍耳：origin [594,451]，pivot [609,488]，幅度5度。
+尾巴：origin [640,601]，pivot [681,844]，幅度4度。
+三者均为behind：先画旋转部件，再画base前景，最后画现有眼睛。
+hit_mask为1024全画布，只有原可见部件，无隐藏根部扩展，防止点到长发误触。
+
+cutout_mask覆盖去掉耳尾的区域，眼区为全透明。
+眼睛base应仅按该mask替换相应区域，保留眼睛rig自身的无瞳眼白。
+休止姿态使用原neutral/现有眼睛rig，可维持精确原样；拆分复合版也接近原图。
+完整拆分复合与原图有313个可见像素的RGBA通道差超过8，来自选区抗锯齿边缘和隐藏根部延伸；不要让未点中的部位也参与重建。
+Photoshop导出会把部分alpha=0像素下不可见RGB归零；mask外的可见RGBA和全部alpha与原图完全一致。
+
+预览：rest_split_dark.png、ears_positive_dark.png、tail_positive_dark.png、tail_negative_dark.png。
+positive_detail.png、negative_detail.png 是两耳±5度与尾±4度的极值近景。
+工程/ 中保存真实Photoshop脚本、启动器、逐步日志、几何检查图及只读像素QA。

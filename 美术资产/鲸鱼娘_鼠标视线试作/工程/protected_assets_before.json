@@ -1,0 +1,46 @@
+[
+    {
+        "path":  "assets/whale.png",
+        "sha256":  "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a"
+    },
+    {
+        "path":  "assets/character/master.png",
+        "sha256":  "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb"
+    },
+    {
+        "path":  "assets/character/static/tsundere.png",
+        "sha256":  "16c6962c2b0a57e4fe620d31144ec2739e5fa206b93da01c9314179951e83de4"
+    },
+    {
+        "path":  "assets/expressions/angry.png",
+        "sha256":  "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9"
+    },
+    {
+        "path":  "assets/expressions/happy.png",
+        "sha256":  "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f"
+    },
+    {
+        "path":  "assets/expressions/neutral.png",
+        "sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b"
+    },
+    {
+        "path":  "assets/expressions/sleepy.png",
+        "sha256":  "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a"
+    },
+    {
+        "path":  "assets/expressions/surprised.png",
+        "sha256":  "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2"
+    },
+    {
+        "path":  "assets/expressions/talk_closed.png",
+        "sha256":  "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff"
+    },
+    {
+        "path":  "assets/expressions/talk_open.png",
+        "sha256":  "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26"
+    },
+    {
+        "path":  "assets/expressions/thinking.png",
+        "sha256":  "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26"
+    }
+]

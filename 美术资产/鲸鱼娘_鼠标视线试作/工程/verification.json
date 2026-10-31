@@ -1,0 +1,432 @@
+{
+  "checked_utc": "2026-10-30T15:07:51.199771+00:00",
+  "status": "passed",
+  "errors": [],
+  "platform": "offscreen",
+  "production_settings_touched": false,
+  "credential_backend": "temporary memory-only",
+  "physical_cursor_moved": false,
+  "native_windows_shown": false,
+  "directions": [
+    {
+      "code": "up_left",
+      "label": "左上",
+      "gaze": [
+        -0.7071067811598533,
+        -0.7071067811598533
+      ],
+      "changed_pixels": 3756,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "dfc252d10d1c9fcce91ed00d506b1ce5fb8d909ae0216aa8cc07f562f9c3d7a0"
+    },
+    {
+      "code": "up",
+      "label": "上",
+      "gaze": [
+        -2.6694240953796194e-11,
+        -0.9999999999889428
+      ],
+      "changed_pixels": 3747,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "3b4e5aef29793aef84b3c67a3c5f1a5545b1ffb1193601db30fb082f1035b7fd"
+    },
+    {
+      "code": "up_right",
+      "label": "右上",
+      "gaze": [
+        0.7071067811598535,
+        -0.7071067811976046
+      ],
+      "changed_pixels": 3758,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "f7eab6b98e10351762d76c38f1c77bb7750fe1496ee256b66456e703eadc5058"
+    },
+    {
+      "code": "left",
+      "label": "左",
+      "gaze": [
+        -0.9999999999355544,
+        -2.6694117597107517e-11
+      ],
+      "changed_pixels": 3764,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "ac1440a4a1d88faf0acbdfbced920909e5a274de015692e23ebcfcda22ad9aad"
+    },
+    {
+      "code": "center",
+      "label": "正中",
+      "gaze": [
+        -3.775135759310614e-11,
+        4.934314476311516e-16
+      ],
+      "changed_pixels": 1027,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "8942b4bd174eed757634a674398d3104058759f036e884f78f8536c9af434d07"
+    },
+    {
+      "code": "right",
+      "label": "右",
+      "gaze": [
+        0.9999999999622486,
+        1.2335811386121037e-16
+      ],
+      "changed_pixels": 3766,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "f8a0b559dd8d151be09f0fcba5c339515631254e9751a9c1dd444b022589f439"
+    },
+    {
+      "code": "down_left",
+      "label": "左下",
+      "gaze": [
+        -0.7071067811221019,
+        0.7071067811598533
+      ],
+      "changed_pixels": 3761,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "ce86a9405a01079d61e1f2315d913ff506de34583f7ab2184ac49eb3ce166efc"
+    },
+    {
+      "code": "down",
+      "label": "下",
+      "gaze": [
+        -2.669424095237103e-11,
+        0.9999999999889428
+      ],
+      "changed_pixels": 3752,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "9248f77fe989d6e43035b480b9c89d1f8a2634701202e3369bf0e2dc5f5c0252"
+    },
+    {
+      "code": "down_right",
+      "label": "右下",
+      "gaze": [
+        0.7071067811598535,
+        0.7071067811976046
+      ],
+      "changed_pixels": 3758,
+      "changed_pixels_outside_aperture": 0,
+      "runtime_frame_sha256": "80125c5fbac4fa1bd057e8cc1168689f8a271c1ddbac395f147ab2063ec48b02"
+    }
+  ],
+  "scales": [
+    {
+      "percent": 50,
+      "window": [
+        512,
+        512
+      ],
+      "sprite": [
+        512,
+        512
+      ],
+      "gaze": [
+        0.49999999998112404,
+        -0.1999999999924489
+      ]
+    },
+    {
+      "percent": 75,
+      "window": [
+        768,
+        768
+      ],
+      "sprite": [
+        768,
+        768
+      ],
+      "gaze": [
+        0.49999999998112465,
+        -0.19999999999244952
+      ]
+    },
+    {
+      "percent": 100,
+      "window": [
+        1024,
+        1024
+      ],
+      "sprite": [
+        1024,
+        1024
+      ],
+      "gaze": [
+        0.49999999998112404,
+        -0.1999999999924499
+      ]
+    },
+    {
+      "percent": 125,
+      "window": [
+        1280,
+        1280
+      ],
+      "sprite": [
+        1280,
+        1280
+      ],
+      "gaze": [
+        0.49999999998112443,
+        -0.1999999999924493
+      ]
+    },
+    {
+      "percent": 150,
+      "window": [
+        1536,
+        1536
+      ],
+      "sprite": [
+        1536,
+        1536
+      ],
+      "gaze": [
+        0.49999999998112465,
+        -0.19999999999244952
+      ]
+    },
+    {
+      "percent": 200,
+      "window": [
+        2048,
+        2048
+      ],
+      "sprite": [
+        2048,
+        2048
+      ],
+      "gaze": [
+        0.49999999998112443,
+        -0.1999999999924499
+      ]
+    }
+  ],
+  "unsupported_expressions": [
+    {
+      "expression": "happy",
+      "rig_active": false
+    },
+    {
+      "expression": "surprised",
+      "rig_active": false
+    },
+    {
+      "expression": "sleepy",
+      "rig_active": false
+    },
+    {
+      "expression": "angry",
+      "rig_active": false
+    },
+    {
+      "expression": "thinking",
+      "rig_active": false
+    },
+    {
+      "expression": "talking",
+      "rig_active": false
+    }
+  ],
+  "edge_drag_regression": {
+    "tests_run": 8,
+    "passed": true,
+    "evidence": "美术资产\\鲸鱼娘_鼠标视线试作\\工程\\edge_drag_regression.json"
+  },
+  "rig_metadata": {
+    "canvas": [
+      1024,
+      1024
+    ],
+    "source_sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+    "base": "base.png",
+    "eyes": [
+      {
+        "name": "left",
+        "center": [
+          414.5,
+          554.4
+        ],
+        "iris": "left_iris.png",
+        "iris_origin": [
+          395,
+          532
+        ],
+        "aperture": "left_aperture.png",
+        "travel": [
+          8,
+          5
+        ]
+      },
+      {
+        "name": "right",
+        "center": [
+          513.5,
+          538.7
+        ],
+        "iris": "right_iris.png",
+        "iris_origin": [
+          491,
+          515
+        ],
+        "aperture": "right_aperture.png",
+        "travel": [
+          8,
+          5
+        ]
+      }
+    ]
+  },
+  "iris_geometry_checks": [
+    {
+      "name": "left",
+      "sprite_size": [
+        40,
+        45
+      ],
+      "iris_global_alpha_bounds": [
+        395,
+        532,
+        435,
+        577
+      ],
+      "aperture_alpha_bounds": [
+        384,
+        533,
+        436,
+        578
+      ],
+      "confined_near_own_eye": true
+    },
+    {
+      "name": "right",
+      "sprite_size": [
+        45,
+        48
+      ],
+      "iris_global_alpha_bounds": [
+        491,
+        515,
+        536,
+        563
+      ],
+      "aperture_alpha_bounds": [
+        489,
+        516,
+        542,
+        564
+      ],
+      "confined_near_own_eye": true
+    }
+  ],
+  "base_sclera_checks": [
+    {
+      "name": "left",
+      "original_blue_iris_pixels": 1105,
+      "blue_pixels_left_in_base": 0
+    },
+    {
+      "name": "right",
+      "original_blue_iris_pixels": 1347,
+      "blue_pixels_left_in_base": 0
+    }
+  ],
+  "source_pixels_preserved": true,
+  "hit_image_preserved": true,
+  "placement_bounds_preserved": true,
+  "no_per_frame_asset_reads": true,
+  "contact_sheet": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\九宫格_视线跟随.png",
+  "animated_preview": {
+    "path": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\鼠标视线效果.gif",
+    "captured_frame_count": 96,
+    "encoded_frame_count": 45,
+    "decoded_duration_seconds": 3.2,
+    "actual_widget_rendering": true,
+    "changed_pixels_outside_aperture_maximum": 0,
+    "shared_palette": true
+  },
+  "timer_cursor_polling_checked": true,
+  "sequence_gating": true,
+  "drag_freeze_and_deferred_expression": true,
+  "missing_stale_corrupt_rig_fallback": true,
+  "protected_files": [
+    {
+      "path": "assets\\whale.png",
+      "sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\master.png",
+      "sha256": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\angry.png",
+      "sha256": "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\happy.png",
+      "sha256": "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\neutral.png",
+      "sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\sleepy.png",
+      "sha256": "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\surprised.png",
+      "sha256": "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\talk_closed.png",
+      "sha256": "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\talk_open.png",
+      "sha256": "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\expressions\\thinking.png",
+      "sha256": "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\base.png",
+      "sha256": "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\left_aperture.png",
+      "sha256": "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\left_iris.png",
+      "sha256": "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\rig.json",
+      "sha256": "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\right_aperture.png",
+      "sha256": "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4",
+      "unchanged": true
+    },
+    {
+      "path": "assets\\character\\eyes\\neutral\\right_iris.png",
+      "sha256": "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8",
+      "unchanged": true
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+Number of Launches: 19
+stdout:
+[0 ms]
+  Launch GPUSnifferThread
+
+[0 ms]
+  Start RunAllAPIs
+
+[0 ms]
+  "C:\Program Files\Adobe\Adobe Photoshop 2024\sniffer.exe" -baseTimeMS=413481 -comment=Photoshop Version: Adobe Photoshop 25.9.0 20240516.r.573 296f739 x64
+
+[1 ms]
+  Start GetSnifferResult
+
+[1515 ms]
+  Start sniffer 2026-10-30 22:07:03
+  # Photoshop Version: Adobe Photoshop 25.9.0 20240516.r.573 296f739 x64
+  C:\Program Files\Adobe\Adobe Photoshop 2024\sniffer.exe -baseTimeMS=413481 -comment=Photoshop Version: Adobe Photoshop 25.9.0 20240516.r.573 296f739 x64
+  
+  {43 ms}
+  Start platform native
+    # displays:                   1
+    Display 0
+      Display:                      \\.\DISPLAY1
+      Main:                         TRUE
+      Built in:                     FALSE
+      Stereo:                       FALSE
+      Bounds:                       (0, 0) -> (2,560, 1,600)
+      Dimensions:                   (2,560 1,600)
+      Display scale:                1.5
+      Physical size:                (0 0)
+      Pixel size:                   (0 0)
+      Dynamic range:                (0 1)
+      Attached Device:              (DeviceID name=NVIDIA GeForce RTX 4060 Laptop GPU index=0)
+    
+    # devices:                    2
+    Device 0
+      Name:                         NVIDIA GeForce RTX 4060 Laptop GPU
+      Preferred:                    TRUE
+      Power Envelope:               UNKNOWN
+      Attachment:                   UNKNOWN
+      # attached displays:          1
+        \\.\DISPLAY1
+      GPU accessible RAM:                7,956 MB
+      VRAM:                              7,956 MB
+      Dedicated System RAM:                  0 MB
+      Shared System RAM:                16,737 MB
+      API version:                  12.0 (12.0)
+      Device version:               12.0 (12.0)
+      Vendor name:                  NVIDIA
+      Driver date:                  2026-07-02  000000.000000-000
+      Driver age:                   3 months
+      Driver version:               32.0.16.1074
+      Supports UMA:                 UNSUPPORTED
+      D3D-ID:                       10400
+    
+    Device 1
+      Name:                         AMD Radeon(TM) Graphics
+      Preferred:                    FALSE
+      Power Envelope:               UNKNOWN
+      Attachment:                   UNKNOWN
+      # attached displays:          0
+      GPU accessible RAM:               17,222 MB
+      VRAM:                                485 MB
+      Dedicated System RAM:                  0 MB
+      Shared System RAM:                16,737 MB
+      API version:                  12.0 (12.0)
+      Device version:               12.0 (12.0)
+      Vendor name:                  AMD
+      Driver date:                  2024-08-13  000000.000000-000
+      Driver age:                   26 months
+      Driver version:               32.0.11038.3
+      Supports UMA:                 SUPPORTED
+      D3D-ID:                       5710
+  End platform native
+  {258 ms}
+  
+  {258 ms}
+  Start platform OpenGL
+    # displays:                   1
+    Display 0
+      Display:                      \\.\DISPLAY1
+      Main:                         TRUE
+      Built in:                     FALSE
+      Stereo:                       FALSE
+      Bounds:                       (0, 0) -> (2,560, 1,600)
+      Dimensions:                   (2,560 1,600)
+      Display scale:                1.5
+      Physical size:                (0 0)
+      Pixel size:                   (0 0)
+      Dynamic range:                (0 1)
+      Attached Device:              (DeviceID name=NVIDIA GeForce RTX 4060 Laptop GPU/PCIe/SSE2 index=0)
+    
+    # devices:                    1
+    Device 0
+      Name:                         NVIDIA GeForce RTX 4060 Laptop GPU/PCIe/SSE2
+      Preferred:                    TRUE
+      Power Envelope:               INTEGRATED
+      Attachment:                   UNKNOWN
+      # attached displays:          1
+        \\.\DISPLAY1
+      GPU accessible RAM:                8,342 MB
+      VRAM:                              8,342 MB
+      Dedicated System RAM:                  0 MB
+      Shared System RAM:                16,737 MB
+      API version:                  2.1 (2.1.2 NVIDIA 610.74)
+      Device version:               2.1 (2.1.2 NVIDIA 610.74)
+      Vendor name:                  NVIDIA
+      Driver date:                  2026-07-02  000000.000000-000
+      Driver age:                   3 months
+      Driver version:               32.0.16.1074
+      GLSL version:                 1.20 (1.20 NVIDIA via Cg compiler)
+  End platform OpenGL
+  {412 ms}
+  
+  {412 ms}
+  Start platform OpenCL
+    # displays:                   0
+    
+    # devices:                    2
+    Device 0
+      Name:                         NVIDIA GeForce RTX 4060 Laptop GPU
+      Preferred:                    TRUE
+      Power Envelope:               DISCRETE
+      Attachment:                   UNKNOWN
+      # attached displays:          0
+      GPU accessible RAM:                8,585 MB
+      VRAM:                              8,585 MB
+      Dedicated System RAM:                  0 MB
+      Shared System RAM:                     0 MB
+      API version:                  3.0 (OpenCL 3.0 CUDA)
+      Device version:               3.0 (OpenCL 3.0 CUDA)
+      Vendor name:                  NVIDIA
+      Driver date:                  UNKNOWN
+      Driver age:                   UNKNOWN
+      Driver version:               UNKNOWN
+      Bandwidth:                    311 GB / s
+      Compute score:                1,180.86
+      Device name string:           NVIDIA GeForce RTX 4060 Laptop GPU
+      Device vendor string:         NVIDIA Corporation
+      Platform name string:         NVIDIA CUDA 
+      Platform vendor string:       NVIDIA Corporation
+    
+    Device 1
+      Name:                         gfx1036
+      Preferred:                    FALSE
+      Power Envelope:               INTEGRATED
+      Attachment:                   UNKNOWN
+      # attached displays:          0
+      GPU accessible RAM:               12,888 MB
+      VRAM:                             12,888 MB
+      Dedicated System RAM:                  0 MB
+      Shared System RAM:                     0 MB
+      API version:                  2.1 (OpenCL 2.1 AMD-APP (3617.0))
+      Device version:               2.0 (OpenCL 2.0 AMD-APP (3617.0))
+      Vendor name:                  AMD
+      Driver date:                  UNKNOWN
+      Driver age:                   UNKNOWN
+      Driver version:               UNKNOWN
+      Bandwidth:                    42 GB / s
+      Compute score:                263.604
+      Device name string:           gfx1036     
+      Device vendor string:         Advanced Micro Devices, Inc.
+      Platform name string:         AMD Accelerated Parallel Processing
+      Platform vendor string:       Advanced Micro Devices, Inc.
+  End platform OpenCL
+  {1376 ms}
+  
+  Exit code kExitNormal
+  End sniffer 2026-10-30 22:07:05
+[kStatusNormal, kExitNormal]
+
+[1515 ms]
+  Finish RunAllAPIs
+
+stderr:

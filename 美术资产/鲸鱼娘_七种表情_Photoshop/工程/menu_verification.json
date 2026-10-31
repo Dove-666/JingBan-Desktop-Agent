@@ -1,0 +1,127 @@
+{
+  "platform": "offscreen",
+  "production_ui_touched": false,
+  "desktop_captured": false,
+  "credentials": "test-only in-memory backend",
+  "settings": "temporary INI",
+  "network": "socket connect guarded; no API action invoked",
+  "states": [
+    {
+      "code": "neutral",
+      "label": "正常",
+      "menu_label": "正常  ·  neutral",
+      "status": "已加载 neutral.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "ae6c46863d4a0151dbd0333141e5496e2dd7c6cc60f53411f2947a350453cd2c",
+      "resolved_rgba_pixels_sha256": "ae6c46863d4a0151dbd0333141e5496e2dd7c6cc60f53411f2947a350453cd2c",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\neutral_pet.png"
+    },
+    {
+      "code": "happy",
+      "label": "开心",
+      "menu_label": "开心  ·  happy",
+      "status": "已加载 happy.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "2d19c69c9baf114a3fb37a973b18d559003988d1be9921be9f3f1094030f3a6f",
+      "resolved_rgba_pixels_sha256": "2d19c69c9baf114a3fb37a973b18d559003988d1be9921be9f3f1094030f3a6f",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\happy_pet.png"
+    },
+    {
+      "code": "surprised",
+      "label": "惊讶",
+      "menu_label": "惊讶  ·  surprised",
+      "status": "已加载 surprised.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "480945a43b450a29c3e852d4cdc2ef47c6ddab80618d248aa698fb09b9387647",
+      "resolved_rgba_pixels_sha256": "480945a43b450a29c3e852d4cdc2ef47c6ddab80618d248aa698fb09b9387647",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\surprised_pet.png"
+    },
+    {
+      "code": "sleepy",
+      "label": "困倦",
+      "menu_label": "困倦  ·  sleepy",
+      "status": "已加载 sleepy.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "db51fdde1c39f28999bc127faa54332b6d4215a47fff1de3ab955dcf128ef9c4",
+      "resolved_rgba_pixels_sha256": "db51fdde1c39f28999bc127faa54332b6d4215a47fff1de3ab955dcf128ef9c4",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\sleepy_pet.png"
+    },
+    {
+      "code": "angry",
+      "label": "生气",
+      "menu_label": "生气  ·  angry",
+      "status": "已加载 angry.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "0da9de603b1a81dde1b3a2f7e5abb2e79a0a79a169e8d6ca118d202355a3604c",
+      "resolved_rgba_pixels_sha256": "0da9de603b1a81dde1b3a2f7e5abb2e79a0a79a169e8d6ca118d202355a3604c",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\angry_pet.png"
+    },
+    {
+      "code": "thinking",
+      "label": "思考",
+      "menu_label": "思考  ·  thinking",
+      "status": "已加载 thinking.png。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "5fa79709958455da55ced7e5073f398134f4b280bab0fa1332f6570cc38e1300",
+      "resolved_rgba_pixels_sha256": "5fa79709958455da55ced7e5073f398134f4b280bab0fa1332f6570cc38e1300",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\thinking_pet.png"
+    },
+    {
+      "code": "talking",
+      "label": "说话",
+      "menu_label": "说话  ·  talking",
+      "status": "已加载 talk_open.png（静态素材）。",
+      "source_size": [
+        1024,
+        1024
+      ],
+      "source_has_alpha": true,
+      "source_rgba_pixels_sha256": "d101d94b0f9041012e94e8db923517d7c3c6d70d7ea4b0bd13781f9a69d31fe0",
+      "resolved_rgba_pixels_sha256": "d101d94b0f9041012e94e8db923517d7c3c6d70d7ea4b0bd13781f9a69d31fe0",
+      "exact_bitmap_match": true,
+      "animation_autoplay": false,
+      "pet_render": "预览\\程序渲染\\talking_pet.png"
+    }
+  ],
+  "status": "passed",
+  "happy_debug_panel": "预览\\程序渲染\\happy_debug_panel.png",
+  "thinking_png_prevents_autoplay": true,
+  "transparent_pet_window": true,
+  "original_assets_unchanged": true
+}

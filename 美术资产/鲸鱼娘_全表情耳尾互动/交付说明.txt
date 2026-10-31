@@ -1,0 +1,28 @@
+鲸鱼娘 · 全表情耳尾点击互动美术包
+
+完整七套：neutral、happy、surprised、sleepy、angry、thinking、talk_open。
+talk_closed与neutral使用同一原图，直接复用neutral，不另做第八套。
+
+PSD/：七份原生Photoshop分层工程。neutral从已通过验收的旧试版直接复制，未重存；其余六份在本机Photoshop 2024 (25.9.0) 实际拆分制作。
+透明分层/<state>/：每套9个文件，即base、cutout_mask、三张裁切RGBA可动部件、三张1024全画布hit_mask、rig.json。
+预览/：逐态原图近景、休止及正反极值深/浅底；contact_*.png是Photoshop拼接的七表情联系图。
+工程/：原生JSX/COM启动器、每态几何参数、源SHA256、实际执行日志、旧资源保护清单与只读像素验收记录。
+
+保持原图1024×1024，三部件均behind，先画可动耳尾，再画静止前景，最后保留既有眼睛跟随。
+左鳍耳pivot [305,520]、右鳍耳pivot [609,488]，幅度±5度。
+尾巴pivot [681,844]，幅度±4度。
+各态原点origin由实际裁切边界独立记录在rig.json中，不假定逐态PNG尺寸相同。
+
+六态从各自原PNG提取自己的像素，未重绘整角色，未借用其他表情的脸、发丝或耳尾。
+尾内缘继承正常试版的精确发丝分界，并按每态黑色发丝描边微调最多3px；前景发丝和蝴蝶结留在base。
+右耳腹下沿按每态原图白色耳腹及黑描边逐列定界，排除原先误夹入的蓝色头发条，避免负摆时出现双层耳腹。
+隐藏根部仅延伸原有鲸蓝色及耳腹浅色，用于微小旋转露底；hit_mask只含原可见部位，不含隐藏延长。
+
+原表情PNG、既有眼睛rig、旧neutral互动9文件及旧耳尾试版文件均保留原字节。
+cutout_mask在眼区为0；mask之外可见RGBA及全部alpha与本态原图完全相同。
+Photoshop导出会将部分alpha=0像素下不可见RGB归零，验收单独记录，视觉不受影响。
+完整拆分复合存在抗锯齿与隐藏根部的微小差异，逐态数量见工程/art_verification.json；休止与未点击部位使用原图/既有眼睛rig，以保持精确原样。
+
+运行安装位置：assets/character/interactions/<state>/。
+仅新增六套共54文件；既有neutral运行文件不覆盖。
+源SHA256和逐套rig路径见工程/delivery_manifest.json及source_hashes.json。

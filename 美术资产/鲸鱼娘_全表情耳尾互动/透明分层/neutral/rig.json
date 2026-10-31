@@ -1,0 +1,56 @@
+{
+    "canvas":  [
+                   1024,
+                   1024
+               ],
+    "source_sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+    "base":  "base.png",
+    "cutout_mask":  "cutout_mask.png",
+    "parts":  [
+                  {
+                      "name":  "left_ear",
+                      "image":  "left_ear.png",
+                      "origin":  [
+                                     228,
+                                     487
+                                 ],
+                      "pivot":  [
+                                    305,
+                                    520
+                                ],
+                      "amplitude_degrees":  5,
+                      "z":  "behind",
+                      "hit_mask":  "left_ear_hit.png"
+                  },
+                  {
+                      "name":  "right_ear",
+                      "image":  "right_ear.png",
+                      "origin":  [
+                                     594,
+                                     451
+                                 ],
+                      "pivot":  [
+                                    609,
+                                    488
+                                ],
+                      "amplitude_degrees":  5,
+                      "z":  "behind",
+                      "hit_mask":  "right_ear_hit.png"
+                  },
+                  {
+                      "name":  "tail",
+                      "image":  "tail.png",
+                      "origin":  [
+                                     640,
+                                     601
+                                 ],
+                      "pivot":  [
+                                    681,
+                                    844
+                                ],
+                      "amplitude_degrees":  4,
+                      "z":  "behind",
+                      "hit_mask":  "tail_hit.png"
+                  }
+              ]
+}

@@ -1,0 +1,97 @@
+{
+    "schema_version":  1,
+    "created_at":  "2026-10-30T23:17:12.1353726+08:00",
+    "status":  "implemented_and_verified",
+    "scope":  "Normal neutral expression prototype",
+    "image_work":  {
+                       "application":  "Adobe Photoshop 2024",
+                       "version":  "25.9.0",
+                       "source":  "assets/expressions/neutral.png",
+                       "original_preserved":  true,
+                       "psd":  "PSD/neutral_eye_rig.psd",
+                       "script":  "工程/build_eye_rig.jsx",
+                       "native_evidence":  "工程/Photoshop_眼睛分层原生证据.png",
+                       "new_image_generation_requests":  0
+                   },
+    "runtime":  {
+                    "rig":  "assets/character/eyes/neutral/rig.json",
+                    "module":  "desktop_pet/eye_tracking.py",
+                    "window":  "desktop_pet/pet_window.py",
+                    "canvas":  [
+                                   1024,
+                                   1024
+                               ],
+                    "source_iris_travel":  [
+                                               8,
+                                               5
+                                           ],
+                    "existing_frame_timer_used":  true,
+                    "frame_io":  false,
+                    "smooth_follow":  true,
+                    "drag_and_return":  "Freeze current gaze",
+                    "sequence":  "Use original clip frames",
+                    "menu_toggle":  "眼睛跟随鼠标（正常表情）",
+                    "toggle_persistence":  "Current running session"
+                },
+    "assets":  [
+                   {
+                       "file":  "base.png",
+                       "sha256":  "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462",
+                       "bytes":  428939
+                   },
+                   {
+                       "file":  "left_aperture.png",
+                       "sha256":  "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f",
+                       "bytes":  8072
+                   },
+                   {
+                       "file":  "left_iris.png",
+                       "sha256":  "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c",
+                       "bytes":  5233
+                   },
+                   {
+                       "file":  "rig.json",
+                       "sha256":  "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a",
+                       "bytes":  399
+                   },
+                   {
+                       "file":  "right_aperture.png",
+                       "sha256":  "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4",
+                       "bytes":  8142
+                   },
+                   {
+                       "file":  "right_iris.png",
+                       "sha256":  "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8",
+                       "bytes":  5983
+                   }
+               ],
+    "verification":  {
+                         "targeted_tests":  {
+                                                "status":  "passed",
+                                                "count":  99,
+                                                "seconds":  16.717,
+                                                "log":  "工程/targeted_tests.log",
+                                                "modules":  [
+                                                                "tests.test_eye_tracking",
+                                                                "tests.test_pet",
+                                                                "tests.test_pet_controller",
+                                                                "tests.test_application",
+                                                                "tests.test_pet_edge_drag",
+                                                                "tests.test_frame_animation",
+                                                                "tests.test_desktop_controls",
+                                                                "tests.test_debug_ui",
+                                                                "tests.test_static_asset_layout"
+                                                            ]
+                                            },
+                         "pixel_and_state_qa":  "工程/verification.json",
+                         "native_cursor_qa":  "工程/native_smoke.json",
+                         "native_display_scale":  1.5,
+                         "production_startup":  "工程/live_startup_verified.json",
+                         "production_restarted_normally":  true,
+                         "protected_source_hashes_checked":  11
+                     },
+    "preview":  {
+                    "animated":  "预览/鼠标视线效果.gif",
+                    "nine_directions":  "预览/九宫格_视线跟随.png"
+                }
+}

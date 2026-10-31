@@ -1,0 +1,1924 @@
+{
+  "schema_version": 1,
+  "name": "think_scratch_head",
+  "canvas": {
+    "width": 1024,
+    "height": 1024
+  },
+  "fps": 12,
+  "frame_count": 62,
+  "duration_ms": 5167,
+  "frames": [
+    "frames/0001.png",
+    "frames/0002.png",
+    "frames/0003.png",
+    "frames/0004.png",
+    "frames/0005.png",
+    "frames/0006.png",
+    "frames/0007.png",
+    "frames/0008.png",
+    "frames/0009.png",
+    "frames/0010.png",
+    "frames/0011.png",
+    "frames/0012.png",
+    "frames/0013.png",
+    "frames/0014.png",
+    "frames/0015.png",
+    "frames/0016.png",
+    "frames/0017.png",
+    "frames/0018.png",
+    "frames/0019.png",
+    "frames/0020.png",
+    "frames/0021.png",
+    "frames/0022.png",
+    "frames/0023.png",
+    "frames/0024.png",
+    "frames/0025.png",
+    "frames/0026.png",
+    "frames/0027.png",
+    "frames/0028.png",
+    "frames/0029.png",
+    "frames/0030.png",
+    "frames/0031.png",
+    "frames/0032.png",
+    "frames/0033.png",
+    "frames/0034.png",
+    "frames/0035.png",
+    "frames/0036.png",
+    "frames/0037.png",
+    "frames/0038.png",
+    "frames/0039.png",
+    "frames/0040.png",
+    "frames/0041.png",
+    "frames/0042.png",
+    "frames/0043.png",
+    "frames/0044.png",
+    "frames/0045.png",
+    "frames/0046.png",
+    "frames/0047.png",
+    "frames/0048.png",
+    "frames/0049.png",
+    "frames/0050.png",
+    "frames/0051.png",
+    "frames/0052.png",
+    "frames/0053.png",
+    "frames/0054.png",
+    "frames/0055.png",
+    "frames/0056.png",
+    "frames/0057.png",
+    "frames/0058.png",
+    "frames/0059.png",
+    "frames/0060.png",
+    "frames/0061.png",
+    "frames/0062.png"
+  ],
+  "anchor": {
+    "x": 0.5,
+    "y": 0.9375
+  },
+  "loop": false,
+  "completion": "idle",
+  "union_bbox": [
+    674,
+    45,
+    1957,
+    1400
+  ],
+  "origin": {
+    "segmentation": "sam2.1",
+    "config": "configs/sam2.1/sam2.1_hiera_t.yaml",
+    "frame_count": 124,
+    "device": "cuda",
+    "prompt_box": [
+      640.0,
+      30.0,
+      1950.0,
+      1435.0
+    ],
+    "feather_radius_pixels": 0.45,
+    "mask_threshold_logits": 0,
+    "native_mask_areas": [
+      925958,
+      923100,
+      923086,
+      923036,
+      922636,
+      922678,
+      922596,
+      922395,
+      922194,
+      922579,
+      922534,
+      922335,
+      922265,
+      922485,
+      922517,
+      922611,
+      922415,
+      922514,
+      922545,
+      922734,
+      922760,
+      922975,
+      923432,
+      923664,
+      923600,
+      924178,
+      924812,
+      926058,
+      926814,
+      926831,
+      927521,
+      928161,
+      928138,
+      927971,
+      929904,
+      930350,
+      931486,
+      933264,
+      936558,
+      937648,
+      939905,
+      939117,
+      935904,
+      935698,
+      935858,
+      938131,
+      942152,
+      946536,
+      950568,
+      951863,
+      950550,
+      948783,
+      945929,
+      943291,
+      939887,
+      938270,
+      938086,
+      937437,
+      937640,
+      936887,
+      938538,
+      938975,
+      938596,
+      938094,
+      937288,
+      936531,
+      936306,
+      936237,
+      936168,
+      938561,
+      940339,
+      941331,
+      942520,
+      943793,
+      943834,
+      945176,
+      945874,
+      946618,
+      948610,
+      949826,
+      950777,
+      952253,
+      952171,
+      952587,
+      952980,
+      953645,
+      953779,
+      953762,
+      953614,
+      953574,
+      953584,
+      952652,
+      951879,
+      949735,
+      950594,
+      949796,
+      948880,
+      947092,
+      946689,
+      946390,
+      928366,
+      926641,
+      925992,
+      926351,
+      926283,
+      925184,
+      924272,
+      924492,
+      924051,
+      924758,
+      924172,
+      924422,
+      924654,
+      924788,
+      924863,
+      925270,
+      925260,
+      925175,
+      924972,
+      925060,
+      925445,
+      925629,
+      925490,
+      925197
+    ],
+    "effect_prompts": [
+      {
+        "obj_id": 2,
+        "name": "question_mark",
+        "frame_idx": 48,
+        "start_frame": 44,
+        "end_frame": 99,
+        "box": [
+          1480,
+          45,
+          1695,
+          320
+        ],
+        "points": [
+          [
+            1585,
+            95
+          ],
+          [
+            1542,
+            224
+          ],
+          [
+            1520,
+            280
+          ]
+        ],
+        "labels": [
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "effect_native_mask_areas": {
+      "question_mark": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3734,
+        9127,
+        13793,
+        20208,
+        23040,
+        24521,
+        23916,
+        22484,
+        20096,
+        17761,
+        16962,
+        17039,
+        17582,
+        18883,
+        19624,
+        20442,
+        21230,
+        21245,
+        20962,
+        20587,
+        20243,
+        19991,
+        19929,
+        19962,
+        20203,
+        20378,
+        20476,
+        20513,
+        20495,
+        20410,
+        20362,
+        20312,
+        20367,
+        20373,
+        20405,
+        20391,
+        20454,
+        20462,
+        20471,
+        20436,
+        20389,
+        20431,
+        20671,
+        20377,
+        19877,
+        19826,
+        19771,
+        19758,
+        20339,
+        20261,
+        20231,
+        20294,
+        20335,
+        20245,
+        20076,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "layer_policy": "independent SAM2 objects, explicit visibility gate, alpha union for final frames",
+    "largest_native_adjacent_area_ratio": 1.0194,
+    "cuda_connected_components_extension": false,
+    "checkpoint_sha256": "7402e0d864fa82708a20fbd15bc84245c2f26dff0eb43a4b5b93452deb34be69",
+    "source_sha256": "f45dbd3f005218ec8c8c8bb73c9d4bf85767b1fd34281d0bf435af69e57ed771",
+    "synthetic": false,
+    "visual_review_required": false,
+    "source_fps": 24.0,
+    "source_duration_seconds": 5.166667,
+    "source_frame_count": 124,
+    "source_frames_segmented": 124,
+    "delivered_fps": 12,
+    "delivered_frame_count": 62,
+    "sampling": "SAM2 every native source frame, then nearest-timestamp delivery selection; no interpolation",
+    "delivered_source_indices": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30,
+      32,
+      34,
+      36,
+      38,
+      40,
+      42,
+      44,
+      46,
+      48,
+      50,
+      52,
+      54,
+      56,
+      58,
+      60,
+      62,
+      64,
+      66,
+      68,
+      70,
+      72,
+      74,
+      76,
+      78,
+      80,
+      82,
+      84,
+      86,
+      88,
+      90,
+      92,
+      94,
+      96,
+      98,
+      100,
+      102,
+      104,
+      106,
+      108,
+      110,
+      112,
+      114,
+      116,
+      118,
+      120,
+      122
+    ],
+    "timestamps_estimated": false,
+    "source_rgba_retained": false,
+    "shared_layout_plan_sha256": "5f2aab2a6aee8aff102197a6daa191bb414471a0fc4b2a0471c08c871c4c0295",
+    "shared_layout_name": "think_scratch_head",
+    "common_safety_factor": 0.7412408317219669,
+    "standing_reference_height": 665.6342668863263,
+    "source_sam2_manifest_sha256": "8125ad01580a6b5cca596116426b1d2bef871adf8b3b08b0951954f9035f8095",
+    "derived_native_manifest_sha256": "f7610841f1b336a26b52e3c5829099cbbe4b39d238e372806b8cb0c110f61e39",
+    "alpha_postprocess": {
+      "alpha_is_estimated_not_native": true,
+      "method": "Black-background effect unpremultiply: RGB / relative blue P90, alpha * relative blue P90",
+      "reference_native_interval": [
+        45,
+        85
+      ],
+      "reference_blue_p90_median": 250.0,
+      "shape_source": "Independent real SAM2.1 question object; support never expanded",
+      "overlap_cleanup": "Primary-mask overlap removed only within real question support dilated two pixels; anatomy outside support unchanged",
+      "approved_preview": "think_question_fade_trial_v2/fade_comparison.png",
+      "limitations": [
+        "Estimated alpha assumes source RGB effect was composited onto black",
+        "Very dark codec values cannot recover exact original colors",
+        "Earliest tiny question at native44 has no independent SAM2 mask; no invented replacement"
+      ],
+      "frames": [
+        {
+          "native_index": 0,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 1,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 2,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 3,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 4,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 5,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 6,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 7,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 8,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 9,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 10,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 11,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 12,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 13,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 14,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 15,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 16,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 17,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 18,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 19,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 20,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 21,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 22,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 23,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 24,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 25,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 26,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 27,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 28,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 29,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 30,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 31,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 32,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 33,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 34,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 35,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 36,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 37,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 38,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 39,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 40,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 41,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 42,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 43,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 44,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 45,
+          "blue_p90": 222.0,
+          "estimated_fade": 0.888,
+          "original_sam2_effect_bbox": [
+            1505,
+            182,
+            1574,
+            279
+          ],
+          "character_overlap_exclusion_bbox": [
+            1503,
+            180,
+            1576,
+            281
+          ]
+        },
+        {
+          "native_index": 46,
+          "blue_p90": 239.0,
+          "estimated_fade": 0.956,
+          "original_sam2_effect_bbox": [
+            1499,
+            130,
+            1619,
+            292
+          ],
+          "character_overlap_exclusion_bbox": [
+            1497,
+            128,
+            1621,
+            294
+          ]
+        },
+        {
+          "native_index": 47,
+          "blue_p90": 239.0,
+          "estimated_fade": 0.956,
+          "original_sam2_effect_bbox": [
+            1496,
+            101,
+            1642,
+            299
+          ],
+          "character_overlap_exclusion_bbox": [
+            1494,
+            99,
+            1644,
+            301
+          ]
+        },
+        {
+          "native_index": 48,
+          "blue_p90": 245.0,
+          "estimated_fade": 0.98,
+          "original_sam2_effect_bbox": [
+            1490,
+            64,
+            1668,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            62,
+            1670,
+            312
+          ]
+        },
+        {
+          "native_index": 49,
+          "blue_p90": 247.0,
+          "estimated_fade": 0.988,
+          "original_sam2_effect_bbox": [
+            1491,
+            49,
+            1679,
+            315
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            47,
+            1681,
+            317
+          ]
+        },
+        {
+          "native_index": 50,
+          "blue_p90": 248.0,
+          "estimated_fade": 0.992,
+          "original_sam2_effect_bbox": [
+            1490,
+            44,
+            1682,
+            317
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            42,
+            1684,
+            319
+          ]
+        },
+        {
+          "native_index": 51,
+          "blue_p90": 248.0,
+          "estimated_fade": 0.992,
+          "original_sam2_effect_bbox": [
+            1490,
+            47,
+            1680,
+            316
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            45,
+            1682,
+            318
+          ]
+        },
+        {
+          "native_index": 52,
+          "blue_p90": 248.0,
+          "estimated_fade": 0.992,
+          "original_sam2_effect_bbox": [
+            1490,
+            54,
+            1676,
+            313
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            52,
+            1678,
+            315
+          ]
+        },
+        {
+          "native_index": 53,
+          "blue_p90": 248.0,
+          "estimated_fade": 0.992,
+          "original_sam2_effect_bbox": [
+            1492,
+            63,
+            1667,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            61,
+            1669,
+            311
+          ]
+        },
+        {
+          "native_index": 54,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1493,
+            73,
+            1658,
+            306
+          ],
+          "character_overlap_exclusion_bbox": [
+            1491,
+            71,
+            1660,
+            308
+          ]
+        },
+        {
+          "native_index": 55,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1493,
+            77,
+            1655,
+            305
+          ],
+          "character_overlap_exclusion_bbox": [
+            1491,
+            75,
+            1657,
+            307
+          ]
+        },
+        {
+          "native_index": 56,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1492,
+            77,
+            1654,
+            305
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            75,
+            1656,
+            307
+          ]
+        },
+        {
+          "native_index": 57,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1492,
+            74,
+            1657,
+            306
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            72,
+            1659,
+            308
+          ]
+        },
+        {
+          "native_index": 58,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1492,
+            68,
+            1661,
+            307
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            66,
+            1663,
+            309
+          ]
+        },
+        {
+          "native_index": 59,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1492,
+            65,
+            1666,
+            308
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            63,
+            1668,
+            310
+          ]
+        },
+        {
+          "native_index": 60,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            62,
+            1669,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            60,
+            1671,
+            312
+          ]
+        },
+        {
+          "native_index": 61,
+          "blue_p90": 252.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            60,
+            1670,
+            311
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            58,
+            1672,
+            313
+          ]
+        },
+        {
+          "native_index": 62,
+          "blue_p90": 252.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            60,
+            1670,
+            311
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            58,
+            1672,
+            313
+          ]
+        },
+        {
+          "native_index": 63,
+          "blue_p90": 252.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            62,
+            1669,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            60,
+            1671,
+            312
+          ]
+        },
+        {
+          "native_index": 64,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1668,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1670,
+            312
+          ]
+        },
+        {
+          "native_index": 65,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            311
+          ]
+        },
+        {
+          "native_index": 66,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            65,
+            1664,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            63,
+            1666,
+            311
+          ]
+        },
+        {
+          "native_index": 67,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            66,
+            1664,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            64,
+            1666,
+            311
+          ]
+        },
+        {
+          "native_index": 68,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            65,
+            1664,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            63,
+            1666,
+            312
+          ]
+        },
+        {
+          "native_index": 69,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            311
+          ]
+        },
+        {
+          "native_index": 70,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 71,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            63,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            61,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 72,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            63,
+            1667,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            61,
+            1669,
+            311
+          ]
+        },
+        {
+          "native_index": 73,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            63,
+            1667,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            61,
+            1669,
+            311
+          ]
+        },
+        {
+          "native_index": 74,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 75,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 76,
+          "blue_p90": 251.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 77,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 78,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 79,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 80,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 81,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 82,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 83,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 84,
+          "blue_p90": 250.0,
+          "estimated_fade": 1.0,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 85,
+          "blue_p90": 249.0,
+          "estimated_fade": 0.996,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 86,
+          "blue_p90": 242.0,
+          "estimated_fade": 0.968,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 87,
+          "blue_p90": 241.0,
+          "estimated_fade": 0.964,
+          "original_sam2_effect_bbox": [
+            1490,
+            63,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            61,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 88,
+          "blue_p90": 238.0,
+          "estimated_fade": 0.952,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 89,
+          "blue_p90": 229.0,
+          "estimated_fade": 0.916,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            308
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            310
+          ]
+        },
+        {
+          "native_index": 90,
+          "blue_p90": 200.0,
+          "estimated_fade": 0.8,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            308
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            310
+          ]
+        },
+        {
+          "native_index": 91,
+          "blue_p90": 190.0,
+          "estimated_fade": 0.76,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            308
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            310
+          ]
+        },
+        {
+          "native_index": 92,
+          "blue_p90": 172.0,
+          "estimated_fade": 0.688,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            308
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            310
+          ]
+        },
+        {
+          "native_index": 93,
+          "blue_p90": 142.0,
+          "estimated_fade": 0.568,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 94,
+          "blue_p90": 112.0,
+          "estimated_fade": 0.448,
+          "original_sam2_effect_bbox": [
+            1491,
+            63,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            61,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 95,
+          "blue_p90": 95.0,
+          "estimated_fade": 0.38,
+          "original_sam2_effect_bbox": [
+            1490,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 96,
+          "blue_p90": 75.0,
+          "estimated_fade": 0.3,
+          "original_sam2_effect_bbox": [
+            1490,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1488,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 97,
+          "blue_p90": 52.0,
+          "estimated_fade": 0.208,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1666,
+            309
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1668,
+            311
+          ]
+        },
+        {
+          "native_index": 98,
+          "blue_p90": 31.0,
+          "estimated_fade": 0.124,
+          "original_sam2_effect_bbox": [
+            1491,
+            64,
+            1665,
+            310
+          ],
+          "character_overlap_exclusion_bbox": [
+            1489,
+            62,
+            1667,
+            312
+          ]
+        },
+        {
+          "native_index": 99,
+          "blue_p90": 22.0,
+          "estimated_fade": 0.088,
+          "original_sam2_effect_bbox": [
+            1492,
+            65,
+            1666,
+            312
+          ],
+          "character_overlap_exclusion_bbox": [
+            1490,
+            63,
+            1668,
+            314
+          ]
+        },
+        {
+          "native_index": 100,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 101,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 102,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 103,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 104,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 105,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 106,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 107,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 108,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 109,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 110,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 111,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 112,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 113,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 114,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 115,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 116,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 117,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 118,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 119,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 120,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 121,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 122,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        },
+        {
+          "native_index": 123,
+          "blue_p90": null,
+          "estimated_fade": null,
+          "original_sam2_effect_bbox": null,
+          "character_overlap_exclusion_bbox": null
+        }
+      ]
+    },
+    "video_generation": {
+      "provider": "AI派",
+      "model": "MiniMax-H3",
+      "requested_duration_seconds": 5,
+      "actual_video_duration_seconds": 5.166667,
+      "output_count": 1,
+      "reference_asset": "assets/whale.png",
+      "reference_asset_sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a"
+    },
+    "sam2_source_commit": "2b90b9f5ceec907a1c18123530e92e794ad901a4"
+  },
+  "complete": true,
+  "qa_passed": true
+}

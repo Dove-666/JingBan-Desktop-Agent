@@ -8,9 +8,12 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from .animation_config import AnimationConfig
+from . import APP_REVISION
 from .application_controller import ApplicationController
 from .config import DEFAULT_IMAGE, PetConfig
 from .pet_window import PetImageError
+from .settings_manager import SettingsError, SettingsManager
+from .single_instance import SingleInstance, SingleInstanceError
 
 
 def parse_config(argv: list[str] | None = None) -> PetConfig:
@@ -35,23 +38,46 @@ def parse_config(argv: list[str] | None = None) -> PetConfig:
         parser.error(str(exc))
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None, *, settings: SettingsManager | None = None) -> int:
     config = parse_config(argv)
-    app = QApplication(sys.argv[:1])
+    app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName("AURA Desktop Pet")
     app.setApplicationDisplayName("鲸鱼娘桌宠")
+    app.setApplicationVersion(APP_REVISION)
     # Panel windows hide on close. Only closing the pet ends this session.
     app.setQuitOnLastWindowClosed(False)
+    instance = None
+    session = None
     try:
-        session = ApplicationController(config)
+        settings = settings if settings is not None else SettingsManager()
+        instance = SingleInstance(settings.config_path, app)
+        if not instance.start("debug" if config.show_debug_panel else "chat"):
+            return 0
+        # No pet, conversation, perception worker or Mem0 service is created
+        # until this process has acquired its own settings-file lifetime lock.
+        session = ApplicationController(config, settings=settings)
+        instance.activation_requested.connect(
+            lambda command: session.open_debug_panel() if command == "debug" else session.open_chat_window()
+        )
+        app.setWindowIcon(QIcon(str(config.image_path)))
+        session.finished.connect(app.quit)
+        app.aboutToQuit.connect(session.shutdown)
+        session.show()
+        if config.show_debug_panel:
+            session.open_debug_panel()
+        return app.exec()
     except PetImageError as exc:
         print(f"桌宠启动失败：{exc}", file=sys.stderr)
         QMessageBox.critical(None, "桌宠启动失败", str(exc))
         return 2
-    app.setWindowIcon(QIcon(str(config.image_path)))
-    session.finished.connect(app.quit)
-    app.aboutToQuit.connect(session.shutdown)
-    session.show()
-    if config.show_debug_panel:
-        session.open_debug_panel()
-    return app.exec()
+    except (SettingsError, SingleInstanceError) as exc:
+        print(f"桌宠启动失败：{exc}", file=sys.stderr)
+        QMessageBox.critical(None, "桌宠启动失败", str(exc))
+        return 3
+    finally:
+        try:
+            if session is not None:
+                session.shutdown()
+        finally:
+            if instance is not None:
+                instance.release()

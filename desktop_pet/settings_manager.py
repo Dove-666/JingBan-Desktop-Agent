@@ -242,6 +242,48 @@ class SettingsManager:
         self._settings.setValue("pet/scale_percent", value)
         self._sync()
 
+    def load_reading_font(self) -> int:
+        try:
+            raw = self._settings.value("pet/reading_font_points", 14)
+            value = int(raw)
+            return value if not isinstance(raw, bool) and float(raw) == value and 12 <= value <= 22 else 14
+        except (ValueError, TypeError, OverflowError):
+            return 14
+
+    def save_reading_font(self, value: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or not 12 <= value <= 22:
+            raise SettingsError("气泡字号必须为 12～22 之间的整数。")
+        self._settings.setValue("pet/reading_font_points", value)
+        self._sync()
+
+    def load_chat_font_size(self) -> int:
+        try:
+            raw = self._settings.value("chat/reading_font_size", 16)
+            value = int(raw)
+            return value if not isinstance(raw, bool) and float(raw) == value and 12 <= value <= 22 else 16
+        except (ValueError, TypeError, OverflowError):
+            return 16
+
+    def save_chat_font_size(self, value: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or not 12 <= value <= 22:
+            raise SettingsError("聊天字号必须为 12～22 之间的整数。")
+        self._settings.setValue("chat/reading_font_size", value)
+        self._sync()
+
+    def load_auto_expression(self) -> bool:
+        raw = self._settings.value("pet/auto_expression", True)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str) and raw.lower() in ("true", "false"):
+            return raw.lower() == "true"
+        return True
+
+    def save_auto_expression(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise SettingsError("自动表情开关必须为布尔值。")
+        self._settings.setValue("pet/auto_expression", value)
+        self._sync()
+
     def get_api_key(self) -> str:
         return self._credentials.get_api_key()
 
@@ -257,3 +299,94 @@ class SettingsManager:
 
     def clear_api_key(self) -> None:
         self._credentials.clear_api_key()
+
+    def load_perception_settings(self):
+        from dataclasses import fields
+        from .perception.settings import PerceptionSettings
+
+        defaults = PerceptionSettings()
+        values = {}
+        try:
+            for field in fields(defaults):
+                default = getattr(defaults, field.name)
+                if isinstance(default, tuple):
+                    raw = self._settings.value("perception/" + field.name, list(default))
+                    values[field.name] = tuple(raw) if isinstance(raw, (list, tuple)) else (raw,)
+                elif isinstance(default, bool):
+                    raw = self._settings.value("perception/" + field.name, default)
+                    if isinstance(raw, bool):
+                        values[field.name] = raw
+                    elif isinstance(raw, str) and raw.lower() in ("true", "false"):
+                        values[field.name] = raw.lower() == "true"
+                    else:
+                        raise ValueError("Invalid consent preference")
+                else:
+                    values[field.name] = self._settings.value("perception/" + field.name, default, type=type(default))
+            result = PerceptionSettings(**values)
+            result.validate()
+            return result
+        except (ValueError, TypeError, OverflowError):
+            return defaults  # A damaged setting must never opt in to screen sending.
+
+    def save_perception_settings(self, settings) -> None:
+        from dataclasses import fields
+        settings.validate()
+        for field in fields(settings):
+            value = getattr(settings, field.name)
+            self._settings.setValue("perception/" + field.name, list(value) if isinstance(value, tuple) else value)
+        self._sync()
+
+    def load_camera_settings(self):
+        from dataclasses import fields
+        from .perception.settings import CameraSettings
+
+        defaults = CameraSettings()
+        values = {}
+        try:
+            for field in fields(defaults):
+                default = getattr(defaults, field.name)
+                raw = self._settings.value("camera/" + field.name, list(default) if isinstance(default, tuple) else default)
+                if isinstance(default, tuple):
+                    values[field.name] = tuple(raw) if isinstance(raw, (list, tuple)) else (raw,)
+                elif isinstance(default, bool):
+                    if isinstance(raw, bool):
+                        values[field.name] = raw
+                    elif isinstance(raw, str) and raw.lower() in ("true", "false"):
+                        values[field.name] = raw.lower() == "true"
+                    else:
+                        raise ValueError("Invalid camera consent preference")
+                else:
+                    values[field.name] = self._settings.value("camera/" + field.name, default, type=type(default))
+            result = CameraSettings(**values)
+            result.validate()
+            return result
+        except (ValueError, TypeError, OverflowError):
+            return defaults
+
+    def save_camera_settings(self, settings) -> None:
+        from dataclasses import fields
+        settings.validate()
+        for field in fields(settings):
+            value = getattr(settings, field.name)
+            self._settings.setValue("camera/" + field.name, list(value) if isinstance(value, tuple) else value)
+        self._sync()
+
+    def load_context_budget(self):
+        from dataclasses import fields
+        from .conversations import ContextBudget
+        defaults = ContextBudget()
+        try:
+            values = {field.name: self._settings.value("context/" + field.name, getattr(defaults, field.name), type=int)
+                      for field in fields(defaults)}
+            result = ContextBudget(**values)
+            result.validate()
+            return result
+        except (TypeError, ValueError, OverflowError):
+            return defaults
+
+    def save_context_budget(self, budget):
+        from dataclasses import fields
+        budget.validate()
+        for field in fields(budget):
+            self._settings.setValue("context/" + field.name, getattr(budget, field.name))
+        self._sync()

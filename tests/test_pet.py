@@ -10,7 +10,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import (
     QColor, QContextMenuEvent, QGuiApplication, QImage, QMouseEvent, QPainter,
 )
@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 
 from desktop_pet.config import PetConfig
 from desktop_pet.pet_window import PetImageError, PetWindow, load_character
-from desktop_pet.placement import clamp_position
+from desktop_pet.placement import clamp_position, clamp_visible_position
 from desktop_pet.windows_work_area import work_area
 
 
@@ -200,7 +200,7 @@ class PetWindowTests(unittest.TestCase):
         self.press(start)
         self.move_pressed(start + delta)
         available = work_area(QGuiApplication.primaryScreen())
-        expected = clamp_position(origin + delta, self.pet.size(), available)
+        expected = clamp_visible_position(origin + delta, self.pet.visible_character_rect, available)
         self.assertEqual(self.pet.pos(), expected)
         self.assertNotEqual(self.pet.pos(), origin)
         self.release(start + delta)
@@ -237,9 +237,10 @@ class PetWindowTests(unittest.TestCase):
         far_corner = available.bottomRight() + QPoint(20000, 20000)
         self.move_pressed(far_corner)
         self.release(far_corner)
-        self.assertTrue(available.contains(self.pet.frameGeometry()))
-        self.assertEqual(self.pet.x(), available.right() - self.pet.width() + 1)
-        self.assertEqual(self.pet.y(), available.bottom() - self.pet.height() + 1)
+        visible = self.pet.visible_character_rect.translated(self.pet.pos())
+        self.assertTrue(QRectF(available).adjusted(-1e-6, -1e-6, 1e-6, 1e-6).contains(visible))
+        self.assertLess(available.x() + available.width() - visible.right(), 1.000001)
+        self.assertLess(available.y() + available.height() - visible.bottom(), 1.000001)
         self.assertFalse(self.pet.bubble.isVisible())
 
     def test_large_requested_window_is_fitted_inside_work_area(self):

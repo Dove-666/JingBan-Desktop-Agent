@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "canvas": {
+    "width": 1024,
+    "height": 1024
+  },
+  "safe_extent": 896,
+  "bottom_anchor_pixels": [
+    512,
+    960
+  ],
+  "anchor": {
+    "x": 0.5,
+    "y": 0.9375
+  },
+  "layout_alpha_threshold": 1,
+  "keep_aspect_ratio": true,
+  "video_bounds_policy": "one union bounding box and one transform for the entire sequence",
+  "video_scale_consistency": "Both native clips calibrated from standing body, with shared motion/effect safety scale applied to master and tsundere",
+  "original_character_image": "assets/whale.png",
+  "applied_common_safety_factor": 0.7412408317219669,
+  "standing_height_pixels": 665.6342668863263,
+  "shared_layout": "assets/character/shared_layout.json",
+  "active_cutout_source": "assets/character/source/master-cutout-corrected-v2.png",
+  "active_cutout_reference": "assets/character/source/master-white-background-v2.png"
+}

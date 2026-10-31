@@ -100,6 +100,38 @@ class SettingsManagerTests(unittest.TestCase):
         self.assertEqual(restarted.load_scale(), 175)
         self.assertEqual(Path(restarted.config_path), self.path)
 
+    def test_reading_font_persists_independently_of_pet_scale_and_rejects_invalid_values(self):
+        self.assertEqual(self.manager.load_reading_font(), 14)
+        self.manager.save_scale(50)
+        self.manager.save_reading_font(18)
+        restarted = self.make_manager()
+        self.assertEqual(restarted.load_scale(), 50)
+        self.assertEqual(restarted.load_reading_font(), 18)
+        for value in (True, 6, 23, 14.5, "18"):
+            with self.subTest(value=value), self.assertRaises(SettingsError):
+                restarted.save_reading_font(value)
+        raw = QSettings(str(self.path), QSettings.Format.IniFormat)
+        raw.setValue("pet/reading_font_points", 6)
+        raw.sync()
+        self.assertEqual(self.make_manager().load_reading_font(), 14)
+
+    def test_chat_reading_size_roundtrip_and_invalid_config_keeps_other_preferences(self):
+        self.assertEqual(self.manager.load_chat_font_size(), 16)
+        self.manager.save_scale(75)
+        self.manager.save_reading_font(18)
+        self.manager.save_chat_font_size(20)
+        self.assertEqual(self.make_manager().load_chat_font_size(), 20)
+        for value in (True, False, 11, 23, 16.5, "18"):
+            with self.subTest(value=value), self.assertRaises(SettingsError):
+                self.manager.save_chat_font_size(value)
+        raw = QSettings(str(self.path), QSettings.Format.IniFormat)
+        for value in (True, 11, "damaged", 16.5):
+            raw.setValue("chat/reading_font_size", value)
+            raw.sync()
+            self.assertEqual(self.make_manager().load_chat_font_size(), 16)
+        self.assertEqual(self.make_manager().load_scale(), 75)
+        self.assertEqual(self.make_manager().load_reading_font(), 18)
+
     def test_defaults_and_corrupted_preferences_are_safe(self):
         self.assertEqual(self.manager.load_api_settings(), ApiSettings())
         self.assertEqual(self.manager.load_scale(), 100)
@@ -206,6 +238,25 @@ class SettingsManagerTests(unittest.TestCase):
         for operation in (manager.get_api_key, lambda: manager.save_api_key("synthetic"), manager.clear_api_key):
             with self.assertRaises(CredentialsError):
                 operation()
+
+    def test_perception_preferences_survive_reload_without_runtime_data(self):
+        from dataclasses import replace
+        from desktop_pet.perception.settings import PerceptionSettings
+
+        preferences = replace(PerceptionSettings(), enabled=True, allow_remote=True,
+                              observation_interval_seconds=15, privacy_keywords=("private", "密码"))
+        self.manager.save_perception_settings(preferences)
+        reloaded = SettingsManager(QSettings(str(self.path), QSettings.Format.IniFormat),
+                                   self.manager._credentials)
+        self.assertEqual(reloaded.load_perception_settings(), preferences)
+        self.assertNotIn("screenshot", self.path.read_text(encoding="utf-8"))
+
+    def test_malformed_consent_cannot_enable_remote_capture(self):
+        self.manager._settings.setValue("perception/enabled", "invalid-but-truthy")
+        self.manager._settings.setValue("perception/allow_remote", True)
+        loaded = self.manager.load_perception_settings()
+        self.assertFalse(loaded.enabled)
+        self.assertFalse(loaded.allow_remote)
 
 
 if __name__ == "__main__":

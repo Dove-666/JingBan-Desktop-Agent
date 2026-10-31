@@ -1,0 +1,373 @@
+{
+  "checked_utc": "2026-10-30T16:05:22.476936+00:00",
+  "status": "passed",
+  "errors": [],
+  "platform": "windows",
+  "physical_cursor_moved": true,
+  "production_settings_touched": false,
+  "injected_gaze_coordinates": false,
+  "existing_frame_timer_used": true,
+  "states": [
+    {
+      "code": "surprised",
+      "stem": "surprised",
+      "directions": [
+        {
+          "name": "left",
+          "gaze": [
+            -0.9975508908197435,
+            -0.0010593064726597413
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            536,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\surprised_left.png"
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9973461422364331,
+            -0.0013381985293983072
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            1141,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\surprised_right.png"
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -5.5628609792229274e-05,
+            -0.9991175793070479
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            319
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\surprised_up.png"
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -0.0009348681832549086,
+            0.9982127004106398
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            772
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\surprised_down.png"
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -0.0014022473931178552,
+            -0.0007438156218854676
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            838,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\surprised_center.png"
+        }
+      ]
+    },
+    {
+      "code": "sleepy",
+      "stem": "sleepy",
+      "directions": [
+        {
+          "name": "left",
+          "gaze": [
+            -0.9990173836304139,
+            -0.0004684951275607561
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            536,
+            544
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\sleepy_left.png"
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9983372431854892,
+            -0.0004684151446558086
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            1141,
+            544
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\sleepy_right.png"
+        },
+        {
+          "name": "up",
+          "gaze": [
+            0.0023822456825118446,
+            -0.9990616173075919
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            839,
+            317
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\sleepy_up.png"
+        },
+        {
+          "name": "down",
+          "gaze": [
+            0.0014499527773779595,
+            0.9974069431729605
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            839,
+            771
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\sleepy_down.png"
+        },
+        {
+          "name": "center",
+          "gaze": [
+            0.002173108506375521,
+            0.0005456888759064813
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            839,
+            544
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\sleepy_center.png"
+        }
+      ]
+    },
+    {
+      "code": "angry",
+      "stem": "angry",
+      "directions": [
+        {
+          "name": "left",
+          "gaze": [
+            -0.9993362108202126,
+            0.000613376383739776
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            536,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\angry_left.png"
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9974991131291951,
+            0.000612475711921543
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            1141,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\angry_right.png"
+        },
+        {
+          "name": "up",
+          "gaze": [
+            5.55200726944571e-05,
+            -0.9990612626728473
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            318
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\angry_up.png"
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -0.0008788014439042648,
+            0.9981693993075185
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            772
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\angry_down.png"
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -0.00132089922820588,
+            0.002182108477416841
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            838,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\angry_center.png"
+        }
+      ]
+    },
+    {
+      "code": "thinking",
+      "stem": "thinking",
+      "directions": [
+        {
+          "name": "left",
+          "gaze": [
+            -0.9991570742718834,
+            -0.002125400099956767
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            539,
+            543
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\thinking_left.png"
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.998145341888272,
+            -0.002127158798913558
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            1144,
+            543
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\thinking_right.png"
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -0.0003847430221985917,
+            -0.9991692983446498
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            841,
+            317
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\thinking_up.png"
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -0.0012146424915076598,
+            0.9973120961838562
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            841,
+            770
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\thinking_down.png"
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -0.001820849677816573,
+            -0.0023408386047309264
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            841,
+            543
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\thinking_center.png"
+        }
+      ]
+    },
+    {
+      "code": "talking",
+      "stem": "talk_open",
+      "directions": [
+        {
+          "name": "left",
+          "gaze": [
+            -0.9990048382084797,
+            -0.0015576104766328563
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            536,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\talk_open_left.png"
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.998414074936952,
+            -0.0015561154496092078
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            1141,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\talk_open_right.png"
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -3.312725443493442e-05,
+            -0.9986077407272511
+          ],
+          "timer_ticks": 17,
+          "cursor_logical": [
+            838,
+            319
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\talk_open_up.png"
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -0.0014232392810281569,
+            0.9982338885622659
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            772
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\talk_open_down.png"
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -0.002134593939622163,
+            -0.0013971733836494519
+          ],
+          "timer_ticks": 18,
+          "cursor_logical": [
+            838,
+            545
+          ],
+          "capture": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\原生窗口\\talk_open_center.png"
+        }
+      ]
+    }
+  ],
+  "device_pixel_ratio": 1.5,
+  "timer_interval_ms": 33,
+  "happy_closed_eyes_static": true,
+  "total_timer_ticks": 469,
+  "pointer_restored": true,
+  "temporary_window_closed": true
+}

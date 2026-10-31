@@ -1,7 +1,23 @@
-# 可选表情素材
+# 鲸鱼娘表情素材
 
-本目录尚未提供独立表情 PNG。程序保留 `assets/whale.png` 原图，并明确标示降级状态，不会生成或覆盖图片。
+七种表情由内置 imagegen 模型根据现有鲸鱼娘参考图逐张生成，再在 Adobe Photoshop 2024 中处理透明蒙版、去白边、统一尺寸并导出。角色造型、服装和站姿沿用原参考图。
 
-支持放入：`neutral.png`、`happy.png`、`surprised.png`、`sleepy.png`、`angry.png`、`thinking.png`、`talk_open.png`、`talk_closed.png`。
+| 状态 | 文件 |
+| --- | --- |
+| 正常 neutral | `neutral.png` |
+| 开心 happy | `happy.png` |
+| 惊讶 surprised | `surprised.png` |
+| 困倦 sleepy | `sleepy.png` |
+| 生气 angry | `angry.png` |
+| 思考 thinking | `thinking.png` |
+| 说话 talking | `talk_open.png`，备用 `talk_closed.png` |
 
-图片应为完整角色的透明 PNG，建议画布、角色位置和尺寸与原图一致。加入图片后，选择表情或点击“测试当前表情”即可加载，无需重启。说话状态优先使用 talk_open.png，其次 talk_closed.png；当前仅显示静态表情素材。
+成品为 1024×1024 RGBA PNG，角色高度约 666 像素，底部锚点为 (512, 960)，与现有角色和动作画布匹配。`talk_closed.png` 复用本批正常闭嘴图；说话状态目前显示静态张嘴图，不循环嘴型。
+
+在调试面板选择对应表情，或点击“测试当前表情”即可重新加载素材。有 `thinking.png` 时优先显示思考表情；手动播放挠头动作仍可使用。
+
+正常、惊讶、困倦、生气、思考和说话均支持鼠标视线跟随。每种表情使用 `assets/character/eyes/<表情文件名>/rig.json` 及 Photoshop 分离的眼白底图、虹膜和眼眶蒙版；困倦与生气按半闭或倾斜眼皮单独裁剪并减小移动范围，开心保留闭眼效果。`talk_closed.png` 与正常图的像素相同，复用正常分层；说话状态仍使用静态张嘴图，不循环嘴型。
+
+右键“眼睛跟随鼠标”可统一开关，切换表情后保留开关与视线方向。拖动与恢复期间冻结视线，视频播放期间使用原序列帧。程序启动时缓存各套素材，切换和绘制时不读取分层文件；修改分层后需重启桌宠。更换某张原表情 PNG 后，对应旧分层素材会自动停用，其他表情继续正常工作。
+
+完整原始生图、Photoshop 可编辑 PSD、透明 PNG、检查预览、提示词与制作记录保存在项目的 `美术资产/鲸鱼娘_七种表情_Photoshop/` 目录。已有原图和动画文件保持原样。

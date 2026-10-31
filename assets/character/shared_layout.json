@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "canvas": {
+    "width": 1024,
+    "height": 1024
+  },
+  "anchor": {
+    "x": 0.5,
+    "y": 0.9375
+  },
+  "target_standing_height_before_safety": 898,
+  "common_safety_factor": 0.7412408317219669,
+  "delivered_standing_height": 665.6342668863263,
+  "placements": {
+    "think_scratch_head": {
+      "source_size": [
+        2560,
+        1440
+      ],
+      "union_bbox": [
+        674,
+        45,
+        1957,
+        1400
+      ],
+      "reference_bbox": [
+        681,
+        65,
+        1865,
+        1400
+      ],
+      "standing_base_scale": 0.6726591760299625,
+      "scale": 0.4986024471058623
+    },
+    "snarl_cute": {
+      "source_size": [
+        2560,
+        1440
+      ],
+      "union_bbox": [
+        427,
+        33,
+        2203,
+        1435
+      ],
+      "reference_bbox": [
+        682,
+        39,
+        1903,
+        1404
+      ],
+      "standing_base_scale": 0.6578754578754579,
+      "scale": 0.4876441515650742
+    }
+  },
+  "policy": "character-only standing reference; all native-frame character+effect unions constrain one shared safety factor",
+  "visual_review_required": true
+}

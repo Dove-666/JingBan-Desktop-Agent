@@ -1,0 +1,90 @@
+{
+  "master": {
+    "source_sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+    "output_sha256": "d2687d33cf564a3e83814a02593995a7dda1dea1fef94cf15e8035de5d40a812",
+    "source_size": [
+      1259,
+      1259
+    ],
+    "source_visible_bounds": [
+      94,
+      27,
+      1164,
+      1226
+    ],
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "scale": 0.5537948290241869,
+    "translation": [
+      164,
+      280
+    ],
+    "visible_bounds": [
+      215,
+      293,
+      810,
+      960
+    ],
+    "bottom_anchor": 960,
+    "layout_alpha_threshold": 1,
+    "operation": "full-canvas uniform scale and translation; alpha retained",
+    "real_transparency": true,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "common_safety_factor": 0.7412408317219669,
+    "applied_static_safe_extent": 664,
+    "shared_standing_height_target": 665.6342668863263,
+    "source": "source/master-original.png",
+    "target": "master.png"
+  },
+  "tsundere": {
+    "source_sha256": "d16880f55daedd2ab23920767b465ededd79d6910a6907a80562816a522a26c9",
+    "output_sha256": "fc13b7d3b97ce16302c88871591142d2552b7a2bfaa5d3ab623b0108de8dd965",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_visible_bounds": [
+      97,
+      21,
+      1185,
+      1227
+    ],
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "scale": 0.5505804311774462,
+    "translation": [
+      160,
+      284
+    ],
+    "visible_bounds": [
+      212,
+      294,
+      813,
+      960
+    ],
+    "bottom_anchor": 960,
+    "layout_alpha_threshold": 1,
+    "operation": "full-canvas uniform scale and translation; alpha retained",
+    "real_transparency": true,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "common_safety_factor": 0.7412408317219669,
+    "applied_static_safe_extent": 664,
+    "shared_standing_height_target": 665.6342668863263,
+    "source": "source/tsundere-generated.png",
+    "target": "static/tsundere.png"
+  }
+}

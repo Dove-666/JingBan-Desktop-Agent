@@ -1,0 +1,6 @@
+happy
+surprised
+sleepy
+angry
+thinking
+talk_open

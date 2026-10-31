@@ -1,0 +1,10 @@
+{
+    "requested_at":  "2026-10-30T23:15:08.8359769+08:00",
+    "normal_shutdown_requested":  true,
+    "old_processes_exited":  true,
+    "forced_termination":  false,
+    "new_launcher_pid":  30680,
+    "neutral_rig":  "assets/character/eyes/neutral/rig.json",
+    "settings_changed":  false,
+    "command":  ".venv/Scripts/pythonw.exe main.py --debug-panel"
+}

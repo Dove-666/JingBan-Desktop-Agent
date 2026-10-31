@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "batch": "first-character-actions",
+  "original_image": "assets/whale.png",
+  "original_sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+  "static": {
+    "tsundere": {
+      "generator": "built_in_image_gen",
+      "generation_completed": true,
+      "raw_source": "assets/character/source/tsundere-generated.png",
+      "output": "assets/character/static/tsundere.png",
+      "canvas_normalization": "complete",
+      "output_sha256": "16c6962c2b0a57e4fe620d31144ec2739e5fa206b93da01c9314179951e83de4",
+      "real_rgba_transparency": true,
+      "corrected_source": "assets/character/source/tsundere-cutout-corrected-v2.png"
+    }
+  },
+  "video_budget": {
+    "maximum_submissions": 2,
+    "submissions_used": 2,
+    "maximum_per_action": 1,
+    "automatic_retries": false,
+    "stop_video_generation_on_failure": true,
+    "distinct_generated_videos_verified": 2,
+    "observed_total_generation_cost_cny": 3.0
+  },
+  "video_service": "https://aipai.cn/image",
+  "video_model_required": "MiniMax-H3",
+  "video_duration_seconds_preferred": 5,
+  "video_submission_blocker": null,
+  "animations": {
+    "think_scratch_head": {
+      "status": "ready",
+      "attempts": 1,
+      "video": "artifacts/asset_pipeline/inputs/think_scratch_head_download.mp4",
+      "sam2_completed": true,
+      "frames_ready": true,
+      "submission_reserved_at": "2026-10-30T12:09:05.518000+00:00",
+      "submission_method": "Windows UI Automation; fallback explicitly authorized by user",
+      "selected_model": "MiniMax-H3",
+      "selected_duration_seconds": 5,
+      "selected_output_count": 1,
+      "estimated_price_cny": 1.5,
+      "video_sha256": "f45dbd3f005218ec8c8c8bb73c9d4bf85767b1fd34281d0bf435af69e57ed771",
+      "video_bytes": 4779141,
+      "source_width": 2560,
+      "source_height": 1440,
+      "source_fps": 24,
+      "source_frames": 124,
+      "source_duration_seconds": 5.166667,
+      "generation_succeeded": true,
+      "download_note": "Browser fetch was blocked by CORS; retrieved returned video object without browser cookies",
+      "animation_manifest": "assets/character/animations/think_scratch_head/animation.json",
+      "frame_count": 62,
+      "fps": 12,
+      "duration_ms": 5167,
+      "canvas": {
+        "width": 1024,
+        "height": 1024
+      },
+      "completion": "idle",
+      "visual_qa_report": "artifacts/asset_pipeline/final_shared_qa_v1/final_report.json",
+      "known_limitations": [
+        "Question-mark fade alpha is estimated from black-background RGB; not source-native alpha",
+        "Tiny initial question-mark appearance is not fully segmented in independent object frame 44"
+      ],
+      "matte_repair_batch": "hair_repair_v2",
+      "current_visual_qa_report": "artifacts/asset_pipeline/hair_repair_v2/repair_delivery_check.json"
+    },
+    "snarl_cute": {
+      "status": "ready",
+      "attempts": 1,
+      "video": "artifacts/asset_pipeline/inputs/snarl_cute_download.mp4",
+      "sam2_completed": true,
+      "frames_ready": true,
+      "submission_reserved_at": "2026-10-30T12:22:30.270769+00:00",
+      "submission_method": "Windows UI Automation; fallback explicitly authorized by user",
+      "selected_model": "MiniMax-H3",
+      "selected_duration_seconds": 5,
+      "selected_output_count": 1,
+      "estimated_price_cny": 1.5,
+      "video_sha256": "abbc57ecaacb17d2013d4d1e2a3540dd5ab7b453503bb0c66677f038f3e97c49",
+      "video_bytes": 4119568,
+      "generation_succeeded": true,
+      "source_width": 2560,
+      "source_height": 1440,
+      "source_fps": "24/1",
+      "source_frames": 124,
+      "source_duration_seconds": 5.166667,
+      "animation_manifest": "assets/character/animations/snarl_cute/animation.json",
+      "frame_count": 62,
+      "fps": 12,
+      "duration_ms": 5167,
+      "canvas": {
+        "width": 1024,
+        "height": 1024
+      },
+      "completion": "hold_last",
+      "visual_qa_report": "artifacts/asset_pipeline/final_shared_qa_v1/final_report.json",
+      "known_limitations": [
+        "Generated action is a cute crouch rather than fully prone; no extra generation requested"
+      ],
+      "matte_repair_batch": "hair_repair_v2",
+      "current_visual_qa_report": "artifacts/asset_pipeline/hair_repair_v2/repair_delivery_check.json"
+    }
+  },
+  "no_substitute_video_provider": true,
+  "no_third_party_static_image_generator": true,
+  "master": {
+    "path": "assets/character/master.png",
+    "output_sha256": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+    "original_preserved": true,
+    "corrected_source": "assets/character/source/master-cutout-corrected-v2.png"
+  },
+  "verification": {
+    "syntax": "compileall main.py desktop_pet tests tools passed",
+    "unit_tests": {
+      "count": 640,
+      "seconds": 237.607,
+      "failures": 0,
+      "skipped": 0,
+      "report": "artifacts/character_assets_real_v1/unittest_report.json"
+    },
+    "application": {
+      "platform": "offscreen",
+      "status": "passed",
+      "production_ui_touched": false,
+      "report": "artifacts/character_assets/application_smoke/result.json"
+    },
+    "sam2": {
+      "actual_cuda_inference": true,
+      "synthetic_fixture_only": true,
+      "seconds": 6.736,
+      "report": "artifacts/asset_pipeline/sam2_smoke_v2/report.json"
+    },
+    "real_action_videos_verified": true,
+    "motion_tracking_and_cross_clip_scale_verified": true,
+    "post_review_label_checks": {
+      "tests": 36,
+      "seconds": 3.181,
+      "result": "passed; final snarl action label restored to user specification"
+    },
+    "final_visual_qa": "artifacts/asset_pipeline/final_shared_qa_v1/final_report.json",
+    "final_playback_smoke": {
+      "status": "passed",
+      "platform": "offscreen",
+      "report": "artifacts/character_assets_real_v1/real_playback/result.json",
+      "raw_rgba_mib_per_clip": 248,
+      "peak_process_rss_mib": 496.52,
+      "maximum_stage_heartbeat_ms": 31.573,
+      "physical_mouse_tested": false
+    },
+    "native_application": {
+      "status": "partial_checks_passed",
+      "report": "artifacts/character_assets_real_v1/native_result.json",
+      "startup_and_transparent_think_playback": "passed",
+      "physical_drag_and_native_snarl_playback": "not verified"
+    },
+    "sam2_production": {
+      "actual_cuda_inference": true,
+      "synthetic_fixture_only": false,
+      "native_frames_segmented_per_video": 124,
+      "reports": [
+        "artifacts/asset_pipeline/inspect_think_v1/real_sam2_report.json",
+        "artifacts/asset_pipeline/inspect_snarl_v1/real_sam2_report.json",
+        "artifacts/asset_pipeline/final_shared_qa_v1/final_report.json"
+      ]
+    },
+    "scope": "Historical first-batch verification before hair_repair_v2; current repair uses repair_verification"
+  },
+  "common_layout": {
+    "path": "assets/character/shared_layout.json",
+    "safety_factor": 0.7412408317219669,
+    "standing_height_pixels": 665.6342668863263,
+    "static_outputs_updated_from_preserved_sources": true
+  },
+  "matte_repair_v2": {
+    "status": "published_and_verified",
+    "reference": "assets/character/source/master-white-background-v2.png",
+    "reference_sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+    "art_package": "美术资产/鲸鱼娘_抠图修复_v2",
+    "backup": "美术资产/鲸鱼娘_抠图修复_v2/制作记录/修复前版本",
+    "static_opaque_rgb_preserved": {
+      "master": 772982,
+      "tsundere": 745772
+    },
+    "static_method": "built-in imagegen matte, original RGB restoration, connected background cleanup; tsundere retains original matte and local hair-gap repair after new matte rejection",
+    "video_method": "real SAM2 hair-gap tracks, local alpha/unmatte, per-clip fixed blue palette mapping",
+    "video_generation_submissions_added": 0,
+    "historical_verification": "verification field retains pre-repair results; repair_verification records this batch separately",
+    "verified_at": "2026-10-30T13:45:44.917473+00:00"
+  },
+  "repair_verification": {
+    "syntax": "compileall main.py desktop_pet tests tools passed; C# matte processor compiled and executed",
+    "targeted_tests": {
+      "count": 77,
+      "seconds": 3.902,
+      "failures": 0,
+      "skipped": 0,
+      "report": "artifacts/asset_pipeline/hair_repair_v2/targeted_execution_report.json"
+    },
+    "full_suite_rerun": false,
+    "real_playback": {
+      "status": "passed",
+      "report": "artifacts/asset_pipeline/hair_repair_v2/real_playback/result.json",
+      "both_actual_clips": true,
+      "frame_count_per_clip": 62,
+      "drag_freeze_return_and_six_scales": "passed with injected Qt events; no physical mouse test"
+    },
+    "native_windows": {
+      "status": "startup_and_visual_checks_passed",
+      "production_pid_at_check": 29768,
+      "stderr": "empty",
+      "corrected_static_visually_verified": true,
+      "real_snarl_pose_observed_after_play_invoke": true,
+      "stop_restore_confirmed": true,
+      "screenshots": [
+        "artifacts/asset_pipeline/hair_repair_v2/native_corrected_pet_verified.png",
+        "artifacts/asset_pipeline/hair_repair_v2/native_corrected_snarl_observed.png"
+      ],
+      "physical_drag_and_native_multi_monitor_tested": false
+    },
+    "inventory": {
+      "status": "passed",
+      "delivered_rgba_frames_verified": 124,
+      "art_package_equals_runtime": true,
+      "pre_repair_backup_hashes_verified": true,
+      "desktop_original_and_legacy_source_unchanged": true,
+      "both_original_videos_unchanged": true
+    },
+    "new_video_generation_requests": 0,
+    "static_builtin_imagegen_calls": 2,
+    "static_generation_note": "normal matte used with original RGB restoration; tsundere new matte rejected, original source alpha retained with localized gap repair"
+  }
+}

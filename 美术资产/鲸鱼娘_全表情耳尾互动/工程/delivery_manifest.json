@@ -1,0 +1,389 @@
+{
+    "canvas":  [
+                   1024,
+                   1024
+               ],
+    "talk_closed_reuses":  "neutral",
+    "photoshop_version":  "25.9.0",
+    "new_runtime_files":  54,
+    "states":  {
+                   "neutral":  {
+                                   "source_sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+                                   "rig":  "透明分层/neutral/rig.json",
+                                   "runtime":  "assets/character/interactions/neutral/rig.json",
+                                   "psd":  "PSD/neutral_interaction_rig.psd",
+                                   "copied_unchanged":  true,
+                                   "files":  [
+                                                 {
+                                                     "file":  "base.png",
+                                                     "sha256":  "a95024b345c2dff5c4efb6ed3fa5fc8d0f81aa526318975238e3cf39db4bebaf",
+                                                     "bytes":  405053
+                                                 },
+                                                 {
+                                                     "file":  "cutout_mask.png",
+                                                     "sha256":  "586b4306fb234ec011522b1bc3cb8284a01ec6f79319436c4b4a849e23b277fb",
+                                                     "bytes":  13594
+                                                 },
+                                                 {
+                                                     "file":  "left_ear.png",
+                                                     "sha256":  "cbe92b7ff5e0380203cf1ace3e86da074f0ef49a6170e23bf9c1507eb9516b5d",
+                                                     "bytes":  9314
+                                                 },
+                                                 {
+                                                     "file":  "left_ear_hit.png",
+                                                     "sha256":  "96f71f5572a6a6809d5355f45721960bbd9a56cba8e46828435670bfccf2c93e",
+                                                     "bytes":  17491
+                                                 },
+                                                 {
+                                                     "file":  "rig.json",
+                                                     "sha256":  "983f439d04251056e7970398e6f73646b29e96afa8a7af7247a865258efd164e",
+                                                     "bytes":  2043
+                                                 },
+                                                 {
+                                                     "file":  "right_ear.png",
+                                                     "sha256":  "acb60a72280049424e650f9437bfe4e298c76f7de2eb7543b904d1ce7996fcab",
+                                                     "bytes":  14723
+                                                 },
+                                                 {
+                                                     "file":  "right_ear_hit.png",
+                                                     "sha256":  "d5c25e7187063f2a2671699b2f4baa98a0e1d60e6de3bab906715c524bc38f79",
+                                                     "bytes":  24228
+                                                 },
+                                                 {
+                                                     "file":  "tail.png",
+                                                     "sha256":  "b52b3dee732eb758ed1ef881c84d04eadc6242372c2a8b2808b50f517517d3c7",
+                                                     "bytes":  22138
+                                                 },
+                                                 {
+                                                     "file":  "tail_hit.png",
+                                                     "sha256":  "7c4040e2da56590ec6cd69befb0edad83350768e305b69381ccdc86ced49eebb",
+                                                     "bytes":  32586
+                                                 }
+                                             ]
+                               },
+                   "happy":  {
+                                 "source_sha256":  "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f",
+                                 "rig":  "透明分层/happy/rig.json",
+                                 "runtime":  "assets/character/interactions/happy/rig.json",
+                                 "psd":  "PSD/happy_interaction_rig.psd",
+                                 "copied_unchanged":  false,
+                                 "files":  [
+                                               {
+                                                   "file":  "base.png",
+                                                   "sha256":  "7d6e481edd1b38b26fcabcb886e4b3b13b5324d79976ed6cea952035974309a3",
+                                                   "bytes":  402154
+                                               },
+                                               {
+                                                   "file":  "cutout_mask.png",
+                                                   "sha256":  "0ae3fbc72a25b1897c5a12145350626a5b386d243e50111055f7469699fa232b",
+                                                   "bytes":  13505
+                                               },
+                                               {
+                                                   "file":  "left_ear.png",
+                                                   "sha256":  "e69f42612dd0326810a17ea309a561cd9420280620f2655f5cef025a9c211519",
+                                                   "bytes":  9267
+                                               },
+                                               {
+                                                   "file":  "left_ear_hit.png",
+                                                   "sha256":  "4abf507a63b686606383f522013fbca49e4918977ea5e8b520beda364d0645bf",
+                                                   "bytes":  16179
+                                               },
+                                               {
+                                                   "file":  "rig.json",
+                                                   "sha256":  "c3059543a33755e791ec32ff1156dace408c1083709b21a6649e0dce1df4a56b",
+                                                   "bytes":  591
+                                               },
+                                               {
+                                                   "file":  "right_ear.png",
+                                                   "sha256":  "49a062fe5dcc938162c603f73201c441229c7a78e7fe487587047037e576b6d3",
+                                                   "bytes":  14234
+                                               },
+                                               {
+                                                   "file":  "right_ear_hit.png",
+                                                   "sha256":  "c0c714180fc26a484c0b372c330cdb644987a35c79570b5a3c6be921cd1bc6bc",
+                                                   "bytes":  22321
+                                               },
+                                               {
+                                                   "file":  "tail.png",
+                                                   "sha256":  "7f363d0082a730d4c8d5833f355d99c311bc14248220097829c9568b0695dfae",
+                                                   "bytes":  22272
+                                               },
+                                               {
+                                                   "file":  "tail_hit.png",
+                                                   "sha256":  "0872da8bfd1dc766497fadff17183d401dd5f5afa0b99f7b88d06c44735aa012",
+                                                   "bytes":  31456
+                                               }
+                                           ]
+                             },
+                   "surprised":  {
+                                     "source_sha256":  "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+                                     "rig":  "透明分层/surprised/rig.json",
+                                     "runtime":  "assets/character/interactions/surprised/rig.json",
+                                     "psd":  "PSD/surprised_interaction_rig.psd",
+                                     "copied_unchanged":  false,
+                                     "files":  [
+                                                   {
+                                                       "file":  "base.png",
+                                                       "sha256":  "ac0d97939a1f52a14289829d46d3dd97b239d7dd523006202f79d97df5d44366",
+                                                       "bytes":  408157
+                                                   },
+                                                   {
+                                                       "file":  "cutout_mask.png",
+                                                       "sha256":  "a742664abcad3eaafae1c79d1fbb71be2fc55b8df376001c5ce9e66108907e47",
+                                                       "bytes":  13637
+                                                   },
+                                                   {
+                                                       "file":  "left_ear.png",
+                                                       "sha256":  "f949ab35054163d6e55cf86ce3262b20f4feaf127796d542a4fed7d42ba684f9",
+                                                       "bytes":  9310
+                                                   },
+                                                   {
+                                                       "file":  "left_ear_hit.png",
+                                                       "sha256":  "1374e41fc24c001ff38008c98d7907a04a82626ab8ad9c1728ab7abb5bbcf4ab",
+                                                       "bytes":  16414
+                                                   },
+                                                   {
+                                                       "file":  "rig.json",
+                                                       "sha256":  "9dde250ffd27294b679328f833f1542fae47495f7593979d301b32c959a13e05",
+                                                       "bytes":  591
+                                                   },
+                                                   {
+                                                       "file":  "right_ear.png",
+                                                       "sha256":  "0c2785315a6bb75effcc67fa503009965b0b3943fa3816c65ff63dfa43d593fb",
+                                                       "bytes":  14336
+                                                   },
+                                                   {
+                                                       "file":  "right_ear_hit.png",
+                                                       "sha256":  "17cfc474b0640079888607c3b32f974a197790e3c1bac4c2d685acbb0d56c94a",
+                                                       "bytes":  22296
+                                                   },
+                                                   {
+                                                       "file":  "tail.png",
+                                                       "sha256":  "0a70cde035b4407c69b4cd7410383376f0a4eb30db74379dff05118d7ca0d2e2",
+                                                       "bytes":  22153
+                                                   },
+                                                   {
+                                                       "file":  "tail_hit.png",
+                                                       "sha256":  "e2e3d02254e06e099f34f4136150f9092d2a8737695ffcc1e952abf0143f4cc3",
+                                                       "bytes":  31398
+                                                   }
+                                               ]
+                                 },
+                   "sleepy":  {
+                                  "source_sha256":  "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+                                  "rig":  "透明分层/sleepy/rig.json",
+                                  "runtime":  "assets/character/interactions/sleepy/rig.json",
+                                  "psd":  "PSD/sleepy_interaction_rig.psd",
+                                  "copied_unchanged":  false,
+                                  "files":  [
+                                                {
+                                                    "file":  "base.png",
+                                                    "sha256":  "ea3b84cd08baccca9124a2d0ed55a9c9bed3f300ff0a8cee2b87295ad31ef800",
+                                                    "bytes":  404599
+                                                },
+                                                {
+                                                    "file":  "cutout_mask.png",
+                                                    "sha256":  "bef9f7b917de236a2c7604fa1c64c2191f814bba128df4f06288f672fa83a55e",
+                                                    "bytes":  13612
+                                                },
+                                                {
+                                                    "file":  "left_ear.png",
+                                                    "sha256":  "b23b34487e168021ffb7b3a90f0c0f2e49c8b07c07712cf8c838ab3639378fa0",
+                                                    "bytes":  9030
+                                                },
+                                                {
+                                                    "file":  "left_ear_hit.png",
+                                                    "sha256":  "e9ff9f51c1d2f6846439c43e74d72036bb58e1e02c9b4a9bf83b504475789c93",
+                                                    "bytes":  15958
+                                                },
+                                                {
+                                                    "file":  "rig.json",
+                                                    "sha256":  "71765ab91f5b8781e078f1ccc353a97a192d50024b7cdb550f410e8461a72de0",
+                                                    "bytes":  591
+                                                },
+                                                {
+                                                    "file":  "right_ear.png",
+                                                    "sha256":  "752fe8724f32420fe39e786f8a7a23236008abe750298723313e99b2cbd22da0",
+                                                    "bytes":  14032
+                                                },
+                                                {
+                                                    "file":  "right_ear_hit.png",
+                                                    "sha256":  "1c6eff6b025ed027ae154bbb8035448ed1b4a7d7ff98c27cbafc118d48aa94dc",
+                                                    "bytes":  22133
+                                                },
+                                                {
+                                                    "file":  "tail.png",
+                                                    "sha256":  "36301ec96bb1e0fcd4509cf90d9dc0976ad7f9396a5346772d2148701cfe6714",
+                                                    "bytes":  21858
+                                                },
+                                                {
+                                                    "file":  "tail_hit.png",
+                                                    "sha256":  "8f4a42c6d7d152eda192c57645b0ac46778c850d57a3233b5330b0adb675ecaf",
+                                                    "bytes":  30917
+                                                }
+                                            ]
+                              },
+                   "angry":  {
+                                 "source_sha256":  "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+                                 "rig":  "透明分层/angry/rig.json",
+                                 "runtime":  "assets/character/interactions/angry/rig.json",
+                                 "psd":  "PSD/angry_interaction_rig.psd",
+                                 "copied_unchanged":  false,
+                                 "files":  [
+                                               {
+                                                   "file":  "base.png",
+                                                   "sha256":  "dab49178dc0161119dd6e7e224d7e29941bb548184a68428cd1f35712bfaac40",
+                                                   "bytes":  411482
+                                               },
+                                               {
+                                                   "file":  "cutout_mask.png",
+                                                   "sha256":  "156ec391b1e047420cf45bbe1a7e7db787d169a619ac988e03f2107ccd014863",
+                                                   "bytes":  13620
+                                               },
+                                               {
+                                                   "file":  "left_ear.png",
+                                                   "sha256":  "cfe29ed4ae9d77942c815aa852b6ec99ec346146aec56d8d444cce529a8775a1",
+                                                   "bytes":  9348
+                                               },
+                                               {
+                                                   "file":  "left_ear_hit.png",
+                                                   "sha256":  "ee94ba2a07a50e03ce8fdd01903db9257ea1f65b7762e21be4e1217efd29e580",
+                                                   "bytes":  16320
+                                               },
+                                               {
+                                                   "file":  "rig.json",
+                                                   "sha256":  "4708fd62cdc82f300d6e942334b7f53cad24c8da336ce4b69694f28562f958fa",
+                                                   "bytes":  591
+                                               },
+                                               {
+                                                   "file":  "right_ear.png",
+                                                   "sha256":  "4639af73f10ba5937aec4c214e6ff56197bc6b884ce3c8c06a90a69bd99e127e",
+                                                   "bytes":  14312
+                                               },
+                                               {
+                                                   "file":  "right_ear_hit.png",
+                                                   "sha256":  "e0eeae5461951d82c549b01cd5e14ddcaab46363a9352eed95640a912914a1bc",
+                                                   "bytes":  22396
+                                               },
+                                               {
+                                                   "file":  "tail.png",
+                                                   "sha256":  "8827b5b1573a71ca3205219ab4ce191feb0280ce3f9c958d3e98b267129b162a",
+                                                   "bytes":  22281
+                                               },
+                                               {
+                                                   "file":  "tail_hit.png",
+                                                   "sha256":  "fe6f253dcca4b0a45d6c52b98b8849f70cce8176e25271d5daa995dc8bfa8e0f",
+                                                   "bytes":  31688
+                                               }
+                                           ]
+                             },
+                   "thinking":  {
+                                    "source_sha256":  "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+                                    "rig":  "透明分层/thinking/rig.json",
+                                    "runtime":  "assets/character/interactions/thinking/rig.json",
+                                    "psd":  "PSD/thinking_interaction_rig.psd",
+                                    "copied_unchanged":  false,
+                                    "files":  [
+                                                  {
+                                                      "file":  "base.png",
+                                                      "sha256":  "b5ff1f7fc1b2da703db7094e465f721eee753a310c5dd8d953a1b737d5c46d2a",
+                                                      "bytes":  404936
+                                                  },
+                                                  {
+                                                      "file":  "cutout_mask.png",
+                                                      "sha256":  "6eddd3f978524d0ea92a45abfce75c4cda8a4b2280c10e2d4f8156a124e5280f",
+                                                      "bytes":  13515
+                                                  },
+                                                  {
+                                                      "file":  "left_ear.png",
+                                                      "sha256":  "f804789fb4c10cf5061237f0c3829d2b15c372cc813913bd4d5c09ddaf7014ec",
+                                                      "bytes":  9322
+                                                  },
+                                                  {
+                                                      "file":  "left_ear_hit.png",
+                                                      "sha256":  "535672109da84c584c8b0673e0cc46da841365b769ce070595e362e194b027ae",
+                                                      "bytes":  16296
+                                                  },
+                                                  {
+                                                      "file":  "rig.json",
+                                                      "sha256":  "2fe48da4c404704a0ef371b21588add8f6cff561663f6452761245cc670b7dda",
+                                                      "bytes":  591
+                                                  },
+                                                  {
+                                                      "file":  "right_ear.png",
+                                                      "sha256":  "6db17ba23a62925602e615e7824e121a41f5d86bd21e3227d5d3a2f27ce0266b",
+                                                      "bytes":  14272
+                                                  },
+                                                  {
+                                                      "file":  "right_ear_hit.png",
+                                                      "sha256":  "72a7ffe9ff5625628d85088411983639874818f19c4bd923142bd3f72f444612",
+                                                      "bytes":  22497
+                                                  },
+                                                  {
+                                                      "file":  "tail.png",
+                                                      "sha256":  "efc099c8d9c3466a69c9037d36a4908934e1ec6b25c20a141697c9c0b1f25137",
+                                                      "bytes":  21741
+                                                  },
+                                                  {
+                                                      "file":  "tail_hit.png",
+                                                      "sha256":  "2124964fed113076bc2fc860b011711014a279dc321af2f1acf2c1feb717d3cd",
+                                                      "bytes":  30712
+                                                  }
+                                              ]
+                                },
+                   "talk_open":  {
+                                     "source_sha256":  "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+                                     "rig":  "透明分层/talk_open/rig.json",
+                                     "runtime":  "assets/character/interactions/talk_open/rig.json",
+                                     "psd":  "PSD/talk_open_interaction_rig.psd",
+                                     "copied_unchanged":  false,
+                                     "files":  [
+                                                   {
+                                                       "file":  "base.png",
+                                                       "sha256":  "d0216aca0facc15aaaeb3e6fd958bc1a436de20f8124f1720be5be3d39a7c4b6",
+                                                       "bytes":  404751
+                                                   },
+                                                   {
+                                                       "file":  "cutout_mask.png",
+                                                       "sha256":  "e14c7dcf1bb1e5d362c7762737bf831d5c47521d780793260fba3be580c9c7f7",
+                                                       "bytes":  13583
+                                                   },
+                                                   {
+                                                       "file":  "left_ear.png",
+                                                       "sha256":  "801ebf59f6920edad0be663a1c024c75a31ad8ffeac047d4b13cc7b1d138c54d",
+                                                       "bytes":  9226
+                                                   },
+                                                   {
+                                                       "file":  "left_ear_hit.png",
+                                                       "sha256":  "657af52b9b961fc3a33170437626b36bf3bdf2ac77bd19c2d0b897f9c195613c",
+                                                       "bytes":  16193
+                                                   },
+                                                   {
+                                                       "file":  "rig.json",
+                                                       "sha256":  "9305e799ce53d60e662797959f6de366c3fa61beccd6ee6837d1b27109cdbc8b",
+                                                       "bytes":  591
+                                                   },
+                                                   {
+                                                       "file":  "right_ear.png",
+                                                       "sha256":  "7f9abd42315aab76fbf02ffa5150daee40bee794e0d6c880150e25d04d30b696",
+                                                       "bytes":  14238
+                                                   },
+                                                   {
+                                                       "file":  "right_ear_hit.png",
+                                                       "sha256":  "a2eb5f7c1d66415f2959d4228d8a53d08287d1b0a8f7d0fa7ff8da9453301aa2",
+                                                       "bytes":  22363
+                                                   },
+                                                   {
+                                                       "file":  "tail.png",
+                                                       "sha256":  "844bc19c9fcfdda8bc0cbf358a74da04c185ef6161c950e4cb920928245561bf",
+                                                       "bytes":  21772
+                                                   },
+                                                   {
+                                                       "file":  "tail_hit.png",
+                                                       "sha256":  "22882e06d1cf2cb41c570a96027f8b6beac586e8e810c0d87d4f557bd10710f1",
+                                                       "bytes":  31024
+                                                   }
+                                               ]
+                                 }
+               }
+}

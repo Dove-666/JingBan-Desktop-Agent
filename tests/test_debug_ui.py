@@ -167,6 +167,20 @@ class DebugUiTests(unittest.TestCase):
         self.window.close()
         self.assertFalse(self.window.isVisible())
 
+    def test_api_credential_summary_distinguishes_presence_from_connectivity(self):
+        self.assertIn("聊天密钥已保存", self.panel.credential_label.text())
+        self.assertNotIn(self.settings.key, self.panel.credential_label.text())
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            self.panel.clear_key_button.click()
+        self.assertIn("尚未保存聊天密钥", self.panel.credential_label.text())
+        self.assertNotIn("连接成功", self.panel.credential_label.text())
+
+    def test_api_credential_read_failure_is_static_and_does_not_echo_backend(self):
+        with patch.object(self.settings, "get_api_key", side_effect=RuntimeError("backend-secret-test-payload")):
+            self.panel._refresh_credential_status()
+        self.assertIn("无法读取", self.panel.credential_label.text())
+        self.assertNotIn("backend-secret-test-payload", self.panel.credential_label.text())
+
     def test_empty_enter_shift_enter_and_busy_block_duplicate(self):
         panel = self.panel.chat_panel
         self.assertFalse(panel.send_button.isEnabled())
@@ -189,6 +203,11 @@ class DebugUiTests(unittest.TestCase):
         self.assertFalse(self.panel.test_connection_button.isEnabled())
 
     def test_two_views_sync_and_escape_provider_html(self):
+        self.panel.tabs.setCurrentWidget(self.panel.chat_panel)
+        self.window.show()
+        for view in (self.panel.chat_panel, self.window.chat_panel):
+            view._activate_native()
+            self.assertTrue(view.transcript.isVisible())
         payload = '<img src="https://invalid.test/image.png"><b>纯文本</b>'
         self.chat.messages = [{"role": "assistant", "content": payload}]
         self.chat.messages_changed.emit()
@@ -208,6 +227,11 @@ class DebugUiTests(unittest.TestCase):
         self.assertEqual(len(self.chat.messages), 1)
 
     def test_clear_requires_confirmation_and_syncs(self):
+        self.panel.tabs.setCurrentWidget(self.panel.chat_panel)
+        self.window.show()
+        for view in (self.panel.chat_panel, self.window.chat_panel):
+            view._activate_native()
+            self.assertTrue(view.transcript.isVisible())
         self.chat.send("你好")
         with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No):
             self.panel.chat_panel.clear_button.click()
@@ -223,7 +247,8 @@ class DebugUiTests(unittest.TestCase):
         self.panel.save_api_button.click()
         self.assertEqual(self.settings.key, original)
         self.assertEqual(self.settings.config.model, "updated-model")
-        self.panel.clear_key_button.click()
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            self.panel.clear_key_button.click()
         self.assertTrue(self.settings.deleted)
         self.assertEqual(self.settings.key, "")
 
@@ -242,7 +267,8 @@ class DebugUiTests(unittest.TestCase):
         self.assertEqual(self.panel.key_input.text(), "")
         with patch.object(self.chat, "test_connection", return_value=True):
             self.panel.test_connection_button.click()
-        self.panel.clear_key_button.click()
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            self.panel.clear_key_button.click()
         self.assertEqual(self.settings.key, "")
         self.assertIn("已删除", self.panel.connection_label.text())
         self.chat.connection_status_changed.emit("连接成功")
@@ -269,12 +295,22 @@ class DebugUiTests(unittest.TestCase):
 
     def test_credential_delete_failure_never_reports_deleted_or_success(self):
         self.panel.test_connection_button.click()
-        with patch.object(self.settings, "clear_api_key", side_effect=RuntimeError("删除失败")):
+        with patch.object(self.settings, "clear_api_key", side_effect=RuntimeError("删除失败")), \
+                patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
             self.panel.clear_key_button.click()
         self.assertIn("无法确认", self.panel.connection_label.text())
         self.assertNotIn("连接成功", self.panel.connection_label.text())
         self.assertIn("删除失败", self.panel.api_error_label.text())
         self.assertNotEqual(self.settings.key, "")
+
+    def test_cancelling_credential_deletion_preserves_saved_and_draft_key(self):
+        original = self.settings.key
+        self.panel.key_input.setText("synthetic-draft-not-a-secret")
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No):
+            self.panel.clear_key_button.click()
+        self.assertEqual(self.settings.key, original)
+        self.assertEqual(self.panel.key_input.text(), "synthetic-draft-not-a-secret")
+        self.assertFalse(self.settings.deleted)
 
     def test_credential_unavailable_is_visible_and_key_not_written(self):
         previous = self.settings.key

@@ -1,4 +1,11 @@
 .venv/
+node_modules/
+.venv-assets/
+.asset-cache/
+asset_work/
+third_party/sam2/
+*.pt
+*.pth
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -12,4 +19,14 @@ runtime/
 local_settings/
 settings.ini
 *.sqlite*
+*.db
+*.db-*
+/memory/
+mem0_data/
+conversation_exports/
+model_cache/
+**/.cache/
+*.onnx
+*.onnx_data
+*.safetensors
 

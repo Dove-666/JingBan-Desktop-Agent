@@ -61,7 +61,7 @@ class PetControllerTests(unittest.TestCase):
             window_width=240, window_height=300, character_size=220,
         ))
         self.pet.refresh_timer.stop()
-        self.controller = PetController(self.pet, self.settings, self.manager)
+        self.controller = PetController(self.pet, self.settings, self.manager, animation_directory=self.root / "empty-animations")
         self.original_cache_key = self.pet._source.cacheKey()
 
     def tearDown(self):
@@ -76,6 +76,17 @@ class PetControllerTests(unittest.TestCase):
         return SettingsManager(
             QSettings(str(self.preferences), QSettings.Format.IniFormat), self.vault,
         )
+
+    def test_proactive_motion_is_visible_without_speech_and_drag_has_priority(self):
+        self.controller.play_motion("thinking")
+        self.assertEqual(self.controller.expression, "thinking")
+        self.assertEqual(self.pet.animation.state, AnimationState.SURPRISED)
+        self.assertFalse(self.pet.bubble.isVisible())
+        self.pet.animation.start_dragging()
+        self.controller.play_motion("neutral")
+        self.assertEqual(self.pet.animation.state, AnimationState.DRAGGING)
+        self.controller.respond("鲸" * 80, "happy")
+        self.assertEqual(self.pet.bubble._text, "鲸" * 80)
 
     @staticmethod
     def file_hash(path):
@@ -144,13 +155,53 @@ class PetControllerTests(unittest.TestCase):
         extra_pet = PetWindow(self.pet.config)
         extra_pet.refresh_timer.stop()
         try:
-            restored = PetController(extra_pet, self.new_settings(), self.manager)
+            restored = PetController(extra_pet, self.new_settings(), self.manager, animation_directory=self.root / "empty-animations")
             self.assertEqual(restored.scale_percent, 150)
             self.assertEqual(extra_pet.size(), self.pet.size())
             self.assertEqual(extra_pet.sprite_rect.size(), self.pet.sprite_rect.size())
         finally:
             extra_pet.close()
             extra_pet.deleteLater()
+
+    def test_custom_image_does_not_use_the_default_project_expression_or_animation_pack(self):
+        extra_pet = PetWindow(self.pet.config)
+        extra_pet.refresh_timer.stop()
+        original_key = extra_pet._source.cacheKey()
+        try:
+            controller = PetController(extra_pet, self.new_settings())
+            self.assertEqual(extra_pet._source.cacheKey(), original_key, "Startup replaced --image with neutral art")
+            with patch.object(controller.asset_player, "play", return_value=True) as play:
+                for code in EXPRESSIONS:
+                    controller.set_expression(code, feedback=False)
+                    self.assertEqual(controller.expression, code)
+                    self.assertEqual(extra_pet._source.cacheKey(), original_key)
+                    self.assertIn("自定义", controller.expression_status)
+                    self.assertIn("未改变面部表情", controller.expression_status)
+                play.assert_not_called()
+            self.assertEqual(controller.static_catalog()[0][1], "自定义角色")
+            controller.set_static_character("original")
+            self.assertEqual(extra_pet._source.cacheKey(), original_key)
+        finally:
+            extra_pet.close()
+            extra_pet.deleteLater()
+
+    def test_reading_font_is_independent_saved_and_rejects_invalid_values(self):
+        changed = QSignalSpy(self.controller.reading_font_changed)
+        errors = QSignalSpy(self.controller.error_occurred)
+        size = self.pet.size()
+        for points in (12, 14, 18, 22):
+            self.controller.set_reading_font_points(points)
+            self.assertEqual(self.controller.reading_font_points, points)
+            self.assertEqual(self.pet.bubble.font().pointSizeF(), points)
+            self.assertEqual(self.pet.size(), size)
+            self.assertEqual(self.new_settings().load_reading_font(), points)
+        for invalid in (11, 23, True, 14.0, "14"):
+            self.controller.set_reading_font_points(invalid)
+            self.assertEqual(self.controller.reading_font_points, 22)
+        self.assertEqual(changed.count(), 4)
+        self.assertEqual(errors.count(), 5)
+        self.controller.reset_reading_font()
+        self.assertEqual(self.controller.reading_font_points, 14)
 
     def test_invalid_scale_is_rejected_without_altering_live_or_saved_size(self):
         size = self.pet.size()
@@ -206,7 +257,7 @@ class PetControllerTests(unittest.TestCase):
         extra_pet.refresh_timer.stop()
         base_key = extra_pet._source.cacheKey()
         try:
-            controller = PetController(extra_pet, self.new_settings(), self.manager)
+            controller = PetController(extra_pet, self.new_settings(), self.manager, animation_directory=self.root / "empty-animations")
             self.assertEqual(controller.expression, "neutral")
             self.assertIn("已加载 neutral.png", controller.expression_status)
             self.assertNotEqual(extra_pet._source.cacheKey(), base_key)
@@ -224,6 +275,26 @@ class PetControllerTests(unittest.TestCase):
         finally:
             extra_pet.close()
             extra_pet.deleteLater()
+
+    def test_supplied_thinking_art_stays_visible_and_explicit_animation_remains_available(self):
+        self.write_image(self.expression_path / "thinking.png", 280, 200, "#7165c2")
+        expected = self.manager.resolve("thinking").pixmap
+        with patch.object(self.controller.asset_player, "play", return_value=True) as play:
+            self.controller.set_expression("thinking")
+            self.assertEqual(self.controller.expression, "thinking")
+            self.assertIn("已加载 thinking.png", self.controller.expression_status)
+            self.assertEqual(self.pet._source.cacheKey(), expected.cacheKey())
+            play.assert_not_called()
+            self.assertTrue(self.controller.play_asset_animation("think_scratch_head"))
+            play.assert_called_once_with("think_scratch_head")
+
+    def test_missing_thinking_art_requests_optional_animation_fallback(self):
+        with patch.object(self.controller.asset_player, "play", return_value=False) as play:
+            self.controller.set_expression("thinking")
+            play.assert_called_once_with("think_scratch_head")
+        self.assertEqual(self.controller.expression, "thinking")
+        self.assertIn("表情素材尚未提供", self.controller.expression_status)
+        self.assertEqual(self.pet._source.cacheKey(), self.original_cache_key)
 
     def test_expression_can_be_added_replaced_corrupted_and_removed_while_running(self):
         path = self.expression_path / "happy.png"

@@ -1,0 +1,1558 @@
+{
+  "checked_utc": "2026-10-30T16:04:55.599019+00:00",
+  "status": "passed",
+  "errors": [],
+  "platform": "offscreen",
+  "production_settings_touched": false,
+  "physical_cursor_moved": false,
+  "credential_backend": "temporary memory-only",
+  "states": [
+    {
+      "code": "neutral",
+      "stem": "neutral",
+      "label": "正常",
+      "selected_rig": "neutral",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598533,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 3756,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.6694240953796194e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 3747,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598535,
+            -0.7071067811976046
+          ],
+          "changed_pixels": 3758,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.6694117597107517e-11
+          ],
+          "changed_pixels": 3764,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.775135759310614e-11,
+            4.934314476311516e-16
+          ],
+          "changed_pixels": 1027,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            1.2335811386121037e-16
+          ],
+          "changed_pixels": 3766,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.7071067811221019,
+            0.7071067811598533
+          ],
+          "changed_pixels": 3761,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.669424095237103e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 3752,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598535,
+            0.7071067811976046
+          ],
+          "changed_pixels": 3758,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\neutral\\九方向_实际运行时.png"
+    },
+    {
+      "code": "happy",
+      "stem": "happy",
+      "label": "开心 · 闭眼静态",
+      "selected_rig": "",
+      "directions": [],
+      "closed_eyes_static": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\happy\\九方向_实际运行时.png"
+    },
+    {
+      "code": "surprised",
+      "stem": "surprised",
+      "label": "惊讶",
+      "selected_rig": "surprised",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598533,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 4266,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.6694287213088886e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 4263,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598533,
+            -0.7071067811976046
+          ],
+          "changed_pixels": 4262,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.66943643133352e-11
+          ],
+          "changed_pixels": 4270,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.775154263027691e-11,
+            -4.934334631188237e-16
+          ],
+          "changed_pixels": 1489,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            -1.2335811386121047e-16
+          ],
+          "changed_pixels": 4267,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.707106781122102,
+            0.7071067811598533
+          ],
+          "changed_pixels": 4269,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.6694287211663725e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 4257,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598534,
+            0.7071067811976046
+          ],
+          "changed_pixels": 4266,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\surprised\\九方向_实际运行时.png"
+    },
+    {
+      "code": "sleepy",
+      "stem": "sleepy",
+      "label": "困倦",
+      "selected_rig": "sleepy",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598533,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 2153,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.669431034273523e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 2132,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598533,
+            -0.7071067811976047
+          ],
+          "changed_pixels": 2156,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.669411759710752e-11
+          ],
+          "changed_pixels": 2154,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.7751635148862285e-11,
+            4.934314476311516e-16
+          ],
+          "changed_pixels": 1029,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            1.2335811386121042e-16
+          ],
+          "changed_pixels": 2157,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.7071067811221019,
+            0.7071067811598533
+          ],
+          "changed_pixels": 2157,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.6694310341310066e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 2154,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598533,
+            0.7071067811976047
+          ],
+          "changed_pixels": 2160,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\sleepy\\九方向_实际运行时.png"
+    },
+    {
+      "code": "angry",
+      "stem": "angry",
+      "label": "生气",
+      "selected_rig": "angry",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598534,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 3399,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.6694148435210814e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 3390,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598533,
+            -0.7071067811976046
+          ],
+          "changed_pixels": 3399,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.669430263427828e-11
+          ],
+          "changed_pixels": 3404,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.7750987518764615e-11,
+            -2.4671723543132986e-16
+          ],
+          "changed_pixels": 1487,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            -6.167905693060526e-17
+          ],
+          "changed_pixels": 3399,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.7071067811221019,
+            0.7071067811598535
+          ],
+          "changed_pixels": 3404,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.6694148433785647e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 3391,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598531,
+            0.7071067811976048
+          ],
+          "changed_pixels": 3401,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\angry\\九方向_实际运行时.png"
+    },
+    {
+      "code": "thinking",
+      "stem": "thinking",
+      "label": "思考",
+      "selected_rig": "thinking",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598533,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 4351,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.6694240953796194e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 4349,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598535,
+            -0.7071067811976046
+          ],
+          "changed_pixels": 4346,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.669424095522136e-11
+          ],
+          "changed_pixels": 4364,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.775135759310614e-11,
+            -1.0077438360420453e-21
+          ],
+          "changed_pixels": 2107,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            -3.8043697919123525e-32
+          ],
+          "changed_pixels": 4346,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.7071067811221019,
+            0.7071067811598535
+          ],
+          "changed_pixels": 4361,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.669424095237103e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 4359,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598534,
+            0.7071067811976047
+          ],
+          "changed_pixels": 4351,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\thinking\\九方向_实际运行时.png"
+    },
+    {
+      "code": "talking",
+      "stem": "talk_open",
+      "label": "说话",
+      "selected_rig": "talk_open",
+      "directions": [
+        {
+          "name": "up_left",
+          "gaze": [
+            -0.7071067811598534,
+            -0.7071067811598533
+          ],
+          "changed_pixels": 4040,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up",
+          "gaze": [
+            -2.6694148435210814e-11,
+            -0.9999999999889428
+          ],
+          "changed_pixels": 4025,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "up_right",
+          "gaze": [
+            0.7071067811598533,
+            -0.7071067811976046
+          ],
+          "changed_pixels": 4028,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "left",
+          "gaze": [
+            -0.9999999999355544,
+            -2.669430263427828e-11
+          ],
+          "changed_pixels": 4037,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "center",
+          "gaze": [
+            -3.7750987518764615e-11,
+            -2.4671723543132986e-16
+          ],
+          "changed_pixels": 1338,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "right",
+          "gaze": [
+            0.9999999999622486,
+            -6.167905693060526e-17
+          ],
+          "changed_pixels": 4036,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_left",
+          "gaze": [
+            -0.7071067811221019,
+            0.7071067811598535
+          ],
+          "changed_pixels": 4035,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down",
+          "gaze": [
+            -2.6694148433785647e-11,
+            0.9999999999889428
+          ],
+          "changed_pixels": 4026,
+          "changed_pixels_outside_aperture": 0
+        },
+        {
+          "name": "down_right",
+          "gaze": [
+            0.7071067811598531,
+            0.7071067811976048
+          ],
+          "changed_pixels": 4038,
+          "changed_pixels_outside_aperture": 0
+        }
+      ],
+      "alpha_silhouette_preserved": true,
+      "source_hit_and_bounds_preserved": true,
+      "nine_direction_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\talk_open\\九方向_实际运行时.png"
+    }
+  ],
+  "scales": [
+    {
+      "stem": "neutral",
+      "percent": 50,
+      "gaze": [
+        0.4999999999433727,
+        -0.1999999999924489
+      ]
+    },
+    {
+      "stem": "neutral",
+      "percent": 75,
+      "gaze": [
+        0.5000000000000003,
+        -0.1999999999999998
+      ]
+    },
+    {
+      "stem": "neutral",
+      "percent": 100,
+      "gaze": [
+        0.4999999999999997,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "neutral",
+      "percent": 125,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999957
+      ]
+    },
+    {
+      "stem": "neutral",
+      "percent": 150,
+      "gaze": [
+        0.5000000000000003,
+        -0.1999999999999998
+      ]
+    },
+    {
+      "stem": "neutral",
+      "percent": 200,
+      "gaze": [
+        0.5000000000000001,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 50,
+      "gaze": [
+        0.5000000000000003,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 75,
+      "gaze": [
+        0.4999999999999997,
+        -0.19999999999999957
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 100,
+      "gaze": [
+        0.5000000000000003,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 125,
+      "gaze": [
+        0.4999999999999999,
+        -0.1999999999999998
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 150,
+      "gaze": [
+        0.4999999999999997,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "surprised",
+      "percent": 200,
+      "gaze": [
+        0.4999999999999999,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 50,
+      "gaze": [
+        0.49999999999999944,
+        -0.19999999999999918
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 75,
+      "gaze": [
+        0.5000000000000003,
+        -0.1999999999999998
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 100,
+      "gaze": [
+        0.5000000000000002,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 125,
+      "gaze": [
+        0.5,
+        -0.19999999999999957
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 150,
+      "gaze": [
+        0.5,
+        -0.1999999999999998
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "percent": 200,
+      "gaze": [
+        0.5000000000000002,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 50,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000009
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 75,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000003
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 100,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999993
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 125,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999968
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 150,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000003
+      ]
+    },
+    {
+      "stem": "angry",
+      "percent": 200,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999993
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 50,
+      "gaze": [
+        0.4999999999999997,
+        -0.20000000000000068
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 75,
+      "gaze": [
+        0.5000000000000003,
+        -0.19999999999999932
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 100,
+      "gaze": [
+        0.4999999999999997,
+        -0.19999999999999968
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 125,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999993
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 150,
+      "gaze": [
+        0.5000000000000003,
+        -0.20000000000000004
+      ]
+    },
+    {
+      "stem": "thinking",
+      "percent": 200,
+      "gaze": [
+        0.5000000000000001,
+        -0.20000000000000018
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 50,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000009
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 75,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000003
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 100,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999993
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 125,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999968
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 150,
+      "gaze": [
+        0.5000000000000001,
+        -0.2000000000000003
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "percent": 200,
+      "gaze": [
+        0.5000000000000001,
+        -0.19999999999999993
+      ]
+    }
+  ],
+  "artwork": [
+    {
+      "stem": "neutral",
+      "source_sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            40,
+            45
+          ],
+          "iris_global_bounds": [
+            395,
+            532,
+            435,
+            577
+          ],
+          "aperture_bounds": [
+            384,
+            533,
+            436,
+            578
+          ],
+          "original_blue_pixels": 1105,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": false
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            45,
+            48
+          ],
+          "iris_global_bounds": [
+            491,
+            515,
+            536,
+            563
+          ],
+          "aperture_bounds": [
+            489,
+            516,
+            542,
+            564
+          ],
+          "original_blue_pixels": 1347,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": false
+        }
+      ]
+    },
+    {
+      "stem": "surprised",
+      "source_sha256": "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            40,
+            47
+          ],
+          "iris_global_bounds": [
+            396,
+            530,
+            436,
+            577
+          ],
+          "aperture_bounds": [
+            383,
+            529,
+            437,
+            579
+          ],
+          "original_blue_pixels": 1142,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            44,
+            49
+          ],
+          "iris_global_bounds": [
+            491,
+            515,
+            535,
+            564
+          ],
+          "aperture_bounds": [
+            488,
+            514,
+            543,
+            566
+          ],
+          "original_blue_pixels": 1357,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        }
+      ]
+    },
+    {
+      "stem": "sleepy",
+      "source_sha256": "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            39,
+            45
+          ],
+          "iris_global_bounds": [
+            395,
+            528,
+            434,
+            573
+          ],
+          "aperture_bounds": [
+            385,
+            546,
+            435,
+            574
+          ],
+          "original_blue_pixels": 628,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            43,
+            46
+          ],
+          "iris_global_bounds": [
+            493,
+            512,
+            536,
+            558
+          ],
+          "aperture_bounds": [
+            489,
+            530,
+            542,
+            558
+          ],
+          "original_blue_pixels": 754,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        }
+      ]
+    },
+    {
+      "stem": "angry",
+      "source_sha256": "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            41,
+            47
+          ],
+          "iris_global_bounds": [
+            395,
+            528,
+            436,
+            575
+          ],
+          "aperture_bounds": [
+            385,
+            541,
+            437,
+            577
+          ],
+          "original_blue_pixels": 987,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            44,
+            47
+          ],
+          "iris_global_bounds": [
+            491,
+            515,
+            535,
+            562
+          ],
+          "aperture_bounds": [
+            487,
+            521,
+            543,
+            564
+          ],
+          "original_blue_pixels": 1174,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        }
+      ]
+    },
+    {
+      "stem": "thinking",
+      "source_sha256": "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            38,
+            42
+          ],
+          "iris_global_bounds": [
+            404,
+            531,
+            442,
+            573
+          ],
+          "aperture_bounds": [
+            384,
+            531,
+            443,
+            578
+          ],
+          "original_blue_pixels": 1002,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            40,
+            43
+          ],
+          "iris_global_bounds": [
+            504,
+            510,
+            544,
+            553
+          ],
+          "aperture_bounds": [
+            488,
+            510,
+            546,
+            559
+          ],
+          "original_blue_pixels": 1135,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        }
+      ]
+    },
+    {
+      "stem": "talk_open",
+      "source_sha256": "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+      "eyes": [
+        {
+          "name": "left",
+          "iris_size": [
+            40,
+            46
+          ],
+          "iris_global_bounds": [
+            395,
+            531,
+            435,
+            577
+          ],
+          "aperture_bounds": [
+            383,
+            531,
+            437,
+            579
+          ],
+          "original_blue_pixels": 1138,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        },
+        {
+          "name": "right",
+          "iris_size": [
+            44,
+            48
+          ],
+          "iris_global_bounds": [
+            492,
+            515,
+            536,
+            563
+          ],
+          "aperture_bounds": [
+            489,
+            515,
+            543,
+            566
+          ],
+          "original_blue_pixels": 1351,
+          "old_blue_residue": 0,
+          "dark_or_gray_residue_inside_opaque_aperture": 0,
+          "confined_near_own_eye": true,
+          "complete_iris_with_hidden_cap_allowed": true
+        }
+      ]
+    }
+  ],
+  "root_baseline_checks": [
+    {
+      "path": "assets/whale.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/master.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/static/tsundere.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/angry.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/happy.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/neutral.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/sleepy.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/surprised.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/talk_closed.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/talk_open.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/thinking.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/base.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/left_aperture.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/left_iris.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/rig.json",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/right_aperture.png",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/right_iris.png",
+      "unchanged": true
+    }
+  ],
+  "contact_grid": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\全表情_左中右对照.png",
+  "animated_preview": {
+    "path": "美术资产\\鲸鱼娘_全表情鼠标视线\\预览\\全表情鼠标视线效果.gif",
+    "captured_frames_per_open_state": 96,
+    "encoded_frames": 72,
+    "duration_seconds": 3.2,
+    "changed_pixels_outside_aperture_maximum": 0,
+    "happy_closed_eyes_static": true,
+    "shared_palette": true,
+    "actual_widget_rendering": true
+  },
+  "no_per_frame_eye_asset_reads": true,
+  "global_toggle_and_cross_state_gaze_continuity": true,
+  "drag_return_and_sequence_policy_all_six": true,
+  "talk_closed_reuses_neutral_by_pixels": true,
+  "corrupt_one_rig_isolated_and_static_fallback": true,
+  "immutable_originals": [
+    {
+      "path": "assets/expressions/angry.png",
+      "sha256": "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/happy.png",
+      "sha256": "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/neutral.png",
+      "sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/sleepy.png",
+      "sha256": "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/surprised.png",
+      "sha256": "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/talk_closed.png",
+      "sha256": "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/talk_open.png",
+      "sha256": "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+      "unchanged": true
+    },
+    {
+      "path": "assets/expressions/thinking.png",
+      "sha256": "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/base.png",
+      "sha256": "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/left_aperture.png",
+      "sha256": "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/left_iris.png",
+      "sha256": "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/rig.json",
+      "sha256": "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/right_aperture.png",
+      "sha256": "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/neutral/right_iris.png",
+      "sha256": "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/base.png",
+      "sha256": "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/left_aperture.png",
+      "sha256": "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/left_iris.png",
+      "sha256": "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/rig.json",
+      "sha256": "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/right_aperture.png",
+      "sha256": "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/透明分层/right_iris.png",
+      "sha256": "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/PSD/neutral_eye_rig.psd",
+      "sha256": "bcbc638d6a5734df67e10f23a4325cef69576449bd14e554445c6bcc36e020ac",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产/鲸鱼娘_鼠标视线试作/工程/verify_gaze.py",
+      "sha256": "344c6e4b477dd8dbf681e9176c414a84a74ce9a520a72d23867fee1824f76284",
+      "unchanged": true
+    },
+    {
+      "path": "assets/whale.png",
+      "sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/master.png",
+      "sha256": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/source/master-white-background-v2.png",
+      "sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/static/tsundere.png",
+      "sha256": "16c6962c2b0a57e4fe620d31144ec2739e5fa206b93da01c9314179951e83de4",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/base.png",
+      "sha256": "405daca9b1dee6ba4b144d67b0a7e055177ac079f911ddd64b68ef955e43398d",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/left_aperture.png",
+      "sha256": "425b75b762c4bc7a6e49c8d4137fc1b18e42d8e265ae92c73f0a13a24469e61f",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/left_iris.png",
+      "sha256": "1fffb803591391c21343997a54794cc6865fc6c78ed6c9039c9b270eecc994b0",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/rig.json",
+      "sha256": "e66a363b68d5219e479565b919cfd32a884311dc965434c73b931d51a28856c0",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/right_aperture.png",
+      "sha256": "15c70a3179496507e7eb51a69b4e8342beb2d267f90908c35c8c54f6f52b7f62",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/surprised/right_iris.png",
+      "sha256": "015fb374659cacbca5bc36a5b9b7418cf2ad983ef1a43fce31a5ec49c6d32eed",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/base.png",
+      "sha256": "efbc4e9159fb0761e5ff2566af7e8d439dfacd0493773b12ac0016ca210160b3",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/left_aperture.png",
+      "sha256": "60c901e25540ef5bf0af1e6f40712f7e9dc2b81d4329718a6f34d2ee5e896135",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/left_iris.png",
+      "sha256": "0bd37a59ea86b8bd4145b8a40f6a34708d990ce30224bf03660e9afac92b726f",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/rig.json",
+      "sha256": "01e215589691bb8424dcb22afffcaa8b719913f5271ccba3cbcb8b46330f3bed",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/right_aperture.png",
+      "sha256": "7c0b2390924863cf2b09ec9df011d7b3f941b6485fa8f11bdd2e39571c501fb6",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/sleepy/right_iris.png",
+      "sha256": "5ab4511d4c2e60236e76d2a31a84790ef162bedc6fc1992c62a3e8e1c80de88b",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/base.png",
+      "sha256": "78bb6bca7ac091e9bb71017160d14a667c198c29fd0a3cab680194c1f7315cb5",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/left_aperture.png",
+      "sha256": "4f08ffdce2d3f285f2da75bfa1f01adb46ed98c75303979ee5889ce30ec8a362",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/left_iris.png",
+      "sha256": "beb28f7cc786fe36d2ff936844517abc5342f18c434f43915d88b19894c81044",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/rig.json",
+      "sha256": "5f0041e89b234b549c7a1116ab5bc2f6ed83b7cbdd5efe1c7148f044cc799e4a",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/right_aperture.png",
+      "sha256": "b781ac924f88f6b9cc76caec8d36a7593068044a3e86603ab1f8b6d5116bf902",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/angry/right_iris.png",
+      "sha256": "d0a6323e63dee973765631178723f6e9bda0bbd26adba19f7e27831419270aa7",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/base.png",
+      "sha256": "12b0dc4921a452fd519c73674b08653850c88f5258f7986daa915dd7bf8e6aa7",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/left_aperture.png",
+      "sha256": "84f0e067affd8b3d09146094b556bc58e06e0dc3509408ea7acb93a0385cfb62",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/left_iris.png",
+      "sha256": "c1d2d016fefc8f6cd75d5c58b22d01cb7059763b22d201b004553af57d58d0b8",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/rig.json",
+      "sha256": "bb7442acffa82bba159b339d1fc8ab315d855c584aabdda44ebba7248ae0077b",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/right_aperture.png",
+      "sha256": "105784f20aaa017e53f33e3d466cf20afb5679dfbe4fcc5bfbe0aacc2418fbde",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/thinking/right_iris.png",
+      "sha256": "d66c707fbc5682daf00346730e4aa2d471a0a500519f8a5b3109c79757975de0",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/base.png",
+      "sha256": "e75dd3a63e22cc34811e3bad563c0f8e7af4ccb0067fee220f2b777f92ebdb83",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/left_aperture.png",
+      "sha256": "e74b601a0a03ddec0b30b2f52961c21fd0e525ae55d818fb5f7af1458b3437ee",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/left_iris.png",
+      "sha256": "c27de298fe47f4b99b9f90b2b293d91e3b0a8ae1e7e2039da926e6a6c326a707",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/rig.json",
+      "sha256": "27eec0d371e0e2d5001e446582a12748bcaac4189ad05212f80fb3f7ca9b6c86",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/right_aperture.png",
+      "sha256": "fb62b2d1042d261e1bc5d6faa7472cf21212188dc4d962f01c61177d6db4609d",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/eyes/talk_open/right_iris.png",
+      "sha256": "26d6b04c2ff3145ebdd484f5017f882c2dac8fc18b2922c3549f99c11e714371",
+      "unchanged": true
+    }
+  ],
+  "protected_unique_file_count": 56,
+  "protection_hashes_rechecked_after_native": true
+}

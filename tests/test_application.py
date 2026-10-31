@@ -9,10 +9,11 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, QSettings, QThreadPool, QTimer, Qt
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from desktop_pet.application_controller import ApplicationController
 from desktop_pet.config import PetConfig
@@ -82,6 +83,8 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.backend = MemoryCredentialBackend()
         self.settings = isolated_settings(self.path, self.backend)
         self.session = ApplicationController(PetConfig(), settings=self.settings)
+        # Chat mocks test logical emotions, not the installed 240 MiB video.
+        self.session.pet_controller.asset_player.directory = Path(self.temp.name) / "empty-animations"
         self.session.show()
         self.app.processEvents()
 
@@ -116,6 +119,8 @@ class ApplicationIntegrationTests(unittest.TestCase):
         panel.expression_combo.setCurrentIndex(panel.expression_combo.findData("sleepy"))
         self.assertEqual(self.session.pet_controller.scale_percent, 150)
         self.assertEqual(self.session.pet_controller.expression, "sleepy")
+        expression_status = panel.expression_status.text()
+        self.assertEqual(expression_status, self.session.pet_controller.expression_status)
         panel.close()
         self.assertFalse(panel.isVisible())
         self.assertTrue(self.session.pet.isVisible())
@@ -123,7 +128,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.assertIs(self.session.debug_panel, panel)
         self.assertEqual(panel.scale_slider.value(), 150)
         self.assertEqual(panel.expression_combo.currentData(), "sleepy")
-        self.assertIn("尚未提供", panel.expression_status.text())
+        self.assertEqual(panel.expression_status.text(), expression_status)
 
     def test_real_local_connection_chat_emotion_and_shared_views(self):
         with MockApiServer() as server:
@@ -138,6 +143,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
             server.enqueue(json.dumps({"reply": "本地 HTTP 对话成功。", "emotion": "happy"}, ensure_ascii=False))
             self.session.open_chat_window()
             chat = self.session.chat_window.chat_panel
+            chat._activate_native()
             chat.input.setPlainText("你好，鲸鱼娘")
             QTest.keyClick(chat.input, Qt.Key.Key_Return)
             self.assertTrue(self.session.chat.busy)
@@ -146,6 +152,7 @@ class ApplicationIntegrationTests(unittest.TestCase):
             self.assertEqual(self.session.pet_controller.expression, "happy")
             self.assertEqual(len(self.session.chat.messages), 2)
             for view in (panel.chat_panel, chat):
+                view._activate_native()
                 self.assertIn("本地 HTTP 对话成功。", view.transcript.toPlainText())
             self.session.chat_window.close()
             self.session.open_chat_window()
@@ -196,7 +203,8 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.assertEqual(reloaded.get_api_key(), LOCAL_TEST_KEY)
         self.assertNotIn(LOCAL_TEST_KEY, self.path.read_text(encoding="utf-8"))
         self.assertEqual(panel.key_input.text(), "")
-        panel.clear_key_button.click()
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            panel.clear_key_button.click()
         self.assertEqual(reloaded.get_api_key(), "")
 
     def test_unconfigured_api_reports_error_and_pet_stays_usable(self):

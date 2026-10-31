@@ -1,6 +1,8 @@
 import json
+from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 
@@ -73,6 +75,7 @@ class ChatControllerTests(unittest.TestCase):
             if condition():
                 return
             QTest.qWait(10)
+            time.sleep(0.002)  # Let Python disk workers run on Windows as Qt pumps events.
         self.assertTrue(condition(), "Qt worker did not finish within the test deadline")
 
     def test_no_configuration_empty_and_oversized_input_are_rejected(self):
@@ -116,27 +119,33 @@ class ChatControllerTests(unittest.TestCase):
         self.assertEqual(client.requests[-1], [{"role": "user", "content": "新的消息"}])
         self.assertEqual(controller.error, "")
 
-    def test_completed_context_and_visible_history_are_bounded(self):
+    def test_complete_archive_is_separate_from_bounded_request_context(self):
         client = RecordingClient()
         controller = self.make_controller(client=client)
         for index in range(30):
             self.assertTrue(controller.send(f"消息{index}"))
             self.spin_until(lambda: not controller.busy)
-        self.assertEqual(len(controller.messages), 50)
-        self.assertEqual(len(client.requests[-1]), 25)  # 12 completed turns + current input.
-        self.assertEqual(client.requests[-1][0]["content"], "消息17")
+        self.assertEqual(len(controller.messages), 60)
+        self.assertLessEqual(len(client.requests[-1]), 17)  # 16 recent + complete current question.
+        self.assertNotEqual(client.requests[-1][0]["content"], "消息0")
+        self.assertEqual(client.requests[-1][-1]["content"], "消息29")
         copy = controller.messages
         copy[0]["content"] = "outside mutation"
         self.assertNotEqual(copy[0]["content"], controller.messages[0]["content"])
 
-    def test_context_character_budget_keeps_whole_turns(self):
+    def test_token_budget_preserves_question_and_refuses_impossible_input(self):
         client = RecordingClient()
         client.reply = ChatReply("r" * 24000)
         controller = self.make_controller(client=client)
         for index in range(3):
-            controller.send("u" * 8000)
+            self.assertTrue(controller.send("u" * 1000))
             self.spin_until(lambda: not controller.busy)
-        self.assertEqual(len(client.requests[-1]), 3)  # one complete large turn + input.
+        self.assertEqual(client.requests[-1][-1]["content"], "u" * 1000)
+        self.assertNotIn("r" * 24000, [item["content"] for item in client.requests[-1]])
+        previous_messages = len(controller.messages)
+        self.assertFalse(controller.send("u" * 8000))
+        self.assertIn("预算", controller.error)
+        self.assertEqual(len(controller.messages), previous_messages)
 
     def test_keys_never_enter_displayed_or_sent_conversation(self):
         client = RecordingClient()
@@ -155,6 +164,7 @@ class ChatControllerTests(unittest.TestCase):
         self.spin_until(lambda: not controller.busy)
         controller.clear()
         self.assertEqual(controller.messages, [])
+        self.spin_until(lambda: not controller.history_loading)
         controller.send("新的一轮")
         self.spin_until(lambda: not controller.busy)
         self.assertEqual(client.requests[-1], [{"role": "user", "content": "新的一轮"}])
@@ -215,6 +225,8 @@ class ChatControllerTests(unittest.TestCase):
         # interpreter shutdown are exercised, rather than just closing a widget.
         code = """
 import sys
+import time
+from pathlib import Path
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 from desktop_pet.chat_controller import ChatController
@@ -228,22 +240,40 @@ app = QApplication([])
 controller = ChatController(Settings())
 app.aboutToQuit.connect(controller.shutdown)
 controller.send('exit test')
-QTimer.singleShot(1000, app.quit)
-app.exec()
+deadline = time.monotonic() + 5
+timer = QTimer()
+def maybe_quit():
+    if Path(sys.argv[2]).exists():
+        app.quit()
+    elif time.monotonic() >= deadline:
+        app.exit(9)
+timer.timeout.connect(maybe_quit)
+timer.start(10)
+exit_code = app.exec()
 print('clean exit')
+raise SystemExit(exit_code)
 """
-        with MockApiServer() as server:
+        with MockApiServer() as server, tempfile.TemporaryDirectory(prefix="aura-inflight-exit-") as directory:
             server.enqueue("这条回复来不及返回", delay=8)
-            start = time.monotonic()
-            completed = subprocess.run(
-                [sys.executable, "-c", code, server.base_url],
-                capture_output=True, text=True, timeout=6,
-            )
-            self.assertTrue(server.received.is_set())
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertIn("clean exit", completed.stdout)
-            self.assertNotIn("QThread", completed.stderr)
-            self.assertLess(time.monotonic() - start, 5)
+            marker = Path(directory) / "quit-requested"
+            process = subprocess.Popen([sys.executable, "-c", code, server.base_url, str(marker)],
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                # The HTTP server, rather than an assumed startup delay,
+                # proves a request is in flight before asking Qt to exit.
+                request_started = server.received.wait(timeout=4)
+                start = time.monotonic()
+                marker.write_text("quit", encoding="ascii")
+                stdout, stderr = process.communicate(timeout=3)
+                self.assertTrue(request_started, "No HTTP request began before the explicit startup deadline")
+                self.assertEqual(process.returncode, 0, stderr)
+                self.assertIn("clean exit", stdout)
+                self.assertNotIn("QThread", stderr)
+                self.assertLess(time.monotonic() - start, 2.5)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=2)
 
 
 if __name__ == "__main__":

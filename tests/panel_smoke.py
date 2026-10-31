@@ -70,6 +70,7 @@ def run_validation() -> int:
             backend = MemoryCredentialBackend()
             settings = isolated_settings(path, backend)
             session = ApplicationController(PetConfig(), settings=settings)
+            session.pet_controller.asset_player.directory = Path(directory) / "empty-animations"
             session.show()
             app.processEvents()
             check("pet_startup", session.pet.isVisible())
@@ -104,6 +105,7 @@ def run_validation() -> int:
             session.pet.frame_tick.connect(lambda elapsed: frames.append(elapsed))
             timer.start()
             panel.show_chat_tab()
+            panel.chat_panel._activate_native()
             panel.chat_panel.input.setPlainText("你好鲸鱼娘，等待回复时我会调整你的大小。")
             QTest.keyClick(panel.chat_panel.input, Qt.Key.Key_Return)
             check("thinking_on_request", session.chat.busy and session.pet_controller.expression == "thinking")
@@ -130,7 +132,7 @@ def run_validation() -> int:
             check("sprite_within_window", session.pet.rect().toRectF().contains(session.pet.animated_sprite_rect))
             capture(panel, "panel_smoke_controls.png")
             capture(session.pet, "panel_smoke_pet.png")
-            panel.tabs.setCurrentIndex(2)
+            panel.show_chat_tab()
             capture(panel, "panel_smoke_chat.png")
 
             saved_messages = session.chat.messages
@@ -145,8 +147,10 @@ def run_validation() -> int:
             ))
             session.open_chat_window()
             separate = session.chat_window
+            separate.chat_panel._activate_native()
             check("independent_chat_shares_session", (
                 separate.parentWidget() is None
+                and separate.chat_panel.transcript.isVisible()
                 and "本地测试接口已收到消息" in separate.chat_panel.transcript.toPlainText()
             ))
             server.enqueue("普通文本回复也能正常显示。")
@@ -155,7 +159,8 @@ def run_validation() -> int:
             spin_until(lambda: not session.chat.busy)
             check("plain_text_reply_and_context", (
                 "普通文本回复也能正常显示。" in panel.chat_panel.transcript.toPlainText()
-                and len(server.requests[-1]["body"]["messages"]) == 4
+                and [m["role"] for m in server.requests[-1]["body"]["messages"]
+                     if m["role"] != "system"] == ["user", "assistant", "user"]
                 and session.pet_controller.expression == "neutral"
             ))
             capture(separate, "panel_smoke_separate_chat.png")
@@ -178,6 +183,7 @@ def run_validation() -> int:
 
             other_settings = isolated_settings(Path(directory) / "unconfigured.ini", MemoryCredentialBackend())
             other = ApplicationController(PetConfig(), settings=other_settings)
+            other.pet_controller.asset_player.directory = Path(directory) / "empty-animations"
             other.show()
             other.open_debug_panel()
             other.debug_panel.chat_panel.input.setPlainText("未配置时也应正常运行")

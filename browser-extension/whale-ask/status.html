@@ -1,0 +1,3 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>问问鲸鱼娘</title><link rel="stylesheet" href="status.css"></head>
+<body><main><img src="icons/whale128.png" width="72" height="72" alt=""><h1>问问鲸鱼娘</h1><p id="error" role="alert" hidden></p><p>在网页中选中文字，右键选择“问问鲸鱼娘”，即可带着这段文字和页面正文打开桌宠对话。</p><ol><li>先启动 AURA 鲸鱼娘桌宠。</li><li>首次使用，在项目目录运行 <code>powershell -NoProfile -ExecutionPolicy Bypass -File tools/install_browser_ask.ps1 -Apply</code>。</li><li>在 Edge 或 Chrome 扩展页开启开发人员模式，加载项目的 <code>browser-extension/whale-ask</code> 文件夹。</li><li>返回网页，选中文字并右键重试。</li></ol><p class="note">仅在点击菜单时读取文字，不截图，不读取密码框，也不会向浏览器提供 API Key。浏览器内置页与部分受限页面无法读取正文。</p></main><script src="status.js"></script></body></html>

@@ -1,0 +1,33 @@
+{
+  "cwd": "E:\\github\\AURA-Desktop-Agent",
+  "command": [
+    "E:\\github\\AURA-Desktop-Agent\\.venv\\Scripts\\python.exe",
+    "-m",
+    "unittest",
+    "-v",
+    "tests.test_static_asset_layout",
+    "tests.test_asset_sequence_pipeline",
+    "tests.test_asset_objects_and_shared_layout",
+    "tests.test_frame_animation",
+    "tests.test_pet_controller",
+    "tests.test_debug_ui"
+  ],
+  "platform": "offscreen",
+  "exit_code": 0,
+  "wall_seconds": 4.234,
+  "production_ui_touched": false,
+  "tests_run": 77,
+  "test_seconds": 3.902,
+  "skipped": 0,
+  "failed_cases": [],
+  "result_tail": [
+    "test_scale_presets_slider_reset_and_controller_sync (tests.test_debug_ui.DebugUiTests) ... ok",
+    "test_two_views_sync_and_escape_provider_html (tests.test_debug_ui.DebugUiTests) ... ok",
+    "test_unsaved_key_test_request_and_config_revision (tests.test_debug_ui.DebugUiTests) ... ok",
+    "",
+    "----------------------------------------------------------------------",
+    "Ran 77 tests in 3.902s",
+    "",
+    "OK"
+  ]
+}
