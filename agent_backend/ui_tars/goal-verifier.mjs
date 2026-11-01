@@ -31,6 +31,7 @@ A click dispatched successfully is NOT proof its desired result happened. A whit
 Do not infer success from elapsed time, an absent error, where the pointer is, or a planner's claim.
 For targets such as 'the first video', prove the identity/order from observations; being on some video is insufficient.
 The retained observations can have gaps. Their sequence numbers only describe capture order, never a video's ordinal position.
+An after_action label only records input dispatch; it does not prove that an app opened, the feed moved, or the like took effect.
 Use stable visible titles/authors/IDs and actual navigation evidence to connect the initial feed to the requested item.
 Moving pictures or different pixels alone do not prove that navigation to a different video happened.
 For save/send/create tasks require visible persisted result or explicit confirmation; merely opening a dialog or typing is insufficient.
