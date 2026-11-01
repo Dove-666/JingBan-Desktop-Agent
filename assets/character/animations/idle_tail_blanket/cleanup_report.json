@@ -1,0 +1,7936 @@
+{
+  "status": "pending_independent_visual_review",
+  "name": "idle_tail_blanket",
+  "frame_count": 68,
+  "source_manifest_sha256": "c924145a8a71a6b1327ef26588b1daaa014c64cc5849b918942b11c959aa4300",
+  "native_source_mapping_preserved": true,
+  "first_last_exact_neutral": true,
+  "frames": [
+    {
+      "frame": 4,
+      "native_index": 0,
+      "changed_pixels": 1922,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            293,
+            663
+          ],
+          "component_pixels": 288,
+          "removed_visible_pixels": 182
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 427,
+          "removed_visible_pixels": 295
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            605,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 207
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            737,
+            249,
+            774
+          ],
+          "component_pixels": 288,
+          "removed_visible_pixels": 193
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            232,
+            743,
+            244,
+            771
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              72,
+              2567,
+              446.05414881184265,
+              881.3603428126218
+            ],
+            [
+              83,
+              2498,
+              495.96156925540436,
+              882.2173738991194
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 846,
+        "protected_pixels": 42522,
+        "visible_pixels_changed": 847,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 5,
+      "native_index": 2,
+      "changed_pixels": 1789,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            293,
+            663
+          ],
+          "component_pixels": 286,
+          "removed_visible_pixels": 185
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 434,
+          "removed_visible_pixels": 300
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            605,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            736,
+            249,
+            774
+          ],
+          "component_pixels": 288,
+          "removed_visible_pixels": 192
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            243,
+            771
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            697,
+            858,
+            702,
+            862
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              71,
+              2568,
+              446.05841121495325,
+              881.3033489096573
+            ],
+            [
+              80,
+              2506,
+              496.0151636073424,
+              882.1604150039905
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 690,
+        "protected_pixels": 42631,
+        "visible_pixels_changed": 692,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 6,
+      "native_index": 4,
+      "changed_pixels": 1789,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            293,
+            663
+          ],
+          "component_pixels": 278,
+          "removed_visible_pixels": 182
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 435,
+          "removed_visible_pixels": 300
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            605,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 211
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            737,
+            248,
+            774
+          ],
+          "component_pixels": 289,
+          "removed_visible_pixels": 192
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            243,
+            771
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            697,
+            858,
+            702,
+            862
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              70,
+              2565,
+              446.05769980506824,
+              881.3360623781676
+            ],
+            [
+              79,
+              2506,
+              495.9964086193137,
+              882.158419792498
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 695,
+        "protected_pixels": 42698,
+        "visible_pixels_changed": 697,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 7,
+      "native_index": 6,
+      "changed_pixels": 1776,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            293,
+            663
+          ],
+          "component_pixels": 278,
+          "removed_visible_pixels": 181
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 432,
+          "removed_visible_pixels": 299
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            606,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 209
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            736,
+            249,
+            774
+          ],
+          "component_pixels": 288,
+          "removed_visible_pixels": 193
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            243,
+            771
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            697,
+            858,
+            702,
+            862
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              75,
+              2562,
+              446.06947697111633,
+              881.3473848555816
+            ],
+            [
+              87,
+              2501,
+              496.00359856057577,
+              882.2007197121152
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 685,
+        "protected_pixels": 42735,
+        "visible_pixels_changed": 685,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 8,
+      "native_index": 8,
+      "changed_pixels": 1805,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            292,
+            663
+          ],
+          "component_pixels": 272,
+          "removed_visible_pixels": 178
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 127
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 426,
+          "removed_visible_pixels": 294
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            606,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 207
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            737,
+            248,
+            774
+          ],
+          "component_pixels": 286,
+          "removed_visible_pixels": 194
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            243,
+            771
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            697,
+            858,
+            702,
+            862
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              77,
+              2565,
+              446.0522417153996,
+              881.3208576998051
+            ],
+            [
+              88,
+              2502,
+              496.01239008792965,
+              882.2098321342926
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 715,
+        "protected_pixels": 42791,
+        "visible_pixels_changed": 715,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 9,
+      "native_index": 10,
+      "changed_pixels": 1780,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            626,
+            293,
+            663
+          ],
+          "component_pixels": 277,
+          "removed_visible_pixels": 183
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            633,
+            287,
+            660
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            691,
+            648
+          ],
+          "component_pixels": 406,
+          "removed_visible_pixels": 279
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            606,
+            687,
+            644
+          ],
+          "removed_visible_pixels": 213
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            736,
+            249,
+            773
+          ],
+          "component_pixels": 279,
+          "removed_visible_pixels": 190
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            244,
+            771
+          ],
+          "removed_visible_pixels": 138
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              77,
+              2566,
+              446.0701480904131,
+              881.2650038971161
+            ],
+            [
+              89,
+              2502,
+              496.0183852917666,
+              882.2110311750599
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 712,
+        "protected_pixels": 42815,
+        "visible_pixels_changed": 712,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 10,
+      "native_index": 12,
+      "changed_pixels": 1863,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            626,
+            293,
+            662
+          ],
+          "component_pixels": 261,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            661
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            600,
+            690,
+            648
+          ],
+          "component_pixels": 417,
+          "removed_visible_pixels": 290
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            607,
+            687,
+            644
+          ],
+          "removed_visible_pixels": 206
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            738,
+            248,
+            773
+          ],
+          "component_pixels": 273,
+          "removed_visible_pixels": 183
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            244,
+            771
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            707,
+            852,
+            715,
+            859
+          ],
+          "removed_visible_pixels": 26
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              76,
+              2563,
+              446.05969566913774,
+              881.315645727663
+            ],
+            [
+              89,
+              2502,
+              496.0183852917666,
+              882.2110311750599
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 772,
+        "protected_pixels": 42903,
+        "visible_pixels_changed": 773,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 11,
+      "native_index": 14,
+      "changed_pixels": 1832,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            627,
+            293,
+            663
+          ],
+          "component_pixels": 259,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            278,
+            632,
+            289,
+            661
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            600,
+            689,
+            647
+          ],
+          "component_pixels": 402,
+          "removed_visible_pixels": 274
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            674,
+            607,
+            686,
+            644
+          ],
+          "removed_visible_pixels": 206
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            231,
+            738,
+            249,
+            774
+          ],
+          "component_pixels": 264,
+          "removed_visible_pixels": 182
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            232,
+            743,
+            245,
+            771
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              67,
+              2562,
+              446.0542544886807,
+              881.3306010928961
+            ],
+            [
+              80,
+              2502,
+              496.00079936051156,
+              882.1970423661071
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 784,
+        "protected_pixels": 42994,
+        "visible_pixels_changed": 784,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 12,
+      "native_index": 16,
+      "changed_pixels": 1803,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            628,
+            293,
+            662
+          ],
+          "component_pixels": 245,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            633,
+            289,
+            661
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            601,
+            688,
+            648
+          ],
+          "component_pixels": 391,
+          "removed_visible_pixels": 271
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            606,
+            686,
+            645
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            233,
+            740,
+            249,
+            773
+          ],
+          "component_pixels": 250,
+          "removed_visible_pixels": 181
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            744,
+            246,
+            771
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              63,
+              2563,
+              446.04486929379635,
+              881.3289114319157
+            ],
+            [
+              75,
+              2505,
+              496.00119760479043,
+              882.1592814371257
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 762,
+        "protected_pixels": 43062,
+        "visible_pixels_changed": 763,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 13,
+      "native_index": 18,
+      "changed_pixels": 1861,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            628,
+            295,
+            664
+          ],
+          "component_pixels": 260,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            633,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            601,
+            688,
+            648
+          ],
+          "component_pixels": 403,
+          "removed_visible_pixels": 280
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            606,
+            685,
+            645
+          ],
+          "removed_visible_pixels": 210
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            234,
+            742,
+            250,
+            774
+          ],
+          "component_pixels": 251,
+          "removed_visible_pixels": 186
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            235,
+            744,
+            247,
+            772
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            273,
+            827,
+            277,
+            840
+          ],
+          "removed_visible_pixels": 18
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              56,
+              2562,
+              446.07416081186574,
+              881.3251366120219
+            ],
+            [
+              65,
+              2496,
+              496.02684294871796,
+              882.2115384615385
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 791,
+        "protected_pixels": 43019,
+        "visible_pixels_changed": 792,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 14,
+      "native_index": 20,
+      "changed_pixels": 1993,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            629,
+            294,
+            663
+          ],
+          "component_pixels": 262,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            634,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            601,
+            688,
+            648
+          ],
+          "component_pixels": 403,
+          "removed_visible_pixels": 276
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            608,
+            685,
+            645
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            235,
+            743,
+            252,
+            775
+          ],
+          "component_pixels": 237,
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            237,
+            744,
+            249,
+            772
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            714,
+            759,
+            724,
+            776
+          ],
+          "component_pixels": 99,
+          "removed_visible_pixels": 91
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            716,
+            759,
+            724,
+            776
+          ],
+          "removed_visible_pixels": 87
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              56,
+              2558,
+              446.0656763096169,
+              881.3088350273651
+            ],
+            [
+              70,
+              2486,
+              496.0048270313757,
+              882.218020917136
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 877,
+        "protected_pixels": 42997,
+        "visible_pixels_changed": 878,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 15,
+      "native_index": 22,
+      "changed_pixels": 2139,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            629,
+            295,
+            665
+          ],
+          "component_pixels": 274,
+          "removed_visible_pixels": 180
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            633,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 130
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            600,
+            688,
+            648
+          ],
+          "component_pixels": 414,
+          "removed_visible_pixels": 279
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            607,
+            685,
+            645
+          ],
+          "removed_visible_pixels": 211
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            237,
+            743,
+            253,
+            775
+          ],
+          "component_pixels": 250,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            238,
+            747,
+            250,
+            775
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            713,
+            761,
+            725,
+            784
+          ],
+          "component_pixels": 169,
+          "removed_visible_pixels": 159
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            713,
+            761,
+            725,
+            784
+          ],
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              56,
+              2549,
+              446.1063162024323,
+              881.4162416633974
+            ],
+            [
+              64,
+              2481,
+              495.9677549375252,
+              882.2833534864974
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 937,
+        "protected_pixels": 43007,
+        "visible_pixels_changed": 939,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 16,
+      "native_index": 24,
+      "changed_pixels": 2138,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            629,
+            294,
+            665
+          ],
+          "component_pixels": 265,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            634,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            601,
+            688,
+            648
+          ],
+          "component_pixels": 403,
+          "removed_visible_pixels": 277
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            607,
+            685,
+            645
+          ],
+          "removed_visible_pixels": 210
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            237,
+            746,
+            253,
+            776
+          ],
+          "component_pixels": 243,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            239,
+            748,
+            250,
+            775
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            713,
+            765,
+            725,
+            787
+          ],
+          "component_pixels": 164,
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            713,
+            766,
+            725,
+            787
+          ],
+          "removed_visible_pixels": 145
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              43,
+              2568,
+              446.0128504672897,
+              881.1806853582555
+            ],
+            [
+              55,
+              2480,
+              495.95,
+              882.2931451612903
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 936,
+        "protected_pixels": 43096,
+        "visible_pixels_changed": 938,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 17,
+      "native_index": 26,
+      "changed_pixels": 2021,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            278,
+            630,
+            293,
+            665
+          ],
+          "component_pixels": 259,
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            633,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 130
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            600,
+            689,
+            647
+          ],
+          "component_pixels": 404,
+          "removed_visible_pixels": 281
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            674,
+            606,
+            687,
+            645
+          ],
+          "removed_visible_pixels": 210
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            238,
+            748,
+            253,
+            778
+          ],
+          "component_pixels": 247,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            240,
+            750,
+            250,
+            776
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            712,
+            773,
+            723,
+            788
+          ],
+          "component_pixels": 97,
+          "removed_visible_pixels": 88
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            714,
+            773,
+            723,
+            788
+          ],
+          "removed_visible_pixels": 87
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            737,
+            789,
+            742,
+            794
+          ],
+          "removed_visible_pixels": 13
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              41,
+              2618,
+              445.4755538579068,
+              880.4365928189458
+            ],
+            [
+              56,
+              2481,
+              495.9403466344216,
+              882.291817815397
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 16,
+        "optically_decontaminated_pixels": 857,
+        "protected_pixels": 43099,
+        "visible_pixels_changed": 873,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 18,
+      "native_index": 28,
+      "changed_pixels": 2357,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            629,
+            292,
+            663
+          ],
+          "component_pixels": 244,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            633,
+            289,
+            662
+          ],
+          "removed_visible_pixels": 127
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            671,
+            600,
+            690,
+            647
+          ],
+          "component_pixels": 387,
+          "removed_visible_pixels": 273
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            606,
+            688,
+            645
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            238,
+            749,
+            252,
+            779
+          ],
+          "component_pixels": 243,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            240,
+            750,
+            250,
+            777
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            687,
+            792,
+            748,
+            823
+          ],
+          "component_pixels": 591,
+          "removed_visible_pixels": 466
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            714,
+            781,
+            721,
+            789
+          ],
+          "removed_visible_pixels": 33
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            695,
+            795,
+            743,
+            818
+          ],
+          "removed_visible_pixels": 315
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              38,
+              2618,
+              445.4549274255157,
+              880.4247517188694
+            ],
+            [
+              52,
+              2479,
+              495.9273900766438,
+              882.3029447357806
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 11,
+        "optically_decontaminated_pixels": 826,
+        "protected_pixels": 43359,
+        "visible_pixels_changed": 837,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 19,
+      "native_index": 30,
+      "changed_pixels": 2563,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            629,
+            291,
+            664
+          ],
+          "component_pixels": 258,
+          "removed_visible_pixels": 178
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            632,
+            288,
+            661
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            600,
+            692,
+            647
+          ],
+          "component_pixels": 388,
+          "removed_visible_pixels": 267
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            606,
+            689,
+            644
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            236,
+            748,
+            251,
+            779
+          ],
+          "component_pixels": 258,
+          "removed_visible_pixels": 185
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            238,
+            749,
+            249,
+            777
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            678,
+            798,
+            746,
+            831
+          ],
+          "component_pixels": 1033,
+          "removed_visible_pixels": 745
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            682,
+            803,
+            742,
+            827
+          ],
+          "removed_visible_pixels": 524
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            782,
+            825,
+            790,
+            827
+          ],
+          "removed_visible_pixels": 10
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              42,
+              2610,
+              445.4689655172414,
+              880.4727969348659
+            ],
+            [
+              58,
+              2472,
+              495.94093851132686,
+              882.3600323624596
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 23,
+        "optically_decontaminated_pixels": 746,
+        "protected_pixels": 43341,
+        "visible_pixels_changed": 769,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 20,
+      "native_index": 32,
+      "changed_pixels": 2718,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            274,
+            628,
+            290,
+            662
+          ],
+          "component_pixels": 247,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            631,
+            287,
+            661
+          ],
+          "removed_visible_pixels": 132
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            601,
+            693,
+            646
+          ],
+          "component_pixels": 375,
+          "removed_visible_pixels": 262
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            677,
+            605,
+            690,
+            643
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            235,
+            748,
+            249,
+            779
+          ],
+          "component_pixels": 248,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            237,
+            748,
+            247,
+            777
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            671,
+            806,
+            747,
+            839
+          ],
+          "component_pixels": 1357,
+          "removed_visible_pixels": 856
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            677,
+            807,
+            739,
+            835
+          ],
+          "removed_visible_pixels": 560
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            713,
+            823,
+            723,
+            827
+          ],
+          "removed_visible_pixels": 13
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2613,
+              445.4726368159204,
+              880.4841178721775
+            ],
+            [
+              54,
+              2476,
+              495.9297253634895,
+              882.314620355412
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 11,
+        "optically_decontaminated_pixels": 825,
+        "protected_pixels": 43433,
+        "visible_pixels_changed": 836,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 21,
+      "native_index": 34,
+      "changed_pixels": 2430,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            272,
+            628,
+            288,
+            662
+          ],
+          "component_pixels": 245,
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            274,
+            631,
+            285,
+            660
+          ],
+          "removed_visible_pixels": 130
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            599,
+            694,
+            645
+          ],
+          "component_pixels": 394,
+          "removed_visible_pixels": 283
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            678,
+            604,
+            692,
+            643
+          ],
+          "removed_visible_pixels": 219
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            231,
+            747,
+            246,
+            778
+          ],
+          "component_pixels": 249,
+          "removed_visible_pixels": 184
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            747,
+            244,
+            776
+          ],
+          "removed_visible_pixels": 138
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            669,
+            810,
+            743,
+            849
+          ],
+          "component_pixels": 1691,
+          "removed_visible_pixels": 566
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            699,
+            810,
+            737,
+            841
+          ],
+          "removed_visible_pixels": 160
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            692,
+            819,
+            699,
+            824
+          ],
+          "removed_visible_pixels": 12
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            685,
+            825,
+            690,
+            829
+          ],
+          "removed_visible_pixels": 10
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            829,
+            684,
+            834
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            671,
+            834,
+            725,
+            845
+          ],
+          "removed_visible_pixels": 126
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            773,
+            857,
+            791,
+            859
+          ],
+          "removed_visible_pixels": 22
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              37,
+              2651,
+              445.4666163711807,
+              879.9807619766126
+            ],
+            [
+              50,
+              2475,
+              495.92646464646464,
+              882.3414141414141
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 5,
+        "optically_decontaminated_pixels": 778,
+        "protected_pixels": 43669,
+        "visible_pixels_changed": 783,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 22,
+      "native_index": 36,
+      "changed_pixels": 2420,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            271,
+            627,
+            287,
+            660
+          ],
+          "component_pixels": 244,
+          "removed_visible_pixels": 164
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            273,
+            630,
+            284,
+            659
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            599,
+            695,
+            645
+          ],
+          "component_pixels": 388,
+          "removed_visible_pixels": 281
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            604,
+            693,
+            642
+          ],
+          "removed_visible_pixels": 222
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            229,
+            746,
+            244,
+            777
+          ],
+          "component_pixels": 249,
+          "removed_visible_pixels": 184
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            746,
+            242,
+            775
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            671,
+            812,
+            737,
+            856
+          ],
+          "component_pixels": 1780,
+          "removed_visible_pixels": 520
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            699,
+            813,
+            717,
+            826
+          ],
+          "removed_visible_pixels": 58
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            717,
+            826,
+            732,
+            851
+          ],
+          "removed_visible_pixels": 92
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            835,
+            680,
+            850
+          ],
+          "removed_visible_pixels": 43
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            704,
+            850,
+            717,
+            853
+          ],
+          "removed_visible_pixels": 20
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            765,
+            870,
+            774,
+            872
+          ],
+          "removed_visible_pixels": 15
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              37,
+              2614,
+              445.4342004590666,
+              880.4996174445295
+            ],
+            [
+              52,
+              2473,
+              495.90254751314194,
+              882.3352203801052
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 834,
+        "protected_pixels": 43805,
+        "visible_pixels_changed": 835,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 23,
+      "native_index": 38,
+      "changed_pixels": 2370,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            270,
+            627,
+            286,
+            659
+          ],
+          "component_pixels": 239,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            629,
+            283,
+            658
+          ],
+          "removed_visible_pixels": 138
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            598,
+            695,
+            644
+          ],
+          "component_pixels": 403,
+          "removed_visible_pixels": 290
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            603,
+            693,
+            642
+          ],
+          "removed_visible_pixels": 233
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            226,
+            744,
+            241,
+            774
+          ],
+          "component_pixels": 240,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            228,
+            744,
+            239,
+            773
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            674,
+            812,
+            734,
+            867
+          ],
+          "component_pixels": 1678,
+          "removed_visible_pixels": 362
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            700,
+            815,
+            709,
+            822
+          ],
+          "removed_visible_pixels": 27
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            834,
+            683,
+            854
+          ],
+          "removed_visible_pixels": 60
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            719,
+            849,
+            727,
+            861
+          ],
+          "removed_visible_pixels": 48
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              41,
+              2604,
+              445.4385560675883,
+              880.6056067588326
+            ],
+            [
+              55,
+              2462,
+              495.87530463038183,
+              882.3891145410236
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 935,
+        "protected_pixels": 44240,
+        "visible_pixels_changed": 936,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 24,
+      "native_index": 40,
+      "changed_pixels": 2345,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            626,
+            287,
+            659
+          ],
+          "component_pixels": 255,
+          "removed_visible_pixels": 178
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            628,
+            283,
+            658
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            598,
+            696,
+            643
+          ],
+          "component_pixels": 389,
+          "removed_visible_pixels": 280
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            678,
+            602,
+            693,
+            642
+          ],
+          "removed_visible_pixels": 231
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            223,
+            743,
+            237,
+            772
+          ],
+          "component_pixels": 240,
+          "removed_visible_pixels": 183
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            225,
+            744,
+            236,
+            772
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            732,
+            751,
+            737,
+            766
+          ],
+          "component_pixels": 48,
+          "removed_visible_pixels": 38
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            679,
+            814,
+            721,
+            866
+          ],
+          "component_pixels": 1286,
+          "removed_visible_pixels": 328
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            755,
+            737,
+            766
+          ],
+          "removed_visible_pixels": 31
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            700,
+            817,
+            707,
+            824
+          ],
+          "removed_visible_pixels": 20
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            841,
+            684,
+            856
+          ],
+          "removed_visible_pixels": 35
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            710,
+            850,
+            717,
+            864
+          ],
+          "removed_visible_pixels": 34
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            688,
+            859,
+            703,
+            864
+          ],
+          "removed_visible_pixels": 23
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              46,
+              2600,
+              445.3657692307692,
+              880.6442307692307
+            ],
+            [
+              56,
+              2459,
+              495.8422122814152,
+              882.4204961366408
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 904,
+        "protected_pixels": 44613,
+        "visible_pixels_changed": 906,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 25,
+      "native_index": 42,
+      "changed_pixels": 2412,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            625,
+            286,
+            659
+          ],
+          "component_pixels": 249,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            626,
+            284,
+            657
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            598,
+            695,
+            643
+          ],
+          "component_pixels": 393,
+          "removed_visible_pixels": 277
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            678,
+            603,
+            693,
+            641
+          ],
+          "removed_visible_pixels": 227
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            221,
+            741,
+            235,
+            771
+          ],
+          "component_pixels": 239,
+          "removed_visible_pixels": 181
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            223,
+            741,
+            235,
+            770
+          ],
+          "removed_visible_pixels": 144
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            753,
+            741,
+            781
+          ],
+          "component_pixels": 185,
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            681,
+            813,
+            714,
+            866
+          ],
+          "component_pixels": 1024,
+          "removed_visible_pixels": 304
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            733,
+            754,
+            741,
+            778
+          ],
+          "removed_visible_pixels": 122
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            704,
+            815,
+            710,
+            823
+          ],
+          "removed_visible_pixels": 19
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            694,
+            852,
+            711,
+            864
+          ],
+          "removed_visible_pixels": 48
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              42,
+              2583,
+              445.4266356949284,
+              880.8296554394116
+            ],
+            [
+              50,
+              2458,
+              495.80146460537026,
+              882.3954434499593
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 23,
+        "optically_decontaminated_pixels": 874,
+        "protected_pixels": 44440,
+        "visible_pixels_changed": 897,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 26,
+      "native_index": 44,
+      "changed_pixels": 2564,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            625,
+            286,
+            658
+          ],
+          "component_pixels": 241,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            627,
+            284,
+            657
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            599,
+            694,
+            644
+          ],
+          "component_pixels": 383,
+          "removed_visible_pixels": 278
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            677,
+            603,
+            692,
+            642
+          ],
+          "removed_visible_pixels": 225
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            219,
+            739,
+            235,
+            768
+          ],
+          "component_pixels": 224,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            221,
+            739,
+            233,
+            766
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            732,
+            746,
+            742,
+            779
+          ],
+          "component_pixels": 205,
+          "removed_visible_pixels": 165
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            685,
+            811,
+            718,
+            863
+          ],
+          "component_pixels": 898,
+          "removed_visible_pixels": 307
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            748,
+            742,
+            777
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            700,
+            811,
+            717,
+            824
+          ],
+          "removed_visible_pixels": 54
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2581,
+              445.49515691592404,
+              880.9066253390158
+            ],
+            [
+              51,
+              2455,
+              495.8,
+              882.40733197556
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 86,
+        "optically_decontaminated_pixels": 953,
+        "protected_pixels": 44625,
+        "visible_pixels_changed": 1039,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 27,
+      "native_index": 46,
+      "changed_pixels": 2587,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            271,
+            625,
+            287,
+            659
+          ],
+          "component_pixels": 238,
+          "removed_visible_pixels": 178
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            272,
+            627,
+            285,
+            657
+          ],
+          "removed_visible_pixels": 146
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            671,
+            600,
+            692,
+            644
+          ],
+          "component_pixels": 383,
+          "removed_visible_pixels": 279
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            604,
+            690,
+            642
+          ],
+          "removed_visible_pixels": 228
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            219,
+            737,
+            233,
+            764
+          ],
+          "component_pixels": 212,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            220,
+            738,
+            232,
+            764
+          ],
+          "removed_visible_pixels": 132
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            744,
+            742,
+            778
+          ],
+          "component_pixels": 221,
+          "removed_visible_pixels": 177
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            687,
+            801,
+            734,
+            860
+          ],
+          "component_pixels": 1014,
+          "removed_visible_pixels": 363
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            748,
+            742,
+            776
+          ],
+          "removed_visible_pixels": 153
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            722,
+            801,
+            732,
+            804
+          ],
+          "removed_visible_pixels": 15
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            715,
+            804,
+            723,
+            811
+          ],
+          "removed_visible_pixels": 18
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            691,
+            825,
+            700,
+            836
+          ],
+          "removed_visible_pixels": 27
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            688,
+            835,
+            703,
+            859
+          ],
+          "removed_visible_pixels": 64
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            694,
+            884,
+            708,
+            890
+          ],
+          "removed_visible_pixels": 58
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2588,
+              445.48106646058733,
+              880.8013910355487
+            ],
+            [
+              51,
+              2451,
+              495.75234598123217,
+              882.3884128926968
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 5,
+        "optically_decontaminated_pixels": 941,
+        "protected_pixels": 44863,
+        "visible_pixels_changed": 946,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 28,
+      "native_index": 48,
+      "changed_pixels": 2508,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            272,
+            625,
+            288,
+            658
+          ],
+          "component_pixels": 227,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            273,
+            627,
+            286,
+            657
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            599,
+            690,
+            643
+          ],
+          "component_pixels": 365,
+          "removed_visible_pixels": 270
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            674,
+            604,
+            688,
+            643
+          ],
+          "removed_visible_pixels": 227
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            219,
+            737,
+            234,
+            763
+          ],
+          "component_pixels": 210,
+          "removed_visible_pixels": 165
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            220,
+            737,
+            233,
+            763
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            745,
+            741,
+            776
+          ],
+          "component_pixels": 200,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            680,
+            883,
+            709,
+            896
+          ],
+          "component_pixels": 267,
+          "removed_visible_pixels": 192
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            731,
+            747,
+            741,
+            776
+          ],
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            682,
+            884,
+            706,
+            894
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              36,
+              2584,
+              445.4500773993808,
+              880.8130804953561
+            ],
+            [
+              48,
+              2453,
+              495.73175703220545,
+              882.3542600896861
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 28,
+        "optically_decontaminated_pixels": 1091,
+        "protected_pixels": 44887,
+        "visible_pixels_changed": 1119,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 29,
+      "native_index": 50,
+      "changed_pixels": 2904,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            273,
+            627,
+            290,
+            660
+          ],
+          "component_pixels": 239,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            275,
+            628,
+            288,
+            659
+          ],
+          "removed_visible_pixels": 146
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            601,
+            688,
+            644
+          ],
+          "component_pixels": 379,
+          "removed_visible_pixels": 278
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            605,
+            686,
+            644
+          ],
+          "removed_visible_pixels": 232
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            221,
+            736,
+            235,
+            762
+          ],
+          "component_pixels": 203,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            222,
+            736,
+            235,
+            762
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            727,
+            745,
+            739,
+            778
+          ],
+          "component_pixels": 211,
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            634,
+            852,
+            710,
+            900
+          ],
+          "component_pixels": 713,
+          "removed_visible_pixels": 554
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            727,
+            747,
+            738,
+            777
+          ],
+          "removed_visible_pixels": 159
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            634,
+            852,
+            705,
+            898
+          ],
+          "removed_visible_pixels": 463
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2582,
+              445.4113090627421,
+              880.8164213787761
+            ],
+            [
+              51,
+              2452,
+              495.74918433931487,
+              882.3715334420881
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 24,
+        "optically_decontaminated_pixels": 1096,
+        "protected_pixels": 44882,
+        "visible_pixels_changed": 1120,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 30,
+      "native_index": 52,
+      "changed_pixels": 2684,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            629,
+            289,
+            660
+          ],
+          "component_pixels": 223,
+          "removed_visible_pixels": 178
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            630,
+            288,
+            659
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            667,
+            603,
+            686,
+            644
+          ],
+          "component_pixels": 353,
+          "removed_visible_pixels": 264
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            671,
+            606,
+            684,
+            644
+          ],
+          "removed_visible_pixels": 218
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            222,
+            736,
+            238,
+            764
+          ],
+          "component_pixels": 212,
+          "removed_visible_pixels": 163
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            223,
+            736,
+            237,
+            763
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            305,
+            847,
+            312,
+            857
+          ],
+          "removed_visible_pixels": 28
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            724,
+            746,
+            736,
+            776
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 164
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            651,
+            878,
+            706,
+            902
+          ],
+          "component_pixels": 619,
+          "removed_visible_pixels": 503
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            726,
+            749,
+            736,
+            776
+          ],
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            651,
+            878,
+            703,
+            900
+          ],
+          "removed_visible_pixels": 413
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              40,
+              2588,
+              445.40262751159196,
+              880.74343122102
+            ],
+            [
+              50,
+              2459,
+              495.7661651077674,
+              882.3428222854819
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 965,
+        "protected_pixels": 44870,
+        "visible_pixels_changed": 967,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 31,
+      "native_index": 54,
+      "changed_pixels": 2754,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            629,
+            291,
+            660
+          ],
+          "component_pixels": 230,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            630,
+            290,
+            660
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            606,
+            685,
+            646
+          ],
+          "component_pixels": 343,
+          "removed_visible_pixels": 263
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            607,
+            683,
+            645
+          ],
+          "removed_visible_pixels": 219
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            225,
+            735,
+            241,
+            764
+          ],
+          "component_pixels": 212,
+          "removed_visible_pixels": 163
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            226,
+            737,
+            240,
+            764
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            308,
+            846,
+            314,
+            859
+          ],
+          "removed_visible_pixels": 30
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            722,
+            749,
+            733,
+            778
+          ],
+          "component_pixels": 200,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            650,
+            881,
+            704,
+            903
+          ],
+          "component_pixels": 661,
+          "removed_visible_pixels": 529
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            723,
+            750,
+            733,
+            778
+          ],
+          "removed_visible_pixels": 152
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            653,
+            881,
+            702,
+            901
+          ],
+          "removed_visible_pixels": 437
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              36,
+              2584,
+              445.43498452012386,
+              880.7604489164087
+            ],
+            [
+              45,
+              2463,
+              495.79821356069834,
+              882.2963865205035
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 990,
+        "protected_pixels": 45014,
+        "visible_pixels_changed": 992,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 32,
+      "native_index": 56,
+      "changed_pixels": 2580,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            629,
+            291,
+            663
+          ],
+          "component_pixels": 245,
+          "removed_visible_pixels": 180
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            632,
+            290,
+            660
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            607,
+            684,
+            646
+          ],
+          "component_pixels": 326,
+          "removed_visible_pixels": 254
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            669,
+            607,
+            682,
+            645
+          ],
+          "removed_visible_pixels": 213
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            228,
+            739,
+            243,
+            765
+          ],
+          "component_pixels": 200,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            228,
+            739,
+            241,
+            765
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            720,
+            752,
+            731,
+            779
+          ],
+          "component_pixels": 182,
+          "removed_visible_pixels": 163
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            651,
+            881,
+            703,
+            904
+          ],
+          "component_pixels": 666,
+          "removed_visible_pixels": 538
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            721,
+            752,
+            731,
+            779
+          ],
+          "removed_visible_pixels": 157
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            654,
+            883,
+            701,
+            902
+          ],
+          "removed_visible_pixels": 447
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              32,
+              2588,
+              445.4242658423493,
+              880.7360896445132
+            ],
+            [
+              45,
+              2471,
+              495.7600161877782,
+              882.1416430594901
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 848,
+        "protected_pixels": 44781,
+        "visible_pixels_changed": 850,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 33,
+      "native_index": 58,
+      "changed_pixels": 2572,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            632,
+            291,
+            662
+          ],
+          "component_pixels": 223,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            632,
+            291,
+            661
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            606,
+            684,
+            646
+          ],
+          "component_pixels": 352,
+          "removed_visible_pixels": 262
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            669,
+            607,
+            682,
+            646
+          ],
+          "removed_visible_pixels": 220
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            232,
+            741,
+            247,
+            767
+          ],
+          "component_pixels": 201,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            232,
+            741,
+            245,
+            767
+          ],
+          "removed_visible_pixels": 142
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            717,
+            752,
+            727,
+            782
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            656,
+            880,
+            704,
+            905
+          ],
+          "component_pixels": 674,
+          "removed_visible_pixels": 491
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            717,
+            753,
+            727,
+            781
+          ],
+          "removed_visible_pixels": 149
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            661,
+            881,
+            702,
+            903
+          ],
+          "removed_visible_pixels": 384
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              31,
+              2595,
+              445.3892100192678,
+              880.5919075144509
+            ],
+            [
+              52,
+              2448,
+              495.88848039215685,
+              882.4959150326797
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 886,
+        "protected_pixels": 44587,
+        "visible_pixels_changed": 890,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 34,
+      "native_index": 60,
+      "changed_pixels": 2480,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            632,
+            292,
+            663
+          ],
+          "component_pixels": 240,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            633,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            668,
+            606,
+            684,
+            646
+          ],
+          "component_pixels": 347,
+          "removed_visible_pixels": 256
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            669,
+            607,
+            682,
+            646
+          ],
+          "removed_visible_pixels": 219
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            234,
+            742,
+            249,
+            770
+          ],
+          "component_pixels": 218,
+          "removed_visible_pixels": 181
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            742,
+            246,
+            770
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            715,
+            754,
+            726,
+            783
+          ],
+          "component_pixels": 195,
+          "removed_visible_pixels": 165
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            655,
+            878,
+            705,
+            906
+          ],
+          "component_pixels": 692,
+          "removed_visible_pixels": 339
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            715,
+            755,
+            726,
+            782
+          ],
+          "removed_visible_pixels": 154
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            693,
+            878,
+            704,
+            890
+          ],
+          "removed_visible_pixels": 41
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            663,
+            884,
+            701,
+            903
+          ],
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              34,
+              2608,
+              445.38075153374234,
+              880.506518404908
+            ],
+            [
+              50,
+              2455,
+              495.8953156822811,
+              882.4399185336049
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 939,
+        "protected_pixels": 44636,
+        "visible_pixels_changed": 941,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 35,
+      "native_index": 62,
+      "changed_pixels": 2532,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            280,
+            634,
+            292,
+            663
+          ],
+          "component_pixels": 220,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            634,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            607,
+            684,
+            647
+          ],
+          "component_pixels": 344,
+          "removed_visible_pixels": 258
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            608,
+            682,
+            646
+          ],
+          "removed_visible_pixels": 214
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            237,
+            744,
+            252,
+            772
+          ],
+          "component_pixels": 217,
+          "removed_visible_pixels": 177
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            237,
+            745,
+            249,
+            772
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            712,
+            755,
+            723,
+            785
+          ],
+          "component_pixels": 207,
+          "removed_visible_pixels": 183
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            659,
+            873,
+            709,
+            905
+          ],
+          "component_pixels": 753,
+          "removed_visible_pixels": 318
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            712,
+            756,
+            723,
+            785
+          ],
+          "removed_visible_pixels": 160
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            703,
+            873,
+            708,
+            881
+          ],
+          "removed_visible_pixels": 20
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            695,
+            875,
+            703,
+            881
+          ],
+          "removed_visible_pixels": 13
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            666,
+            888,
+            679,
+            896
+          ],
+          "removed_visible_pixels": 38
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            890,
+            703,
+            903
+          ],
+          "removed_visible_pixels": 60
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              34,
+              2617,
+              445.33435231180744,
+              880.383645395491
+            ],
+            [
+              42,
+              2469,
+              495.7974888618874,
+              882.221142162819
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 5,
+        "optically_decontaminated_pixels": 1002,
+        "protected_pixels": 44409,
+        "visible_pixels_changed": 1007,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 36,
+      "native_index": 64,
+      "changed_pixels": 2219,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            280,
+            633,
+            292,
+            663
+          ],
+          "component_pixels": 222,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            634,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 132
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            608,
+            685,
+            645
+          ],
+          "component_pixels": 321,
+          "removed_visible_pixels": 251
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            671,
+            608,
+            683,
+            645
+          ],
+          "removed_visible_pixels": 211
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            238,
+            746,
+            253,
+            775
+          ],
+          "component_pixels": 217,
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            239,
+            747,
+            250,
+            774
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            711,
+            757,
+            721,
+            786
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            711,
+            757,
+            721,
+            786
+          ],
+          "removed_visible_pixels": 161
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              30,
+              2621,
+              445.3189622281572,
+              880.3639832125143
+            ],
+            [
+              43,
+              2471,
+              495.81384055038444,
+              882.1732092270336
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 1034,
+        "protected_pixels": 44408,
+        "visible_pixels_changed": 1037,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 37,
+      "native_index": 66,
+      "changed_pixels": 2161,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            280,
+            634,
+            292,
+            663
+          ],
+          "component_pixels": 219,
+          "removed_visible_pixels": 171
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            634,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            608,
+            686,
+            646
+          ],
+          "component_pixels": 325,
+          "removed_visible_pixels": 249
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            608,
+            684,
+            645
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            239,
+            746,
+            254,
+            776
+          ],
+          "component_pixels": 229,
+          "removed_visible_pixels": 179
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            240,
+            749,
+            251,
+            776
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            710,
+            756,
+            721,
+            788
+          ],
+          "component_pixels": 207,
+          "removed_visible_pixels": 183
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            710,
+            759,
+            721,
+            788
+          ],
+          "removed_visible_pixels": 157
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            700,
+            896,
+            705,
+            901
+          ],
+          "removed_visible_pixels": 11
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              34,
+              2622,
+              445.315408085431,
+              880.4031273836765
+            ],
+            [
+              46,
+              2470,
+              495.8113360323887,
+              882.1732793522267
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 949,
+        "protected_pixels": 44312,
+        "visible_pixels_changed": 951,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 38,
+      "native_index": 68,
+      "changed_pixels": 2114,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            633,
+            291,
+            664
+          ],
+          "component_pixels": 228,
+          "removed_visible_pixels": 171
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            633,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            607,
+            688,
+            645
+          ],
+          "component_pixels": 311,
+          "removed_visible_pixels": 245
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            674,
+            607,
+            686,
+            645
+          ],
+          "removed_visible_pixels": 214
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            240,
+            746,
+            254,
+            777
+          ],
+          "component_pixels": 228,
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            241,
+            749,
+            252,
+            777
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            710,
+            757,
+            721,
+            788
+          ],
+          "component_pixels": 213,
+          "removed_visible_pixels": 185
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            710,
+            759,
+            721,
+            788
+          ],
+          "removed_visible_pixels": 162
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              35,
+              2624,
+              445.359756097561,
+              880.329649390244
+            ],
+            [
+              55,
+              2468,
+              495.79497568881686,
+              882.2050243111831
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 920,
+        "protected_pixels": 44218,
+        "visible_pixels_changed": 924,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 39,
+      "native_index": 70,
+      "changed_pixels": 2117,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            632,
+            290,
+            663
+          ],
+          "component_pixels": 223,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            278,
+            634,
+            288,
+            662
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            604,
+            690,
+            644
+          ],
+          "component_pixels": 327,
+          "removed_visible_pixels": 251
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            606,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 214
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            239,
+            749,
+            253,
+            778
+          ],
+          "component_pixels": 219,
+          "removed_visible_pixels": 170
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            240,
+            749,
+            251,
+            778
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            286,
+            832,
+            292,
+            843
+          ],
+          "removed_visible_pixels": 21
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            712,
+            758,
+            723,
+            789
+          ],
+          "component_pixels": 221,
+          "removed_visible_pixels": 187
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            712,
+            759,
+            723,
+            789
+          ],
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2624,
+              445.360137195122,
+              880.2884908536586
+            ],
+            [
+              53,
+              2472,
+              495.8216019417476,
+              882.2176375404531
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 911,
+        "protected_pixels": 44312,
+        "visible_pixels_changed": 914,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 40,
+      "native_index": 72,
+      "changed_pixels": 2102,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            632,
+            288,
+            662
+          ],
+          "component_pixels": 212,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            633,
+            287,
+            662
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            604,
+            691,
+            644
+          ],
+          "component_pixels": 320,
+          "removed_visible_pixels": 248
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            605,
+            689,
+            643
+          ],
+          "removed_visible_pixels": 213
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            238,
+            749,
+            251,
+            778
+          ],
+          "component_pixels": 224,
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            239,
+            750,
+            249,
+            778
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            714,
+            758,
+            726,
+            790
+          ],
+          "component_pixels": 236,
+          "removed_visible_pixels": 195
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            714,
+            759,
+            725,
+            789
+          ],
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              39,
+              2659,
+              445.4418954494171,
+              879.8352764197066
+            ],
+            [
+              51,
+              2473,
+              495.87868985038415,
+              882.2547513141933
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 900,
+        "protected_pixels": 44416,
+        "visible_pixels_changed": 901,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 41,
+      "native_index": 74,
+      "changed_pixels": 2100,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            631,
+            286,
+            661
+          ],
+          "component_pixels": 224,
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            275,
+            631,
+            286,
+            661
+          ],
+          "removed_visible_pixels": 138
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            601,
+            693,
+            644
+          ],
+          "component_pixels": 327,
+          "removed_visible_pixels": 243
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            678,
+            605,
+            691,
+            642
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            235,
+            747,
+            249,
+            777
+          ],
+          "component_pixels": 217,
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            236,
+            749,
+            246,
+            777
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            717,
+            757,
+            728,
+            789
+          ],
+          "component_pixels": 240,
+          "removed_visible_pixels": 201
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            718,
+            758,
+            728,
+            788
+          ],
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            710,
+            881,
+            717,
+            883
+          ],
+          "removed_visible_pixels": 10
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              51,
+              2543,
+              446.0031458906803,
+              881.5277231616201
+            ],
+            [
+              52,
+              2480,
+              495.85564516129034,
+              882.1725806451614
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 887,
+        "protected_pixels": 44428,
+        "visible_pixels_changed": 889,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 42,
+      "native_index": 76,
+      "changed_pixels": 2142,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            273,
+            630,
+            286,
+            660
+          ],
+          "component_pixels": 231,
+          "removed_visible_pixels": 170
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            274,
+            630,
+            285,
+            660
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            599,
+            694,
+            642
+          ],
+          "component_pixels": 326,
+          "removed_visible_pixels": 250
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            605,
+            692,
+            641
+          ],
+          "removed_visible_pixels": 223
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            233,
+            746,
+            247,
+            778
+          ],
+          "component_pixels": 224,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            747,
+            245,
+            777
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            719,
+            756,
+            731,
+            788
+          ],
+          "component_pixels": 231,
+          "removed_visible_pixels": 197
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            720,
+            757,
+            731,
+            788
+          ],
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              38,
+              2645,
+              445.50661625708887,
+              879.9928166351607
+            ],
+            [
+              48,
+              2480,
+              495.8504032258064,
+              882.175
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 919,
+        "protected_pixels": 44700,
+        "visible_pixels_changed": 920,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 43,
+      "native_index": 78,
+      "changed_pixels": 2189,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            271,
+            629,
+            285,
+            659
+          ],
+          "component_pixels": 242,
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            272,
+            630,
+            283,
+            659
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            675,
+            599,
+            695,
+            642
+          ],
+          "component_pixels": 335,
+          "removed_visible_pixels": 257
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            604,
+            693,
+            640
+          ],
+          "removed_visible_pixels": 218
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            745,
+            243,
+            775
+          ],
+          "component_pixels": 216,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            230,
+            746,
+            241,
+            775
+          ],
+          "removed_visible_pixels": 144
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            724,
+            753,
+            735,
+            787
+          ],
+          "component_pixels": 241,
+          "removed_visible_pixels": 197
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            724,
+            756,
+            735,
+            786
+          ],
+          "removed_visible_pixels": 174
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              33,
+              2621,
+              445.6241892407478,
+              880.3277375047692
+            ],
+            [
+              49,
+              2472,
+              495.9073624595469,
+              882.2617313915857
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 967,
+        "protected_pixels": 44709,
+        "visible_pixels_changed": 967,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 44,
+      "native_index": 80,
+      "changed_pixels": 2155,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            629,
+            285,
+            658
+          ],
+          "component_pixels": 243,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            630,
+            283,
+            658
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            675,
+            598,
+            695,
+            640
+          ],
+          "component_pixels": 327,
+          "removed_visible_pixels": 259
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            679,
+            603,
+            693,
+            640
+          ],
+          "removed_visible_pixels": 221
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            227,
+            743,
+            241,
+            773
+          ],
+          "component_pixels": 218,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            228,
+            744,
+            239,
+            773
+          ],
+          "removed_visible_pixels": 144
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            727,
+            753,
+            737,
+            785
+          ],
+          "component_pixels": 223,
+          "removed_visible_pixels": 187
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            727,
+            754,
+            737,
+            784
+          ],
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              34,
+              2620,
+              445.46488549618323,
+              880.3389312977099
+            ],
+            [
+              49,
+              2473,
+              495.8887990295188,
+              882.2571775171856
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 950,
+        "protected_pixels": 44852,
+        "visible_pixels_changed": 953,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 45,
+      "native_index": 82,
+      "changed_pixels": 2267,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            628,
+            283,
+            659
+          ],
+          "component_pixels": 257,
+          "removed_visible_pixels": 176
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            628,
+            283,
+            657
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            679,
+            605,
+            695,
+            642
+          ],
+          "component_pixels": 314,
+          "removed_visible_pixels": 255
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            680,
+            605,
+            693,
+            641
+          ],
+          "removed_visible_pixels": 226
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            223,
+            741,
+            238,
+            771
+          ],
+          "component_pixels": 229,
+          "removed_visible_pixels": 177
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            224,
+            742,
+            236,
+            771
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            270,
+            829,
+            273,
+            841
+          ],
+          "removed_visible_pixels": 18
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            729,
+            750,
+            741,
+            782
+          ],
+          "component_pixels": 238,
+          "removed_visible_pixels": 187
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            731,
+            752,
+            741,
+            781
+          ],
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              32,
+              2629,
+              445.46976036515787,
+              880.2415367059718
+            ],
+            [
+              44,
+              2473,
+              495.88677719369184,
+              882.2680954306511
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 1043,
+        "protected_pixels": 44950,
+        "visible_pixels_changed": 1047,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 46,
+      "native_index": 84,
+      "changed_pixels": 2478,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            628,
+            283,
+            659
+          ],
+          "component_pixels": 255,
+          "removed_visible_pixels": 180
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            628,
+            283,
+            657
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            600,
+            694,
+            640
+          ],
+          "component_pixels": 305,
+          "removed_visible_pixels": 248
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            678,
+            603,
+            693,
+            640
+          ],
+          "removed_visible_pixels": 220
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            222,
+            739,
+            236,
+            769
+          ],
+          "component_pixels": 219,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            222,
+            740,
+            235,
+            769
+          ],
+          "removed_visible_pixels": 145
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            749,
+            743,
+            780
+          ],
+          "component_pixels": 230,
+          "removed_visible_pixels": 180
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            688,
+            796,
+            748,
+            843
+          ],
+          "component_pixels": 1600,
+          "removed_visible_pixels": 338
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            750,
+            742,
+            780
+          ],
+          "removed_visible_pixels": 161
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            740,
+            797,
+            745,
+            803
+          ],
+          "removed_visible_pixels": 16
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            736,
+            823,
+            740,
+            840
+          ],
+          "removed_visible_pixels": 23
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            688,
+            825,
+            697,
+            835
+          ],
+          "removed_visible_pixels": 27
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              33,
+              2641,
+              445.37523665278303,
+              880.0976902688376
+            ],
+            [
+              43,
+              2474,
+              495.8795472918351,
+              882.2526273241714
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 937,
+        "protected_pixels": 45040,
+        "visible_pixels_changed": 940,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 47,
+      "native_index": 86,
+      "changed_pixels": 2531,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            269,
+            628,
+            284,
+            658
+          ],
+          "component_pixels": 247,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            271,
+            628,
+            283,
+            657
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            600,
+            693,
+            641
+          ],
+          "component_pixels": 347,
+          "removed_visible_pixels": 253
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            604,
+            691,
+            641
+          ],
+          "removed_visible_pixels": 220
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            218,
+            737,
+            234,
+            766
+          ],
+          "component_pixels": 216,
+          "removed_visible_pixels": 173
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            220,
+            737,
+            234,
+            766
+          ],
+          "removed_visible_pixels": 144
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            747,
+            744,
+            778
+          ],
+          "component_pixels": 246,
+          "removed_visible_pixels": 187
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            698,
+            794,
+            746,
+            831
+          ],
+          "component_pixels": 1036,
+          "removed_visible_pixels": 348
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            733,
+            749,
+            743,
+            777
+          ],
+          "removed_visible_pixels": 152
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            797,
+            742,
+            802
+          ],
+          "removed_visible_pixels": 22
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            717,
+            804,
+            725,
+            811
+          ],
+          "removed_visible_pixels": 14
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            801,
+            810,
+            812,
+            812
+          ],
+          "removed_visible_pixels": 12
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            699,
+            819,
+            709,
+            827
+          ],
+          "removed_visible_pixels": 40
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              32,
+              2598,
+              445.52270977675136,
+              880.6970746728252
+            ],
+            [
+              43,
+              2474,
+              495.9215844785772,
+              882.2974939369442
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 977,
+        "protected_pixels": 44784,
+        "visible_pixels_changed": 981,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 48,
+      "native_index": 88,
+      "changed_pixels": 2528,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            270,
+            628,
+            285,
+            658
+          ],
+          "component_pixels": 234,
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            272,
+            629,
+            284,
+            657
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            603,
+            692,
+            642
+          ],
+          "component_pixels": 327,
+          "removed_visible_pixels": 266
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            604,
+            690,
+            642
+          ],
+          "removed_visible_pixels": 224
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            218,
+            736,
+            236,
+            765
+          ],
+          "component_pixels": 214,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            220,
+            737,
+            233,
+            764
+          ],
+          "removed_visible_pixels": 145
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            731,
+            746,
+            742,
+            776
+          ],
+          "component_pixels": 193,
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            701,
+            795,
+            748,
+            825
+          ],
+          "component_pixels": 801,
+          "removed_visible_pixels": 340
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            733,
+            748,
+            741,
+            772
+          ],
+          "removed_visible_pixels": 88
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            732,
+            796,
+            746,
+            819
+          ],
+          "removed_visible_pixels": 85
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            716,
+            805,
+            726,
+            811
+          ],
+          "removed_visible_pixels": 17
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            706,
+            813,
+            726,
+            821
+          ],
+          "removed_visible_pixels": 44
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              36,
+              2616,
+              445.41972477064223,
+              880.4996177370031
+            ],
+            [
+              44,
+              2479,
+              495.9661153691004,
+              882.2864058087939
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 1030,
+        "protected_pixels": 44830,
+        "visible_pixels_changed": 1034,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 49,
+      "native_index": 90,
+      "changed_pixels": 2232,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            272,
+            629,
+            285,
+            658
+          ],
+          "component_pixels": 231,
+          "removed_visible_pixels": 170
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            273,
+            630,
+            285,
+            658
+          ],
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            671,
+            602,
+            691,
+            644
+          ],
+          "component_pixels": 367,
+          "removed_visible_pixels": 275
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            605,
+            688,
+            643
+          ],
+          "removed_visible_pixels": 228
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            219,
+            735,
+            236,
+            764
+          ],
+          "component_pixels": 213,
+          "removed_visible_pixels": 165
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            220,
+            737,
+            233,
+            763
+          ],
+          "removed_visible_pixels": 135
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            717,
+            790,
+            751,
+            811
+          ],
+          "component_pixels": 316,
+          "removed_visible_pixels": 253
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            719,
+            793,
+            747,
+            808
+          ],
+          "removed_visible_pixels": 192
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            777,
+            826,
+            785,
+            828
+          ],
+          "removed_visible_pixels": 10
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              38,
+              2595,
+              445.46628131021197,
+              880.7718689788054
+            ],
+            [
+              58,
+              2472,
+              496.0194174757281,
+              882.4279935275081
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 944,
+        "protected_pixels": 44792,
+        "visible_pixels_changed": 947,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 50,
+      "native_index": 92,
+      "changed_pixels": 2221,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            274,
+            630,
+            286,
+            658
+          ],
+          "component_pixels": 220,
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            274,
+            630,
+            286,
+            658
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            603,
+            689,
+            643
+          ],
+          "component_pixels": 341,
+          "removed_visible_pixels": 265
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            605,
+            687,
+            643
+          ],
+          "removed_visible_pixels": 223
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            220,
+            734,
+            238,
+            764
+          ],
+          "component_pixels": 218,
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            221,
+            736,
+            235,
+            763
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            305,
+            846,
+            311,
+            856
+          ],
+          "removed_visible_pixels": 24
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            722,
+            790,
+            750,
+            806
+          ],
+          "component_pixels": 174,
+          "removed_visible_pixels": 126
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            722,
+            793,
+            746,
+            804
+          ],
+          "removed_visible_pixels": 90
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              35,
+              2593,
+              445.579251831855,
+              880.8688777477826
+            ],
+            [
+              55,
+              2473,
+              496.0149615851193,
+              882.4169025475131
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 1063,
+        "protected_pixels": 44785,
+        "visible_pixels_changed": 1065,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 51,
+      "native_index": 94,
+      "changed_pixels": 2181,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            275,
+            632,
+            288,
+            660
+          ],
+          "component_pixels": 212,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            632,
+            287,
+            660
+          ],
+          "removed_visible_pixels": 138
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            604,
+            687,
+            645
+          ],
+          "component_pixels": 340,
+          "removed_visible_pixels": 268
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            607,
+            685,
+            644
+          ],
+          "removed_visible_pixels": 221
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            221,
+            737,
+            238,
+            765
+          ],
+          "component_pixels": 205,
+          "removed_visible_pixels": 163
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            223,
+            737,
+            237,
+            764
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            303,
+            849,
+            311,
+            860
+          ],
+          "removed_visible_pixels": 32
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            727,
+            761,
+            736,
+            777
+          ],
+          "component_pixels": 102,
+          "removed_visible_pixels": 94
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            728,
+            761,
+            736,
+            777
+          ],
+          "removed_visible_pixels": 88
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              37,
+              2588,
+              445.6031684698609,
+              880.8732612055642
+            ],
+            [
+              57,
+              2472,
+              496.0210355987055,
+              882.453074433657
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 3,
+        "optically_decontaminated_pixels": 1050,
+        "protected_pixels": 44562,
+        "visible_pixels_changed": 1053,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 52,
+      "native_index": 96,
+      "changed_pixels": 2251,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            633,
+            289,
+            660
+          ],
+          "component_pixels": 207,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            633,
+            288,
+            660
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            669,
+            604,
+            686,
+            645
+          ],
+          "component_pixels": 340,
+          "removed_visible_pixels": 267
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            671,
+            607,
+            684,
+            644
+          ],
+          "removed_visible_pixels": 220
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            223,
+            740,
+            239,
+            765
+          ],
+          "component_pixels": 204,
+          "removed_visible_pixels": 160
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            226,
+            740,
+            238,
+            765
+          ],
+          "removed_visible_pixels": 132
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            306,
+            851,
+            314,
+            861
+          ],
+          "removed_visible_pixels": 29
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            724,
+            751,
+            735,
+            777
+          ],
+          "component_pixels": 193,
+          "removed_visible_pixels": 161
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            724,
+            751,
+            735,
+            777
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              33,
+              2587,
+              445.61654425976036,
+              880.8678005411674
+            ],
+            [
+              55,
+              2473,
+              496.0287100687424,
+              882.4585523655479
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 1060,
+        "protected_pixels": 44498,
+        "visible_pixels_changed": 1062,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 53,
+      "native_index": 98,
+      "changed_pixels": 2207,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            634,
+            290,
+            661
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 159
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            634,
+            289,
+            661
+          ],
+          "removed_visible_pixels": 130
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            607,
+            685,
+            647
+          ],
+          "component_pixels": 347,
+          "removed_visible_pixels": 263
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            607,
+            683,
+            646
+          ],
+          "removed_visible_pixels": 222
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            674,
+            667,
+            682,
+            680
+          ],
+          "removed_visible_pixels": 30
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            227,
+            741,
+            243,
+            768
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 165
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            229,
+            742,
+            241,
+            767
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            719,
+            754,
+            729,
+            773
+          ],
+          "component_pixels": 138,
+          "removed_visible_pixels": 103
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            721,
+            754,
+            729,
+            773
+          ],
+          "removed_visible_pixels": 92
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              36,
+              2589,
+              445.59559675550406,
+              880.8207802240247
+            ],
+            [
+              63,
+              2473,
+              496.03154063890014,
+              882.4961585119288
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 22,
+        "optically_decontaminated_pixels": 1053,
+        "protected_pixels": 44364,
+        "visible_pixels_changed": 1075,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 54,
+      "native_index": 100,
+      "changed_pixels": 2265,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            634,
+            291,
+            661
+          ],
+          "component_pixels": 213,
+          "removed_visible_pixels": 166
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            634,
+            290,
+            661
+          ],
+          "removed_visible_pixels": 137
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            608,
+            685,
+            646
+          ],
+          "component_pixels": 350,
+          "removed_visible_pixels": 275
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            665,
+            689,
+            693
+          ],
+          "component_pixels": 303,
+          "removed_visible_pixels": 239
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            608,
+            683,
+            646
+          ],
+          "removed_visible_pixels": 224
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            667,
+            685,
+            692
+          ],
+          "removed_visible_pixels": 163
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            742,
+            245,
+            769
+          ],
+          "component_pixels": 201,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            743,
+            244,
+            769
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            717,
+            752,
+            727,
+            772
+          ],
+          "component_pixels": 123,
+          "removed_visible_pixels": 88
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            718,
+            752,
+            726,
+            769
+          ],
+          "removed_visible_pixels": 67
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              36,
+              2589,
+              445.6002317497103,
+              880.8455001931247
+            ],
+            [
+              62,
+              2477,
+              496.02785627775535,
+              882.4905127169964
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 918,
+        "protected_pixels": 44361,
+        "visible_pixels_changed": 918,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 55,
+      "native_index": 102,
+      "changed_pixels": 1986,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            281,
+            634,
+            293,
+            662
+          ],
+          "component_pixels": 204,
+          "removed_visible_pixels": 160
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            634,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            608,
+            685,
+            646
+          ],
+          "component_pixels": 360,
+          "removed_visible_pixels": 274
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            608,
+            683,
+            646
+          ],
+          "removed_visible_pixels": 224
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            232,
+            743,
+            248,
+            772
+          ],
+          "component_pixels": 227,
+          "removed_visible_pixels": 169
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            743,
+            247,
+            770
+          ],
+          "removed_visible_pixels": 143
+        },
+        {
+          "name": "right_lower_curl",
+          "bbox": [
+            715,
+            754,
+            723,
+            767
+          ],
+          "component_pixels": 51,
+          "removed_visible_pixels": 24
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            778,
+            743,
+            785,
+            750
+          ],
+          "removed_visible_pixels": 16
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            716,
+            754,
+            721,
+            761
+          ],
+          "removed_visible_pixels": 21
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              53,
+              2547,
+              446.0251276010993,
+              881.5265017667845
+            ],
+            [
+              65,
+              2478,
+              496.02542372881356,
+              882.4769975786925
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 934,
+        "protected_pixels": 44172,
+        "visible_pixels_changed": 934,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 56,
+      "native_index": 104,
+      "changed_pixels": 1993,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            281,
+            634,
+            293,
+            662
+          ],
+          "component_pixels": 195,
+          "removed_visible_pixels": 157
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            281,
+            634,
+            291,
+            662
+          ],
+          "removed_visible_pixels": 127
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            608,
+            685,
+            646
+          ],
+          "component_pixels": 361,
+          "removed_visible_pixels": 278
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            670,
+            608,
+            683,
+            646
+          ],
+          "removed_visible_pixels": 223
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            235,
+            745,
+            250,
+            773
+          ],
+          "component_pixels": 216,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            236,
+            745,
+            248,
+            772
+          ],
+          "removed_visible_pixels": 139
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            273,
+            827,
+            277,
+            839
+          ],
+          "removed_visible_pixels": 18
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              47,
+              2557,
+              446.01603441533047,
+              881.3828705514275
+            ],
+            [
+              59,
+              2486,
+              496.0028157683025,
+              882.3475462590507
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 0,
+        "optically_decontaminated_pixels": 955,
+        "protected_pixels": 44018,
+        "visible_pixels_changed": 955,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 57,
+      "native_index": 106,
+      "changed_pixels": 2011,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            280,
+            634,
+            292,
+            662
+          ],
+          "component_pixels": 213,
+          "removed_visible_pixels": 159
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            635,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 124
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            670,
+            607,
+            686,
+            647
+          ],
+          "component_pixels": 347,
+          "removed_visible_pixels": 262
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            671,
+            608,
+            683,
+            646
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            236,
+            745,
+            252,
+            776
+          ],
+          "component_pixels": 226,
+          "removed_visible_pixels": 175
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            238,
+            746,
+            250,
+            774
+          ],
+          "removed_visible_pixels": 140
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              42,
+              2669,
+              445.50655676283253,
+              879.7841888347696
+            ],
+            [
+              64,
+              2490,
+              495.9807228915663,
+              882.2975903614458
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 1005,
+        "protected_pixels": 43616,
+        "visible_pixels_changed": 1007,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 58,
+      "native_index": 108,
+      "changed_pixels": 2024,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            634,
+            290,
+            662
+          ],
+          "component_pixels": 196,
+          "removed_visible_pixels": 153
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            280,
+            634,
+            290,
+            662
+          ],
+          "removed_visible_pixels": 127
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            672,
+            607,
+            686,
+            647
+          ],
+          "component_pixels": 345,
+          "removed_visible_pixels": 265
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            672,
+            607,
+            684,
+            646
+          ],
+          "removed_visible_pixels": 214
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            236,
+            747,
+            252,
+            777
+          ],
+          "component_pixels": 221,
+          "removed_visible_pixels": 167
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            238,
+            747,
+            250,
+            775
+          ],
+          "removed_visible_pixels": 134
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              42,
+              2619,
+              445.49484536082474,
+              880.4390988927071
+            ],
+            [
+              63,
+              2490,
+              495.9654618473896,
+              882.3048192771084
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 1017,
+        "protected_pixels": 43673,
+        "visible_pixels_changed": 1021,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 59,
+      "native_index": 110,
+      "changed_pixels": 2075,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            279,
+            635,
+            289,
+            662
+          ],
+          "component_pixels": 199,
+          "removed_visible_pixels": 159
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            279,
+            635,
+            289,
+            662
+          ],
+          "removed_visible_pixels": 128
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            673,
+            606,
+            688,
+            646
+          ],
+          "component_pixels": 355,
+          "removed_visible_pixels": 271
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            673,
+            607,
+            686,
+            645
+          ],
+          "removed_visible_pixels": 220
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            236,
+            746,
+            252,
+            778
+          ],
+          "component_pixels": 230,
+          "removed_visible_pixels": 172
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            238,
+            748,
+            249,
+            775
+          ],
+          "removed_visible_pixels": 131
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            696,
+            855,
+            704,
+            860
+          ],
+          "removed_visible_pixels": 19
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              45,
+              2621,
+              445.48111407859597,
+              880.4170164059519
+            ],
+            [
+              61,
+              2491,
+              495.96467282215974,
+              882.2906463267764
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 1039,
+        "protected_pixels": 43641,
+        "visible_pixels_changed": 1040,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 60,
+      "native_index": 112,
+      "changed_pixels": 2025,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            278,
+            635,
+            289,
+            662
+          ],
+          "component_pixels": 198,
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            278,
+            635,
+            288,
+            661
+          ],
+          "removed_visible_pixels": 127
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            674,
+            607,
+            689,
+            646
+          ],
+          "component_pixels": 327,
+          "removed_visible_pixels": 244
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            675,
+            607,
+            687,
+            645
+          ],
+          "removed_visible_pixels": 218
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            235,
+            747,
+            251,
+            777
+          ],
+          "component_pixels": 223,
+          "removed_visible_pixels": 171
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            237,
+            748,
+            248,
+            775
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            698,
+            858,
+            704,
+            862
+          ],
+          "removed_visible_pixels": 12
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              47,
+              2623,
+              445.46778497903165,
+              880.4163171940527
+            ],
+            [
+              64,
+              2492,
+              495.96388443017656,
+              882.279695024077
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 1027,
+        "protected_pixels": 43693,
+        "visible_pixels_changed": 1028,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 61,
+      "native_index": 114,
+      "changed_pixels": 2068,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            635,
+            287,
+            662
+          ],
+          "component_pixels": 177,
+          "removed_visible_pixels": 147
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            635,
+            287,
+            661
+          ],
+          "removed_visible_pixels": 124
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            607,
+            690,
+            645
+          ],
+          "component_pixels": 320,
+          "removed_visible_pixels": 252
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            607,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 211
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            234,
+            746,
+            250,
+            777
+          ],
+          "component_pixels": 224,
+          "removed_visible_pixels": 177
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            235,
+            747,
+            247,
+            775
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            692,
+            857,
+            703,
+            862
+          ],
+          "removed_visible_pixels": 33
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              46,
+              2626,
+              445.4516374714394,
+              880.3865194211729
+            ],
+            [
+              65,
+              2494,
+              495.9615076182839,
+              882.2546110665597
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 1052,
+        "protected_pixels": 43873,
+        "visible_pixels_changed": 1053,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 62,
+      "native_index": 116,
+      "changed_pixels": 2015,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            277,
+            634,
+            287,
+            661
+          ],
+          "component_pixels": 176,
+          "removed_visible_pixels": 145
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            277,
+            634,
+            286,
+            660
+          ],
+          "removed_visible_pixels": 123
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            607,
+            691,
+            644
+          ],
+          "component_pixels": 322,
+          "removed_visible_pixels": 250
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            607,
+            688,
+            644
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            233,
+            745,
+            248,
+            775
+          ],
+          "component_pixels": 211,
+          "removed_visible_pixels": 168
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            234,
+            746,
+            245,
+            774
+          ],
+          "removed_visible_pixels": 136
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              46,
+              2628,
+              445.49657534246575,
+              880.3584474885845
+            ],
+            [
+              66,
+              2492,
+              495.96268057784914,
+              882.2833065810594
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 1042,
+        "protected_pixels": 44037,
+        "visible_pixels_changed": 1043,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 63,
+      "native_index": 118,
+      "changed_pixels": 2016,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            634,
+            287,
+            661
+          ],
+          "component_pixels": 191,
+          "removed_visible_pixels": 156
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            634,
+            286,
+            660
+          ],
+          "removed_visible_pixels": 125
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            606,
+            691,
+            645
+          ],
+          "component_pixels": 323,
+          "removed_visible_pixels": 255
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            606,
+            689,
+            644
+          ],
+          "removed_visible_pixels": 211
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            231,
+            745,
+            244,
+            775
+          ],
+          "component_pixels": 204,
+          "removed_visible_pixels": 164
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            232,
+            745,
+            244,
+            773
+          ],
+          "removed_visible_pixels": 133
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              43,
+              2655,
+              445.5333333333333,
+              879.9792843691149
+            ],
+            [
+              61,
+              2492,
+              495.96268057784914,
+              882.2833065810594
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 1,
+        "optically_decontaminated_pixels": 1033,
+        "protected_pixels": 43945,
+        "visible_pixels_changed": 1034,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 64,
+      "native_index": 120,
+      "changed_pixels": 1988,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            633,
+            287,
+            660
+          ],
+          "component_pixels": 177,
+          "removed_visible_pixels": 146
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            633,
+            286,
+            660
+          ],
+          "removed_visible_pixels": 122
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            606,
+            691,
+            645
+          ],
+          "component_pixels": 319,
+          "removed_visible_pixels": 247
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            606,
+            689,
+            644
+          ],
+          "removed_visible_pixels": 212
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            230,
+            746,
+            242,
+            774
+          ],
+          "component_pixels": 193,
+          "removed_visible_pixels": 160
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            231,
+            746,
+            242,
+            772
+          ],
+          "removed_visible_pixels": 129
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              43,
+              2657,
+              445.54497553631916,
+              879.99435453519
+            ],
+            [
+              59,
+              2493,
+              495.9715202567188,
+              882.2835940633774
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 4,
+        "optically_decontaminated_pixels": 1025,
+        "protected_pixels": 43996,
+        "visible_pixels_changed": 1029,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    },
+    {
+      "frame": 65,
+      "native_index": 122,
+      "changed_pixels": 2012,
+      "negative_spaces": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            276,
+            633,
+            286,
+            659
+          ],
+          "component_pixels": 166,
+          "removed_visible_pixels": 141
+        },
+        {
+          "name": "left_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            276,
+            633,
+            286,
+            659
+          ],
+          "removed_visible_pixels": 123
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            676,
+            606,
+            691,
+            645
+          ],
+          "component_pixels": 328,
+          "removed_visible_pixels": 255
+        },
+        {
+          "name": "right_upper_curl_reviewed_neutral_pocket",
+          "bbox": [
+            676,
+            606,
+            689,
+            644
+          ],
+          "removed_visible_pixels": 215
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            229,
+            743,
+            244,
+            773
+          ],
+          "component_pixels": 198,
+          "removed_visible_pixels": 161
+        },
+        {
+          "name": "left_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            230,
+            745,
+            241,
+            771
+          ],
+          "removed_visible_pixels": 130
+        },
+        {
+          "name": "right_lower_curl_reviewed_neutral_pocket",
+          "bbox": [
+            694,
+            857,
+            699,
+            861
+          ],
+          "removed_visible_pixels": 13
+        },
+        {
+          "name": "between_outlined_stockings",
+          "stocking_components": [
+            [
+              45,
+              2642,
+              445.5688872066616,
+              880.1718395155185
+            ],
+            [
+              63,
+              2493,
+              495.9715202567188,
+              882.2835940633774
+            ]
+          ]
+        }
+      ],
+      "edge": {
+        "radius": 3,
+        "sample_distance": 5,
+        "include_enclosed_background": true,
+        "exterior_white_pixels_removed": 2,
+        "optically_decontaminated_pixels": 1034,
+        "protected_pixels": 44116,
+        "visible_pixels_changed": 1036,
+        "opaque_non_edge_rgb_changed": 0,
+        "alpha_expanded": false,
+        "semantic_holes_inferred": false
+      }
+    }
+  ]
+}

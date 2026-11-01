@@ -1,0 +1,2575 @@
+{
+  "checked_utc": "2026-10-30T14:24:44.312531+00:00",
+  "scope": "full delivery including installed Qt expressions",
+  "status": "passed",
+  "errors": [],
+  "sources": [
+    {
+      "path": "assets/whale.png",
+      "sha256": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+      "baseline": "79450abd5d7201fcb7c8e7a5a668bd5550342658d27f49e3f26d0e4235ff801a",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/source/master-white-background-v2.png",
+      "sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+      "baseline": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+      "unchanged": true
+    },
+    {
+      "path": "assets/character/master.png",
+      "sha256": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+      "baseline": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+      "unchanged": true
+    }
+  ],
+  "raw": [
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\neutral.png",
+      "sha256": "0443afb8b3ebd771526efa329e045397f3bafb6f7117e7a65abf6ed669dad679",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        7,
+        1234,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 768322,
+      "transparent_fraction": 0.48859407471847666,
+      "partial_alpha_pixels": 802158,
+      "nonzero_alpha_pixels": 804194,
+      "component_count_all_nonzero_alpha": 775,
+      "detached_pixels_all_nonzero_alpha": 6033,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 784787,
+          "bounds": [
+            99,
+            10,
+            1180,
+            1219
+          ]
+        },
+        {
+          "pixels": 8,
+          "bounds": [
+            564,
+            1185,
+            565,
+            1193
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            487,
+            1142,
+            488,
+            1146
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            641,
+            68,
+            643,
+            69
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            645,
+            69,
+            647,
+            70
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            547,
+            51,
+            548,
+            52
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            465,
+            71,
+            466,
+            72
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            283,
+            253,
+            284,
+            254
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            244,
+            363,
+            245,
+            364
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            244,
+            366,
+            245,
+            367
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            271,
+            502,
+            272,
+            503
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            131,
+            855,
+            132,
+            856
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            132,
+            861,
+            133,
+            862
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            330,
+            931,
+            331,
+            932
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            429,
+            990,
+            430,
+            991
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            564,
+            1024,
+            565,
+            1025
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            563,
+            1044,
+            564,
+            1045
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            662,
+            1048,
+            663,
+            1049
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            560,
+            1148,
+            561,
+            1149
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            489,
+            1174,
+            490,
+            1175
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 20,
+      "detached_pixels_alpha_above_8": 31,
+      "significant_detached_components": [],
+      "baseline_sha256": "0443afb8b3ebd771526efa329e045397f3bafb6f7117e7a65abf6ed669dad679",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\happy.png",
+      "sha256": "943309fd45fc44fc6ac634a7c42d610f82e1eba870365d51f5ef047b14c52457",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        8,
+        1240,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 772135,
+      "transparent_fraction": 0.49101885131852396,
+      "partial_alpha_pixels": 798288,
+      "nonzero_alpha_pixels": 800381,
+      "component_count_all_nonzero_alpha": 453,
+      "detached_pixels_all_nonzero_alpha": 1243,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 786319,
+          "bounds": [
+            97,
+            9,
+            1182,
+            1220
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            563,
+            1068,
+            564,
+            1072
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            486,
+            1137,
+            487,
+            1141
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            564,
+            1187,
+            565,
+            1191
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            508,
+            54,
+            510,
+            55
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            468,
+            1043,
+            469,
+            1045
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            560,
+            1103,
+            561,
+            1105
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            559,
+            1120,
+            560,
+            1122
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            646,
+            69,
+            647,
+            70
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            650,
+            70,
+            651,
+            71
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            269,
+            313,
+            270,
+            314
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            271,
+            503,
+            272,
+            504
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            1179,
+            600,
+            1180,
+            601
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            435,
+            990,
+            436,
+            991
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            662,
+            1048,
+            663,
+            1049
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            563,
+            1049,
+            564,
+            1050
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            470,
+            1058,
+            471,
+            1059
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            559,
+            1117,
+            560,
+            1118
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            488,
+            1175,
+            489,
+            1176
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 19,
+      "detached_pixels_alpha_above_8": 31,
+      "significant_detached_components": [],
+      "baseline_sha256": "943309fd45fc44fc6ac634a7c42d610f82e1eba870365d51f5ef047b14c52457",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\surprised.png",
+      "sha256": "9b5a32633f3e48c929ab4651a36d9fdba82ec9336a49696cfa6c62f0ce5ef690",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        5,
+        1238,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 768591,
+      "transparent_fraction": 0.4887651381607564,
+      "partial_alpha_pixels": 801934,
+      "nonzero_alpha_pixels": 803925,
+      "component_count_all_nonzero_alpha": 667,
+      "detached_pixels_all_nonzero_alpha": 5134,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 785952,
+          "bounds": [
+            98,
+            9,
+            1181,
+            1220
+          ]
+        },
+        {
+          "pixels": 17,
+          "bounds": [
+            564,
+            1179,
+            565,
+            1196
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            487,
+            1142,
+            488,
+            1146
+          ]
+        },
+        {
+          "pixels": 3,
+          "bounds": [
+            469,
+            1048,
+            470,
+            1051
+          ]
+        },
+        {
+          "pixels": 3,
+          "bounds": [
+            486,
+            1136,
+            487,
+            1139
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            520,
+            51,
+            521,
+            52
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            504,
+            55,
+            505,
+            56
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            640,
+            67,
+            641,
+            68
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            268,
+            320,
+            269,
+            321
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            992,
+            586,
+            993,
+            587
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            132,
+            862,
+            133,
+            863
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            453,
+            1002,
+            454,
+            1003
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            470,
+            1058,
+            471,
+            1059
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            561,
+            1095,
+            562,
+            1096
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            485,
+            1131,
+            486,
+            1132
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            560,
+            1148,
+            561,
+            1149
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            488,
+            1174,
+            489,
+            1175
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 17,
+      "detached_pixels_alpha_above_8": 39,
+      "significant_detached_components": [
+        {
+          "pixels": 17,
+          "bounds": [
+            564,
+            1179,
+            565,
+            1196
+          ]
+        }
+      ],
+      "baseline_sha256": "9b5a32633f3e48c929ab4651a36d9fdba82ec9336a49696cfa6c62f0ce5ef690",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\sleepy.png",
+      "sha256": "dcaddb4eed34acaa975712ed7e664a3de532833e040d7f036a515d1f81994488",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        0,
+        1236,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 765987,
+      "transparent_fraction": 0.48710919316560214,
+      "partial_alpha_pixels": 805248,
+      "nonzero_alpha_pixels": 806529,
+      "component_count_all_nonzero_alpha": 916,
+      "detached_pixels_all_nonzero_alpha": 5785,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 785671,
+          "bounds": [
+            99,
+            9,
+            1180,
+            1220
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            132,
+            856,
+            133,
+            858
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            504,
+            54,
+            505,
+            55
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            648,
+            69,
+            649,
+            70
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            993,
+            590,
+            994,
+            591
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            944,
+            596,
+            945,
+            597
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            945,
+            600,
+            946,
+            601
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            974,
+            670,
+            975,
+            671
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            145,
+            834,
+            146,
+            835
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            434,
+            990,
+            435,
+            991
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            664,
+            1054,
+            665,
+            1055
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            563,
+            1198,
+            564,
+            1199
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 12,
+      "detached_pixels_alpha_above_8": 12,
+      "significant_detached_components": [],
+      "baseline_sha256": "dcaddb4eed34acaa975712ed7e664a3de532833e040d7f036a515d1f81994488",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\angry.png",
+      "sha256": "6ceaf9ae9219b0b7ac45d29a96ac0c65d2362d79964d98c445a6dbbb2173a156",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        0,
+        1232,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 770962,
+      "transparent_fraction": 0.4902729129624118,
+      "partial_alpha_pixels": 799591,
+      "nonzero_alpha_pixels": 801554,
+      "component_count_all_nonzero_alpha": 216,
+      "detached_pixels_all_nonzero_alpha": 616,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 787409,
+          "bounds": [
+            98,
+            8,
+            1180,
+            1220
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            565,
+            1183,
+            566,
+            1187
+          ]
+        },
+        {
+          "pixels": 3,
+          "bounds": [
+            560,
+            1116,
+            561,
+            1119
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            301,
+            1019,
+            302,
+            1021
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            563,
+            1084,
+            564,
+            1086
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            486,
+            1135,
+            487,
+            1137
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            564,
+            1176,
+            565,
+            1178
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            739,
+            111,
+            740,
+            112
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            284,
+            251,
+            285,
+            252
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            267,
+            320,
+            268,
+            321
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            270,
+            503,
+            271,
+            504
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            225,
+            630,
+            226,
+            631
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            950,
+            634,
+            951,
+            635
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            145,
+            833,
+            146,
+            834
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            148,
+            917,
+            149,
+            918
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            335,
+            955,
+            336,
+            956
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            300,
+            1022,
+            301,
+            1023
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            300,
+            1024,
+            301,
+            1025
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            299,
+            1026,
+            300,
+            1027
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            298,
+            1028,
+            299,
+            1029
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            663,
+            1050,
+            664,
+            1051
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            564,
+            1056,
+            565,
+            1057
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 22,
+      "detached_pixels_alpha_above_8": 30,
+      "significant_detached_components": [],
+      "baseline_sha256": "6ceaf9ae9219b0b7ac45d29a96ac0c65d2362d79964d98c445a6dbbb2173a156",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\thinking.png",
+      "sha256": "a9799d990922cd8cd91456f0423b9cc47d3b867e12bfa19c00511e456952e7e9",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        0,
+        8,
+        1232,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 775633,
+      "transparent_fraction": 0.4932433119917381,
+      "partial_alpha_pixels": 794439,
+      "nonzero_alpha_pixels": 796883,
+      "component_count_all_nonzero_alpha": 289,
+      "detached_pixels_all_nonzero_alpha": 1189,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 784362,
+          "bounds": [
+            99,
+            10,
+            1180,
+            1219
+          ]
+        },
+        {
+          "pixels": 4,
+          "bounds": [
+            487,
+            1142,
+            488,
+            1146
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            1180,
+            644,
+            1181,
+            646
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            684,
+            68,
+            685,
+            69
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            465,
+            71,
+            466,
+            72
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            283,
+            253,
+            284,
+            254
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            267,
+            322,
+            268,
+            323
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            991,
+            582,
+            992,
+            583
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            992,
+            585,
+            993,
+            586
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            132,
+            861,
+            133,
+            862
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            345,
+            938,
+            346,
+            939
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            328,
+            940,
+            329,
+            941
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            381,
+            966,
+            382,
+            967
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            434,
+            990,
+            435,
+            991
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            302,
+            1022,
+            303,
+            1023
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            300,
+            1028,
+            301,
+            1029
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            486,
+            1135,
+            487,
+            1136
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            561,
+            1151,
+            562,
+            1152
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            562,
+            1166,
+            563,
+            1167
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            489,
+            1174,
+            490,
+            1175
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            563,
+            1199,
+            564,
+            1200
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 21,
+      "detached_pixels_alpha_above_8": 24,
+      "significant_detached_components": [],
+      "baseline_sha256": "a9799d990922cd8cd91456f0423b9cc47d3b867e12bfa19c00511e456952e7e9",
+      "unchanged": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\原始生图\\talk_open.png",
+      "sha256": "f07433d2b8660eee12c9a600b1f008e77189fa1f0d9ec780b3e968b93eae31ce",
+      "mode": "RGBA",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_bounds": [
+        17,
+        7,
+        1238,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 771634,
+      "transparent_fraction": 0.49070025360632263,
+      "partial_alpha_pixels": 798789,
+      "nonzero_alpha_pixels": 800882,
+      "component_count_all_nonzero_alpha": 738,
+      "detached_pixels_all_nonzero_alpha": 4620,
+      "border_alpha_clear": false,
+      "components_alpha_above_8": [
+        {
+          "pixels": 783305,
+          "bounds": [
+            99,
+            10,
+            1179,
+            1219
+          ]
+        },
+        {
+          "pixels": 3,
+          "bounds": [
+            563,
+            1070,
+            564,
+            1073
+          ]
+        },
+        {
+          "pixels": 3,
+          "bounds": [
+            487,
+            1143,
+            488,
+            1146
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            563,
+            1026,
+            564,
+            1028
+          ]
+        },
+        {
+          "pixels": 2,
+          "bounds": [
+            564,
+            1188,
+            565,
+            1190
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            283,
+            253,
+            284,
+            254
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            222,
+            671,
+            223,
+            672
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            976,
+            672,
+            977,
+            673
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            132,
+            861,
+            133,
+            862
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            456,
+            1002,
+            457,
+            1003
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            662,
+            1048,
+            663,
+            1049
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            664,
+            1054,
+            665,
+            1055
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            560,
+            1148,
+            561,
+            1149
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            489,
+            1174,
+            490,
+            1175
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            643,
+            1174,
+            644,
+            1175
+          ]
+        },
+        {
+          "pixels": 1,
+          "bounds": [
+            563,
+            1197,
+            564,
+            1198
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 16,
+      "detached_pixels_alpha_above_8": 21,
+      "significant_detached_components": [],
+      "baseline_sha256": "f07433d2b8660eee12c9a600b1f008e77189fa1f0d9ec780b3e968b93eae31ce",
+      "unchanged": true
+    }
+  ],
+  "png": [
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\neutral.png",
+      "sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809490,
+      "transparent_fraction": 0.7719898223876953,
+      "partial_alpha_pixels": 5140,
+      "nonzero_alpha_pixels": 239086,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238729,
+          "bounds": [
+            214,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\happy.png",
+      "sha256": "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809834,
+      "transparent_fraction": 0.7723178863525391,
+      "partial_alpha_pixels": 5129,
+      "nonzero_alpha_pixels": 238742,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238395,
+          "bounds": [
+            214,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\surprised.png",
+      "sha256": "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809929,
+      "transparent_fraction": 0.7724084854125977,
+      "partial_alpha_pixels": 5233,
+      "nonzero_alpha_pixels": 238647,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238301,
+          "bounds": [
+            214,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\sleepy.png",
+      "sha256": "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        215,
+        294,
+        809,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 810086,
+      "transparent_fraction": 0.7725582122802734,
+      "partial_alpha_pixels": 5301,
+      "nonzero_alpha_pixels": 238490,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238110,
+          "bounds": [
+            215,
+            294,
+            809,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\angry.png",
+      "sha256": "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        215,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809888,
+      "transparent_fraction": 0.772369384765625,
+      "partial_alpha_pixels": 5176,
+      "nonzero_alpha_pixels": 238688,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238344,
+          "bounds": [
+            215,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\thinking.png",
+      "sha256": "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809594,
+      "transparent_fraction": 0.7720890045166016,
+      "partial_alpha_pixels": 5069,
+      "nonzero_alpha_pixels": 238982,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238638,
+          "bounds": [
+            214,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\talk_open.png",
+      "sha256": "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        215,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809961,
+      "transparent_fraction": 0.7724390029907227,
+      "partial_alpha_pixels": 5140,
+      "nonzero_alpha_pixels": 238615,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238245,
+          "bounds": [
+            215,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\透明PNG\\talk_closed.png",
+      "sha256": "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff",
+      "mode": "RGBA",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 809490,
+      "transparent_fraction": 0.7719898223876953,
+      "partial_alpha_pixels": 5140,
+      "nonzero_alpha_pixels": 239086,
+      "component_count_all_nonzero_alpha": 1,
+      "detached_pixels_all_nonzero_alpha": 0,
+      "border_alpha_clear": true,
+      "components_alpha_above_8": [
+        {
+          "pixels": 238729,
+          "bounds": [
+            214,
+            294,
+            810,
+            960
+          ]
+        }
+      ],
+      "component_count_alpha_above_8": 1,
+      "detached_pixels_alpha_above_8": 0,
+      "significant_detached_components": []
+    }
+  ],
+  "psd": [
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\neutral.psd",
+      "sha256": "b21c5bbd807aeb81d8c130bb503d64a169212b220ada1a1cbb58f5697d536b39",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            7,
+            1234,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 138136
+            },
+            {
+              "id": 0,
+              "bytes": 657066
+            },
+            {
+              "id": 1,
+              "bytes": 667265
+            },
+            {
+              "id": 2,
+              "bytes": 673662
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "neutral - editable Photoshop cu",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 9662
+            },
+            {
+              "id": 0,
+              "bytes": 271621
+            },
+            {
+              "id": 1,
+              "bytes": 275111
+            },
+            {
+              "id": 2,
+              "bytes": 280920
+            },
+            {
+              "id": -2,
+              "bytes": 19850
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            214,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2994176,
+      "layer_mask_section_bytes": 2995004,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\happy.psd",
+      "sha256": "3185742aa26d724ecfb847f7621d71ab1d0e9707acf51fd301c0b987038a3c3d",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            8,
+            1240,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 132015
+            },
+            {
+              "id": 0,
+              "bytes": 655186
+            },
+            {
+              "id": 1,
+              "bytes": 667543
+            },
+            {
+              "id": 2,
+              "bytes": 672788
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "happy - editable Photoshop cuto",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 12422
+            },
+            {
+              "id": 0,
+              "bytes": 268737
+            },
+            {
+              "id": 1,
+              "bytes": 274610
+            },
+            {
+              "id": 2,
+              "bytes": 278836
+            },
+            {
+              "id": -2,
+              "bytes": 19823
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            214,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2982836,
+      "layer_mask_section_bytes": 2983664,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\surprised.psd",
+      "sha256": "af9527d839a74e26d6f19286518805aa14d327dc2e46d7dfa5b0ac151c22d937",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            5,
+            1238,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 136135
+            },
+            {
+              "id": 0,
+              "bytes": 659860
+            },
+            {
+              "id": 1,
+              "bytes": 668512
+            },
+            {
+              "id": 2,
+              "bytes": 675894
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "surprised - editable Photoshop ",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 12422
+            },
+            {
+              "id": 0,
+              "bytes": 270720
+            },
+            {
+              "id": 1,
+              "bytes": 275706
+            },
+            {
+              "id": 2,
+              "bytes": 280285
+            },
+            {
+              "id": -2,
+              "bytes": 19979
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            214,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 3000400,
+      "layer_mask_section_bytes": 3001228,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\sleepy.psd",
+      "sha256": "fa8c7f59665ec4798cfbaa950d48a26042e6c8d9db46134c734c3cdae284a146",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            0,
+            1236,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 141078
+            },
+            {
+              "id": 0,
+              "bytes": 653586
+            },
+            {
+              "id": 1,
+              "bytes": 665908
+            },
+            {
+              "id": 2,
+              "bytes": 674566
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "sleepy - editable Photoshop cut",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 12422
+            },
+            {
+              "id": 0,
+              "bytes": 266906
+            },
+            {
+              "id": 1,
+              "bytes": 274074
+            },
+            {
+              "id": 2,
+              "bytes": 279572
+            },
+            {
+              "id": -2,
+              "bytes": 20047
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            215,
+            294,
+            809,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2989036,
+      "layer_mask_section_bytes": 2989864,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\angry.psd",
+      "sha256": "4ab9e87d88bdaf4ea36e05fbdd3b386e59baa771d5180e9f87031e798156dfa8",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            0,
+            1232,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 126692
+            },
+            {
+              "id": 0,
+              "bytes": 680087
+            },
+            {
+              "id": 1,
+              "bytes": 689903
+            },
+            {
+              "id": 2,
+              "bytes": 691282
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "angry - editable Photoshop cuto",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            161,
+            289,
+            851,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 11042
+            },
+            {
+              "id": 0,
+              "bytes": 270878
+            },
+            {
+              "id": 1,
+              "bytes": 276462
+            },
+            {
+              "id": 2,
+              "bytes": 282462
+            },
+            {
+              "id": -2,
+              "bytes": 19932
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            215,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 3049616,
+      "layer_mask_section_bytes": 3050444,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\thinking.psd",
+      "sha256": "d26f7d3c395b162412dce7796f44f1630cca50070a08caaf0fecd2bacd0c6773",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            8,
+            1232,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 127931
+            },
+            {
+              "id": 0,
+              "bytes": 647324
+            },
+            {
+              "id": 1,
+              "bytes": 658786
+            },
+            {
+              "id": 2,
+              "bytes": 667235
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "thinking - editable Photoshop c",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 9662
+            },
+            {
+              "id": 0,
+              "bytes": 268802
+            },
+            {
+              "id": 1,
+              "bytes": 274619
+            },
+            {
+              "id": 2,
+              "bytes": 278674
+            },
+            {
+              "id": -2,
+              "bytes": 19756
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            214,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2953672,
+      "layer_mask_section_bytes": 2954500,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\talk_open.psd",
+      "sha256": "5b8f88ac40d421fca3291d87a399e4aa1b35affc0ab4ae78fdd77a6f98e537c2",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            17,
+            7,
+            1238,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 136640
+            },
+            {
+              "id": 0,
+              "bytes": 648946
+            },
+            {
+              "id": 1,
+              "bytes": 659745
+            },
+            {
+              "id": 2,
+              "bytes": 668058
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "talk_open - editable Photoshop ",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            161,
+            289,
+            851,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 9662
+            },
+            {
+              "id": 0,
+              "bytes": 267680
+            },
+            {
+              "id": 1,
+              "bytes": 273963
+            },
+            {
+              "id": 2,
+              "bytes": 278213
+            },
+            {
+              "id": -2,
+              "bytes": 19903
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            215,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2963696,
+      "layer_mask_section_bytes": 2964524,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    },
+    {
+      "path": "美术资产\\鲸鱼娘_七种表情_Photoshop\\PSD\\talk_closed.psd",
+      "sha256": "5afee8172c67844732ac0f968338a4249b301e203b25febfa2c5f4bc8ccf68d8",
+      "version": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "channels": 4,
+      "depth": 8,
+      "color_mode": 3,
+      "layers": [
+        {
+          "name": "Raw original - unmodified",
+          "visible": false,
+          "opacity": 255,
+          "bounds": [
+            0,
+            7,
+            1234,
+            1254
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 138136
+            },
+            {
+              "id": 0,
+              "bytes": 657066
+            },
+            {
+              "id": 1,
+              "bytes": 667265
+            },
+            {
+              "id": 2,
+              "bytes": 673662
+            }
+          ],
+          "mask_bytes": 0,
+          "mask_bounds": null,
+          "blend_mode": "norm"
+        },
+        {
+          "name": "neutral - editable Photoshop cu",
+          "visible": true,
+          "opacity": 255,
+          "bounds": [
+            160,
+            289,
+            850,
+            979
+          ],
+          "channels": [
+            {
+              "id": -1,
+              "bytes": 9662
+            },
+            {
+              "id": 0,
+              "bytes": 271621
+            },
+            {
+              "id": 1,
+              "bytes": 275111
+            },
+            {
+              "id": 2,
+              "bytes": 280920
+            },
+            {
+              "id": -2,
+              "bytes": 19850
+            }
+          ],
+          "mask_bytes": 20,
+          "mask_bounds": [
+            214,
+            294,
+            810,
+            960
+          ],
+          "blend_mode": "norm"
+        }
+      ],
+      "layer_info_bytes": 2994176,
+      "layer_mask_section_bytes": 2995004,
+      "contains_visible_editable_mask": true,
+      "contains_hidden_original": true
+    }
+  ],
+  "qt_expressions": [
+    {
+      "code": "neutral",
+      "loaded": true,
+      "status": "已加载 neutral.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "happy",
+      "loaded": true,
+      "status": "已加载 happy.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "surprised",
+      "loaded": true,
+      "status": "已加载 surprised.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "sleepy",
+      "loaded": true,
+      "status": "已加载 sleepy.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "angry",
+      "loaded": true,
+      "status": "已加载 angry.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "thinking",
+      "loaded": true,
+      "status": "已加载 thinking.png。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "talking",
+      "loaded": true,
+      "status": "已加载 talk_open.png（静态素材）。",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    },
+    {
+      "code": "talking.closed",
+      "loaded": true,
+      "status": "Qt direct load of optional closed-mouth talking sprite",
+      "size": [
+        1024,
+        1024
+      ],
+      "alpha_channel": true,
+      "installed_sha256_matches_final": true,
+      "qt_pixels_match_final_input": true,
+      "alpha_pixels_match_final_input": true
+    }
+  ],
+  "talk_closed_alias": {
+    "source_state": "neutral",
+    "identical_rgba_pixels": true
+  },
+  "inspection_contact_sheet": "美术资产\\鲸鱼娘_七种表情_Photoshop\\预览\\七种表情总览.png"
+}

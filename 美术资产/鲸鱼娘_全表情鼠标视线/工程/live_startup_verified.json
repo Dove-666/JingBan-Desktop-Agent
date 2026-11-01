@@ -1,0 +1,26 @@
+{
+    "checked_at":  "2026-10-31T00:10:47.7582358+08:00",
+    "status":  "passed",
+    "windows":  [
+                    {
+                        "process_id":  35348,
+                        "title":  "AURA · 鲸鱼娘桌宠",
+                        "visible":  true,
+                        "loaded_expression_status":  null
+                    },
+                    {
+                        "process_id":  35348,
+                        "title":  "和鲸鱼娘聊天 - 鲸鱼娘桌宠",
+                        "visible":  true,
+                        "loaded_expression_status":  null
+                    },
+                    {
+                        "process_id":  35348,
+                        "title":  "鲸鱼娘 · 调试面板 · 2026.10.30-r8 - 鲸鱼娘桌宠",
+                        "visible":  true,
+                        "loaded_expression_status":  "已加载 thinking.png。"
+                    }
+                ],
+    "stderr_empty":  true,
+    "expression_choice_preserved":  true
+}

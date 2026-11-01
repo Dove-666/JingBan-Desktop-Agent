@@ -1,0 +1,4 @@
+# Optional CPU-only local embeddings; no Torch, GPU or Embedding API key.
+-r requirements-memory.txt
+fastembed==0.9.1
+onnxruntime==1.23.2

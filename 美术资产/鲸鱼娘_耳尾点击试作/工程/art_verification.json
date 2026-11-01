@@ -1,0 +1,88 @@
+{
+  "source_sha256": "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+  "source_matches_rig": true,
+  "base_dimensions": [
+    1024,
+    1024
+  ],
+  "mask_bbox": [
+    223,
+    452,
+    814,
+    863
+  ],
+  "base_changed_pixels_outside_mask": 32398,
+  "base_alpha_changed_outside_mask": 0,
+  "base_visible_changed_outside_mask": 0,
+  "mask_eye_region_nonzero": 0,
+  "rest_rgba_different_pixels": 158469,
+  "rest_visible_diff_gt8": 313,
+  "parts": [
+    {
+      "name": "left_ear",
+      "size": [
+        102,
+        81
+      ],
+      "alpha_bbox": [
+        0,
+        0,
+        102,
+        81
+      ],
+      "origin": [
+        228,
+        487
+      ],
+      "pivot": [
+        305,
+        520
+      ],
+      "z": "behind"
+    },
+    {
+      "name": "right_ear",
+      "size": [
+        142,
+        90
+      ],
+      "alpha_bbox": [
+        0,
+        0,
+        142,
+        90
+      ],
+      "origin": [
+        594,
+        451
+      ],
+      "pivot": [
+        609,
+        488
+      ],
+      "z": "behind"
+    },
+    {
+      "name": "tail",
+      "size": [
+        170,
+        262
+      ],
+      "alpha_bbox": [
+        0,
+        0,
+        170,
+        262
+      ],
+      "origin": [
+        640,
+        601
+      ],
+      "pivot": [
+        681,
+        844
+      ],
+      "z": "behind"
+    }
+  ]
+}

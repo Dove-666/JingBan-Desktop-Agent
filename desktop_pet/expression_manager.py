@@ -28,8 +28,9 @@ class Expression:
 
 
 class ExpressionManager:
-    def __init__(self, directory: Path | None = None) -> None:
+    def __init__(self, directory: Path | None = None, *, character_directory: Path | None = None) -> None:
         self.directory = directory or PROJECT_ROOT / "assets" / "expressions"
+        self.character_directory = character_directory or PROJECT_ROOT / "assets" / "character"
         self._cache: dict[Path, tuple[tuple[int, int], QPixmap]] = {}
 
     def resolve(self, code: str) -> Expression:
@@ -70,4 +71,39 @@ class ExpressionManager:
     def missing_assets(self) -> list[str]:
         return [filename for _, names in EXPRESSIONS.values() for filename in names
                 if not (self.directory / filename).is_file()]
+
+    def resolve_static(self, code: str) -> Expression:
+        """An appearance choice is separate from the seven API emotion values."""
+        if code not in {"original", "tsundere"}:
+            raise ValueError("未知静态角色素材。")
+        original = code == "original"
+        label = "原始鲸鱼娘" if original else "傲娇 · 静态"
+        path = (self.character_directory / "master.png" if original
+                else self.character_directory / "static" / "tsundere.png")
+        try:
+            stat = path.stat()
+            fingerprint = (stat.st_mtime_ns, stat.st_size)
+            cached = self._cache.get(path)
+            if cached is not None and cached[0] == fingerprint:
+                pixmap = cached[1]
+            else:
+                reader = QImageReader(str(path), b"png")
+                image = reader.read()
+                if image.isNull() or not image.hasAlphaChannel():
+                    return Expression(code, label, None, "静态 PNG 无效或没有透明通道；原始模式将回退 whale.png，其他模式保留当前角色。")
+                pixmap = QPixmap.fromImage(image)
+                self._cache[path] = (fingerprint, pixmap)
+            status = ("已加载统一 1024 画布的 master.png；原始 whale.png 保持不变。" if original else
+                      "已加载傲娇静态角色 PNG；此处选择会固定显示，随机待机也会短暂展示这个姿态。")
+            return Expression(code, label, pixmap, status)
+        except FileNotFoundError:
+            status = ("统一画布 master.png 缺失，安全回退原始 whale.png。" if original else
+                      "傲娇静态素材尚未就绪：assets/character/static/tsundere.png。")
+            return Expression(code, label, None, status)
+        except OSError:
+            return Expression(code, label, None, "无法读取静态 PNG；原始模式将回退 whale.png，其他模式保留当前角色。")
+
+    def static_catalog(self) -> list[tuple[str, str, str]]:
+        return [(code, item.label, item.status) for code in ("original", "tsundere")
+                for item in (self.resolve_static(code),)]
 

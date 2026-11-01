@@ -1,0 +1,90 @@
+{
+  "master": {
+    "source_sha256": "001211e634dbc29dee9fbbf44f331954a9d0b7a7721c9e664e4118e3f89843ab",
+    "output_sha256": "14eb9daf26d9de51f39f75bcd103ed7f40ed087c1ce53596f409d030ae5760bb",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_visible_bounds": [
+      100,
+      10,
+      1179,
+      1218
+    ],
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "scale": 0.5496688741721855,
+    "translation": [
+      160,
+      288
+    ],
+    "visible_bounds": [
+      213,
+      291,
+      810,
+      960
+    ],
+    "bottom_anchor": 960,
+    "layout_alpha_threshold": 1,
+    "operation": "full-canvas uniform scale and translation; alpha retained",
+    "source": "source/master-cutout-corrected-v2.png",
+    "target": "master.png",
+    "real_transparency": true,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "common_safety_factor": 0.7412408317219669,
+    "applied_static_safe_extent": 664,
+    "shared_standing_height_target": 665.6342668863263
+  },
+  "tsundere": {
+    "source_sha256": "5e862460722e2cd84d9ac1041556596a7bc4c7831234d5c02d10771a5353977d",
+    "output_sha256": "16c6962c2b0a57e4fe620d31144ec2739e5fa206b93da01c9314179951e83de4",
+    "source_size": [
+      1254,
+      1254
+    ],
+    "source_visible_bounds": [
+      99,
+      23,
+      1182,
+      1225
+    ],
+    "canvas": {
+      "width": 1024,
+      "height": 1024
+    },
+    "scale": 0.5524126455906821,
+    "translation": [
+      158,
+      281
+    ],
+    "visible_bounds": [
+      211,
+      291,
+      813,
+      960
+    ],
+    "bottom_anchor": 960,
+    "layout_alpha_threshold": 1,
+    "operation": "full-canvas uniform scale and translation; alpha retained",
+    "source": "source/tsundere-cutout-corrected-v2.png",
+    "target": "static/tsundere.png",
+    "real_transparency": true,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "common_safety_factor": 0.7412408317219669,
+    "applied_static_safe_extent": 664,
+    "shared_standing_height_target": 665.6342668863263
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "问问鲸鱼娘",
+  "version": "1.0.0",
+  "description": "选中文字后，右键问问桌面上的鲸鱼娘。仅在点击时读取当前页面的文字上下文。",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwZZwt31gTm7ZwSF4wV77TSYbsfsoG2m4C8VmsNyHazJZACwXQCXfVESc5+PTuQ6gPNvx/CKq1TVIRw9TmC6WnGIOb6A/8oqCs5pW9MSG3EkccmCarc2n3mBv5OeyE8ZtVfKXVtqcQ+gci7bgLRmzdPhlovpHggTsnxdllcAbDu0ovkfqy9nxFC9pIkOGENl4TbgoCsG1R1gSX9l7Mg7tAoIvdhaCOrmj1pJErBA95cg4AeGfawwvZ1EXsnLrkv8kNggum5shc7K6RHHBgtvcrG5TyOOII+Fo1nMVdffPj55V2glpfdlXG+cTnsywOFs7/u5hsBkJLZ+jV5sh0e9UOQIDAQAB",
+  "permissions": ["contextMenus", "activeTab", "scripting", "nativeMessaging"],
+  "background": {"service_worker": "service_worker.js"},
+  "action": {"default_title": "问问鲸鱼娘", "default_popup": "status.html"},
+  "icons": {"16": "icons/whale16.png", "48": "icons/whale48.png", "128": "icons/whale128.png"},
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; connect-src 'none';"}
+}

@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "environment": {
+    "python": "3.12.13",
+    "nanobot-ai": "0.4.0",
+    "openai": "3.42.0",
+    "mcp": "1.30.0"
+  },
+  "installation": {
+    "distribution": "official PyPI nanobot-ai 0.4.0 sdist",
+    "source_sha256": "06a0c3dbcf1ceecfb59b057a1d8c052ccf2694b0e9286ae4fe9a27232f4befca",
+    "pypi_sha256_verified": true,
+    "upstream_modified": false,
+    "dependency_check": "117 packages compatible"
+  },
+  "tests": {
+    "command": "agent_backend/nanobot/.venv/Scripts/python.exe -m unittest discover -s agent_backend/nanobot/tests -v",
+    "passed": 16,
+    "seconds": 9.828,
+    "post_review_gui_authorization_tests": {
+      "passed": 2,
+      "seconds": 0.029
+    },
+    "real_nanobot_sdk": true,
+    "model_transport": "loopback HTTP SSE fake model",
+    "gui_transport": "mocked subprocess only",
+    "web_transport": "mocked DNS/HTTP only"
+  },
+  "security": {
+    "real_user_api_config_read": false,
+    "real_cloud_model_calls": 0,
+    "physical_mouse_keyboard_input": 0,
+    "desktop_screenshots": 0,
+    "gateway_started": false,
+    "persistent_sdk_memory": false,
+    "credentials_in_argv_or_environment": false,
+    "shell_tool_registered": false
+  },
+  "tools": [
+    "read_file",
+    "write_file",
+    "search_files",
+    "web_fetch"
+  ],
+  "computer_extra_tool": "computer_use (one dispatch per task; exact original user goal, model tool arguments ignored)",
+  "known_limitations": [
+    "No general internet search; public URL required",
+    "GUI native actions already dispatched cannot be undone",
+    "SDK and OS blocking IO ultimately bounded by host process-tree timeout",
+    "Cloud GUI model/setup validated separately by host"
+  ]
+}

@@ -1,0 +1,129 @@
+{
+    "schema_version":  1,
+    "created_at":  "2026-10-30T22:25:10.2450814+08:00",
+    "generator":  "built_in_image_gen",
+    "generated_images":  7,
+    "reference":  "assets/character/source/master-white-background-v2.png",
+    "reference_sha256":  "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+    "imagegen_prompts":  "工程/generation_prompts.json",
+    "cutout":  {
+                   "application":  "Adobe Photoshop 2024",
+                   "version":  "25.9.0",
+                   "operations":  [
+                                      "Defringe 1px before resizing",
+                                      "Editable layer mask from source transparency",
+                                      "Mask Levels input black 8 white 250 gamma 1",
+                                      "Preserve hidden original layer",
+                                      "Normalize canvas and anchor",
+                                      "Save layered PSD and transparent PNG"
+                                  ],
+                   "script":  "工程/photoshop_expressions.jsx",
+                   "log":  "工程/photoshop_batch.log",
+                   "native_evidence":  "工程/Photoshop_原生窗口证据.png",
+                   "python_used_for_cutout":  false
+               },
+    "canvas":  {
+                   "width":  1024,
+                   "height":  1024,
+                   "subject_height":  666,
+                   "bottom_anchor":  [
+                                         512,
+                                         960
+                                     ]
+               },
+    "expression_map":  {
+                           "neutral":  "neutral.png",
+                           "happy":  "happy.png",
+                           "surprised":  "surprised.png",
+                           "sleepy":  "sleepy.png",
+                           "angry":  "angry.png",
+                           "thinking":  "thinking.png",
+                           "talking":  "talk_open.png"
+                       },
+    "closed_mouth_note":  "talk_closed is a Photoshop export of neutral, identical RGBA pixels; talking currently uses a static mouth pose",
+    "entries":  [
+                    {
+                        "code":  "neutral",
+                        "source":  "原始生图/neutral.png",
+                        "png":  "透明PNG/neutral.png",
+                        "psd":  "PSD/neutral.psd",
+                        "runtime":  "assets/expressions/neutral.png",
+                        "png_sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+                        "psd_sha256":  "b21c5bbd807aeb81d8c130bb503d64a169212b220ada1a1cbb58f5697d536b39"
+                    },
+                    {
+                        "code":  "happy",
+                        "source":  "原始生图/happy.png",
+                        "png":  "透明PNG/happy.png",
+                        "psd":  "PSD/happy.psd",
+                        "runtime":  "assets/expressions/happy.png",
+                        "png_sha256":  "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f",
+                        "psd_sha256":  "3185742aa26d724ecfb847f7621d71ab1d0e9707acf51fd301c0b987038a3c3d"
+                    },
+                    {
+                        "code":  "surprised",
+                        "source":  "原始生图/surprised.png",
+                        "png":  "透明PNG/surprised.png",
+                        "psd":  "PSD/surprised.psd",
+                        "runtime":  "assets/expressions/surprised.png",
+                        "png_sha256":  "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+                        "psd_sha256":  "af9527d839a74e26d6f19286518805aa14d327dc2e46d7dfa5b0ac151c22d937"
+                    },
+                    {
+                        "code":  "sleepy",
+                        "source":  "原始生图/sleepy.png",
+                        "png":  "透明PNG/sleepy.png",
+                        "psd":  "PSD/sleepy.psd",
+                        "runtime":  "assets/expressions/sleepy.png",
+                        "png_sha256":  "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+                        "psd_sha256":  "fa8c7f59665ec4798cfbaa950d48a26042e6c8d9db46134c734c3cdae284a146"
+                    },
+                    {
+                        "code":  "angry",
+                        "source":  "原始生图/angry.png",
+                        "png":  "透明PNG/angry.png",
+                        "psd":  "PSD/angry.psd",
+                        "runtime":  "assets/expressions/angry.png",
+                        "png_sha256":  "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+                        "psd_sha256":  "4ab9e87d88bdaf4ea36e05fbdd3b386e59baa771d5180e9f87031e798156dfa8"
+                    },
+                    {
+                        "code":  "thinking",
+                        "source":  "原始生图/thinking.png",
+                        "png":  "透明PNG/thinking.png",
+                        "psd":  "PSD/thinking.psd",
+                        "runtime":  "assets/expressions/thinking.png",
+                        "png_sha256":  "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+                        "psd_sha256":  "d26f7d3c395b162412dce7796f44f1630cca50070a08caaf0fecd2bacd0c6773"
+                    },
+                    {
+                        "code":  "talk_open",
+                        "source":  "原始生图/talk_open.png",
+                        "png":  "透明PNG/talk_open.png",
+                        "psd":  "PSD/talk_open.psd",
+                        "runtime":  "assets/expressions/talk_open.png",
+                        "png_sha256":  "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+                        "psd_sha256":  "5b8f88ac40d421fca3291d87a399e4aa1b35affc0ab4ae78fdd77a6f98e537c2"
+                    },
+                    {
+                        "code":  "talk_closed",
+                        "source":  "原始生图/neutral.png",
+                        "png":  "透明PNG/talk_closed.png",
+                        "psd":  "PSD/talk_closed.psd",
+                        "runtime":  "assets/expressions/talk_closed.png",
+                        "png_sha256":  "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff",
+                        "psd_sha256":  "5afee8172c67844732ac0f968338a4249b301e203b25febfa2c5f4bc8ccf68d8"
+                    }
+                ],
+    "verification":  {
+                         "asset_delivery":  "工程/verification.json",
+                         "menu":  "工程/menu_verification.json",
+                         "targeted_unit_tests":  {
+                                                     "status":  "passed",
+                                                     "count":  26,
+                                                     "seconds":  4.563,
+                                                     "command":  ".venv/Scripts/python.exe -m unittest tests.test_pet_controller tests.test_application tests.test_static_asset_layout"
+                                                 },
+                         "contact_sheet":  "预览/七种表情总览.png"
+                     }
+}

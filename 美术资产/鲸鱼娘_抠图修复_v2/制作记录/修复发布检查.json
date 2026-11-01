@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "batch": "hair_repair_v2",
+  "verification": {
+    "syntax": "compileall main.py desktop_pet tests tools passed; C# matte processor compiled and executed",
+    "targeted_tests": {
+      "count": 77,
+      "seconds": 3.902,
+      "failures": 0,
+      "skipped": 0,
+      "report": "artifacts/asset_pipeline/hair_repair_v2/targeted_execution_report.json"
+    },
+    "full_suite_rerun": false,
+    "real_playback": {
+      "status": "passed",
+      "report": "artifacts/asset_pipeline/hair_repair_v2/real_playback/result.json",
+      "both_actual_clips": true,
+      "frame_count_per_clip": 62,
+      "drag_freeze_return_and_six_scales": "passed with injected Qt events; no physical mouse test"
+    },
+    "native_windows": {
+      "status": "startup_and_visual_checks_passed",
+      "production_pid_at_check": 29768,
+      "stderr": "empty",
+      "corrected_static_visually_verified": true,
+      "real_snarl_pose_observed_after_play_invoke": true,
+      "stop_restore_confirmed": true,
+      "screenshots": [
+        "artifacts/asset_pipeline/hair_repair_v2/native_corrected_pet_verified.png",
+        "artifacts/asset_pipeline/hair_repair_v2/native_corrected_snarl_observed.png"
+      ],
+      "physical_drag_and_native_multi_monitor_tested": false
+    },
+    "inventory": {
+      "status": "passed",
+      "delivered_rgba_frames_verified": 124,
+      "art_package_equals_runtime": true,
+      "pre_repair_backup_hashes_verified": true,
+      "desktop_original_and_legacy_source_unchanged": true,
+      "both_original_videos_unchanged": true
+    },
+    "new_video_generation_requests": 0,
+    "static_builtin_imagegen_calls": 2,
+    "static_generation_note": "normal matte used with original RGB restoration; tsundere new matte rejected, original source alpha retained with localized gap repair"
+  },
+  "video_pixel_validation": "final_repair_report.json records pre-publication video candidates only; static generation is accounted separately here",
+  "video_white_core_pixels_before": 369888,
+  "video_white_core_pixels_after": 0
+}

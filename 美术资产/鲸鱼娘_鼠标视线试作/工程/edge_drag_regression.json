@@ -1,0 +1,8 @@
+{
+  "module": "tests.test_pet_edge_drag",
+  "tests_run": 8,
+  "failures": 0,
+  "errors": 0,
+  "passed": true,
+  "output": "test_all_transparent_character_does_not_produce_invalid_placement (tests.test_pet_edge_drag.PetEdgeDragTests) ... ok\ntest_large_canvas_transparent_margins_do_not_prevent_dragging_to_any_edge (tests.test_pet_edge_drag.PetEdgeDragTests) ... ok\ntest_placement_envelope_contains_all_default_animation_phases (tests.test_pet_edge_drag.PetEdgeDragTests) ... ok\ntest_sequence_placement_uses_one_stable_union_without_cropping_frames (tests.test_pet_edge_drag.PetEdgeDragTests) ... ok\ntest_transparent_hole_is_not_made_draggable_by_the_visible_bounding_box (tests.test_pet_edge_drag.PetEdgeDragTests) ... ok\ntest_empty_and_oversized_footprints_have_a_safe_deterministic_result (tests.test_pet_edge_drag.VisiblePlacementTests) ... ok\ntest_fractional_alpha_bounds_reach_all_four_negative_monitor_edges (tests.test_pet_edge_drag.VisiblePlacementTests) ... ok\ntest_position_inside_visible_work_area_is_preserved_even_if_window_is_outside (tests.test_pet_edge_drag.VisiblePlacementTests) ... ok\n\n----------------------------------------------------------------------\nRan 8 tests in 10.844s\n\nOK\n"
+}

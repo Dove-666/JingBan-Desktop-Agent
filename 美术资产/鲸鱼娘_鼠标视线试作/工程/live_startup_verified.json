@@ -1,0 +1,19 @@
+{
+    "checked_at":  "2026-10-30T23:16:19.4762793+08:00",
+    "windows":  [
+                    {
+                        "process_id":  17768,
+                        "title":  "AURA · 鲸鱼娘桌宠",
+                        "visible":  true,
+                        "neutral_status_found":  false
+                    },
+                    {
+                        "process_id":  17768,
+                        "title":  "鲸鱼娘 · 调试面板 · 2026.10.30-r8 - 鲸鱼娘桌宠",
+                        "visible":  true,
+                        "neutral_status_found":  true
+                    }
+                ],
+    "stderr_empty":  true,
+    "status":  "passed"
+}

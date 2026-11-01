@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -29,11 +29,15 @@ def _has_control_characters(value: str) -> bool:
     return any(ord(character) < 32 or ord(character) == 127 for character in value)
 
 
+REASONING_EFFORTS = ("default", "none", "minimal", "low", "medium", "high", "xhigh", "max")
+
+
 @dataclass(frozen=True)
 class ApiSettings:
     base_url: str = "https://api.openai.com/v1"
     model: str = ""
     timeout_seconds: float = 30.0
+    reasoning_effort: str = "default"
 
     def validate(self, require_model: bool = True) -> None:
         if not isinstance(self.base_url, str) or not self.base_url:
@@ -66,6 +70,8 @@ class ApiSettings:
             or not 1 <= self.timeout_seconds <= 120
         ):
             raise SettingsError("请求超时必须为 1～120 秒。")
+        if not isinstance(self.reasoning_effort, str) or self.reasoning_effort not in REASONING_EFFORTS:
+            raise SettingsError("思考强度无效，请在模型设置中重新选择。")
 
 
 class CredentialStore:
@@ -191,10 +197,14 @@ class SettingsManager:
     def load_api_settings(self) -> ApiSettings:
         defaults = ApiSettings()
         try:
+            effort = self._settings.value("api/reasoning_effort", defaults.reasoning_effort)
+            if not isinstance(effort, str) or effort not in REASONING_EFFORTS:
+                effort = defaults.reasoning_effort
             result = ApiSettings(
                 base_url=self._settings.value("api/base_url", defaults.base_url),
                 model=self._settings.value("api/model", defaults.model),
                 timeout_seconds=float(self._settings.value("api/timeout_seconds", defaults.timeout_seconds)),
+                reasoning_effort=effort,
             )
             result.validate(require_model=False)
             return result
@@ -213,18 +223,38 @@ class SettingsManager:
         # Those fields are ordinary INI preferences, so reject a known secret
         # before writing anything. A missing vault must still allow non-secret
         # preferences to be saved; the caller can supply an unsaved input key.
-        known_keys = [pending_api_key.strip()]
-        if self.credentials_available:
-            try:
-                known_keys.append(self.get_api_key())
-            except CredentialsError:
-                pass
+        known_keys = (*self.get_known_api_keys(), pending_api_key.strip())
         if any(key and (key in settings.base_url or key in settings.model) for key in known_keys):
             raise SettingsError("Base URL 和模型名称不能包含 API Key，请只在 API Key 输入框中填写密钥。")
         self._settings.setValue("api/base_url", settings.base_url)
         self._settings.setValue("api/model", settings.model.strip())
         self._settings.setValue("api/timeout_seconds", float(settings.timeout_seconds))
+        self._settings.setValue("api/reasoning_effort", settings.reasoning_effort)
         self._sync()
+
+    def load_silent_start(self) -> bool:
+        value = self._settings.value("startup/silent", False)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.casefold() in {"true", "false"}:
+            return value.casefold() == "true"
+        return False
+
+    def save_silent_start(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise SettingsError("静默启动开关必须为布尔值。")
+        key = "startup/silent"
+        present = self._settings.contains(key)
+        previous = self._settings.value(key)
+        self._settings.setValue(key, value)
+        try:
+            self._sync()
+        except SettingsError:
+            if present:
+                self._settings.setValue(key, previous)
+            else:
+                self._settings.remove(key)
+            raise
 
     def load_scale(self) -> int:
         try:
@@ -242,18 +272,284 @@ class SettingsManager:
         self._settings.setValue("pet/scale_percent", value)
         self._sync()
 
+    def load_reading_font(self) -> int:
+        try:
+            raw = self._settings.value("pet/reading_font_points", 14)
+            value = int(raw)
+            return value if not isinstance(raw, bool) and float(raw) == value and 12 <= value <= 22 else 14
+        except (ValueError, TypeError, OverflowError):
+            return 14
+
+    def save_reading_font(self, value: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or not 12 <= value <= 22:
+            raise SettingsError("气泡字号必须为 12～22 之间的整数。")
+        self._settings.setValue("pet/reading_font_points", value)
+        self._sync()
+
+    def load_chat_font_size(self) -> int:
+        try:
+            raw = self._settings.value("chat/reading_font_size", 16)
+            value = int(raw)
+            return value if not isinstance(raw, bool) and float(raw) == value and 12 <= value <= 22 else 16
+        except (ValueError, TypeError, OverflowError):
+            return 16
+
+    def save_chat_font_size(self, value: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int) or not 12 <= value <= 22:
+            raise SettingsError("聊天字号必须为 12～22 之间的整数。")
+        self._settings.setValue("chat/reading_font_size", value)
+        self._sync()
+
+    def load_auto_expression(self) -> bool:
+        raw = self._settings.value("pet/auto_expression", True)
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str) and raw.lower() in ("true", "false"):
+            return raw.lower() == "true"
+        return True
+
+    def save_auto_expression(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise SettingsError("自动表情开关必须为布尔值。")
+        self._settings.setValue("pet/auto_expression", value)
+        self._sync()
+
     def get_api_key(self) -> str:
         return self._credentials.get_api_key()
+
+    def get_known_api_keys(self) -> tuple[str, ...]:
+        """Return readable chat/GUI keys for redaction, never backend errors.
+
+        This only reads the configured vault. It does not read plain-text
+        settings, initialize a model/Agent, write credentials, or start work.
+        """
+        keys = set()
+        if not self.credentials_available:
+            return ()
+        for getter in (self.get_api_key, self.get_agent_gui_api_key):
+            try:
+                value = getter()
+                if isinstance(value, str) and value:
+                    keys.add(value)
+            except Exception:
+                # A vault backend may include a secret in its exception text.
+                # A different readable credential can still be redacted.
+                pass
+        return tuple(sorted(keys, key=lambda value: (-len(value), value)))
+
+    @staticmethod
+    def _public_strings(value):
+        if is_dataclass(value):
+            value = asdict(value)
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, dict):
+            for item in value.values():
+                yield from SettingsManager._public_strings(item)
+        elif isinstance(value, (tuple, list)):
+            for item in value:
+                yield from SettingsManager._public_strings(item)
+
+    def _reject_public_api_keys(self, value) -> None:
+        fields = tuple(self._public_strings(value))
+        if any(secret in field for secret in self.get_known_api_keys() for field in fields):
+            raise SettingsError("普通配置不能包含 API Key，请只在密钥输入框中填写密钥。")
+
+    def _check_new_key_not_in_preferences(self, value) -> None:
+        if isinstance(value, str) and value.strip():
+            secret = value.strip()
+            for name in self._settings.allKeys():
+                if any(secret in field for field in self._public_strings(self._settings.value(name))):
+                    raise CredentialsError("API Key 已出现在普通配置字段中，请先修正普通设置，再保存密钥。")
 
     def save_api_key(self, value: str) -> None:
         # Also protect callers which save the credential separately after
         # having accidentally entered that same key in an ordinary field.
-        if isinstance(value, str) and value.strip():
-            secret = value.strip()
-            fields = (self._settings.value("api/base_url", ""), self._settings.value("api/model", ""))
-            if any(isinstance(field, str) and secret in field for field in fields):
-                raise CredentialsError("API Key 已出现在普通配置字段中，请先修正 Base URL 或模型名称，再保存密钥。")
+        self._check_new_key_not_in_preferences(value)
         self._credentials.save_api_key(value)
 
     def clear_api_key(self) -> None:
         self._credentials.clear_api_key()
+
+    def load_conversation_agent_mode(self, conversation_id):
+        from uuid import UUID
+        try:
+            if str(UUID(conversation_id)) != conversation_id:
+                return False
+        except (TypeError, ValueError, AttributeError):
+            return False
+        value = self._settings.value("chat/agent_mode/" + conversation_id, False)
+        return value is True or isinstance(value, str) and value.casefold() == "true"
+
+    def save_conversation_agent_mode(self, conversation_id, enabled):
+        from uuid import UUID
+        if type(enabled) is not bool or str(UUID(conversation_id)) != conversation_id:
+            raise SettingsError("Agent 模式参数无效。")
+        self._settings.setValue("chat/agent_mode/" + conversation_id, enabled)
+        self._settings.sync()
+        if self._settings.status() != QSettings.Status.NoError:
+            raise SettingsError("Agent 模式未能保存。")
+
+    def load_agent_settings(self):
+        from .agents.settings import load_agent_settings
+        return load_agent_settings(self._settings)
+
+    def save_agent_settings(self, settings, *, pending_api_key="") -> None:
+        from .agents.settings import save_agent_settings
+        from .agents.contracts import AgentValidationError
+        known = (*self.get_known_api_keys(), pending_api_key.strip())
+        try:
+            save_agent_settings(self._settings, settings, known_secrets=known)
+        except AgentValidationError as exc:
+            raise SettingsError(str(exc)) from None
+
+    def _agent_gui_credentials(self):
+        from .agents.settings import GUI_CREDENTIAL_ACCOUNT
+        return CredentialStore(service=self._credentials.service, account=GUI_CREDENTIAL_ACCOUNT,
+                               backend=self._credentials._backend)
+
+    @property
+    def agent_gui_credential_status(self):
+        return self._agent_gui_credentials().status
+
+    def get_agent_gui_api_key(self):
+        return self._agent_gui_credentials().get_api_key()
+
+    def save_agent_gui_api_key(self, value):
+        self._check_new_key_not_in_preferences(value)
+        self._agent_gui_credentials().save_api_key(value)
+
+    def clear_agent_gui_api_key(self):
+        self._agent_gui_credentials().clear_api_key()
+
+    def load_perception_settings(self):
+        from dataclasses import fields
+        from .perception.settings import PerceptionSettings
+
+        defaults = PerceptionSettings()
+        values = {}
+        try:
+            for field in fields(defaults):
+                default = getattr(defaults, field.name)
+                if isinstance(default, tuple):
+                    raw = self._settings.value("perception/" + field.name, list(default))
+                    values[field.name] = tuple(raw) if isinstance(raw, (list, tuple)) else (raw,)
+                elif isinstance(default, bool):
+                    raw = self._settings.value("perception/" + field.name, default)
+                    if isinstance(raw, bool):
+                        values[field.name] = raw
+                    elif isinstance(raw, str) and raw.lower() in ("true", "false"):
+                        values[field.name] = raw.lower() == "true"
+                    else:
+                        raise ValueError("Invalid consent preference")
+                else:
+                    values[field.name] = self._settings.value("perception/" + field.name, default, type=type(default))
+            result = PerceptionSettings(**values)
+            result.validate()
+            return result
+        except (ValueError, TypeError, OverflowError):
+            return defaults  # A damaged setting must never opt in to screen sending.
+
+    def save_perception_settings(self, settings) -> None:
+        from dataclasses import fields
+        settings.validate()
+        self._reject_public_api_keys(settings)
+        for field in fields(settings):
+            value = getattr(settings, field.name)
+            self._settings.setValue("perception/" + field.name, list(value) if isinstance(value, tuple) else value)
+        self._sync()
+
+    def load_camera_settings(self):
+        from dataclasses import fields
+        from .perception.settings import CameraSettings
+
+        defaults = CameraSettings()
+        values = {}
+        try:
+            for field in fields(defaults):
+                default = getattr(defaults, field.name)
+                raw = self._settings.value("camera/" + field.name, list(default) if isinstance(default, tuple) else default)
+                if isinstance(default, tuple):
+                    values[field.name] = tuple(raw) if isinstance(raw, (list, tuple)) else (raw,)
+                elif isinstance(default, bool):
+                    if isinstance(raw, bool):
+                        values[field.name] = raw
+                    elif isinstance(raw, str) and raw.lower() in ("true", "false"):
+                        values[field.name] = raw.lower() == "true"
+                    else:
+                        raise ValueError("Invalid camera consent preference")
+                else:
+                    values[field.name] = self._settings.value("camera/" + field.name, default, type=type(default))
+            result = CameraSettings(**values)
+            result.validate()
+            return result
+        except (ValueError, TypeError, OverflowError):
+            return defaults
+
+    def save_camera_settings(self, settings) -> None:
+        from dataclasses import fields
+        settings.validate()
+        self._reject_public_api_keys(settings)
+        for field in fields(settings):
+            value = getattr(settings, field.name)
+            self._settings.setValue("camera/" + field.name, list(value) if isinstance(value, tuple) else value)
+        self._sync()
+
+    def load_context_budget(self):
+        from dataclasses import fields
+        from .conversations import ContextBudget
+        defaults = ContextBudget(mode="model")
+        try:
+            # Old preferences had no mode and silently clipped to 8192/16.
+            # Loading them now selects model policy without rewriting any
+            # unrelated setting or contacting the provider.
+            values = {field.name: self._settings.value("context/" + field.name, getattr(defaults, field.name), type=int)
+                      for field in fields(defaults) if field.name not in {"mode", "model_context_tokens"}}
+            values["mode"] = self._settings.value("context/mode", "model", type=str)
+            if values["mode"] == "model":
+                from .model_context import model_context_tokens
+                api = self.load_api_settings()
+                values["model_context_tokens"] = model_context_tokens(self.load_model_context_metadata(api), api.model)
+            result = ContextBudget(**values)
+            result.validate()
+            return result
+        except (TypeError, ValueError, OverflowError):
+            return defaults
+
+    def save_context_budget(self, budget):
+        from dataclasses import fields
+        budget.validate()
+        for field in fields(budget):
+            if field.name == "model_context_tokens":
+                continue  # A window is associated with endpoint + exact model.
+            self._settings.setValue("context/" + field.name, getattr(budget, field.name))
+        self._sync()
+
+    def load_model_context_metadata(self, api=None):
+        import json
+        from .model_context import model_context_cache_key, sanitized_model_context_metadata
+        api = api or self.load_api_settings()
+        api.validate(require_model=False)
+        if not api.model.strip():
+            return None
+        key = model_context_cache_key(api.base_url, api.model)
+        try:
+            raw = self._settings.value("model_context/" + key, "", type=str)
+            value = json.loads(raw) if raw else None
+            return sanitized_model_context_metadata(value, api.model)
+        except (TypeError, ValueError, RecursionError):
+            return None
+
+    def save_model_context_metadata(self, metadata, api=None):
+        """Cache a previously obtained provider model entry, never fetch one."""
+        import json
+        from .model_context import model_context_cache_key, sanitized_model_context_metadata
+        api = api or self.load_api_settings()
+        api.validate(require_model=True)
+        value = sanitized_model_context_metadata(metadata, api.model)
+        if value is None:
+            raise SettingsError("模型接口未提供可确认的上下文窗口资料。")
+        self._reject_public_api_keys(value)
+        key = model_context_cache_key(api.base_url, api.model)
+        self._settings.setValue("model_context/" + key, json.dumps(value, ensure_ascii=False))
+        self._sync()

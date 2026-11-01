@@ -22,8 +22,14 @@ class PetConfig:
     padding: int = 8
     bubble_height: int = 54
     show_debug_panel: bool = False
+    silent_start: bool | None = None
+    autostart: bool = False
 
     def __post_init__(self) -> None:
+        if self.silent_start is not None and type(self.silent_start) is not bool:
+            raise ValueError("静默启动设置必须为开启或关闭。")
+        if type(self.autostart) is not bool:
+            raise ValueError("自动启动标识必须为开启或关闭。")
         if self.window_width < 160 or self.window_height < 200:
             raise ValueError("窗口宽度至少为 160，高度至少为 200。")
         if self.character_size < 32:

@@ -10,6 +10,7 @@ import time
 class MockApiServer:
     def __init__(self):
         self.requests = []
+        self.metadata_requests = []
         self.plans = Queue()
         self.received = threading.Event()
         owner = self
@@ -21,9 +22,19 @@ class MockApiServer:
             def do_POST(self):
                 length = int(self.headers.get("Content-Length", "0"))
                 data = json.loads(self.rfile.read(length))
-                owner.requests.append({"path": self.path, "body": data, "authorization": self.headers.get("Authorization")})
-                owner.received.set()
-                plan = owner.plans.get(timeout=2)
+                request = {"path": self.path, "body": data, "authorization": self.headers.get("Authorization")}
+                is_metadata = any("AURA_SESSION_METADATA" in str(item.get("content", ""))
+                                  for item in data.get("messages", []) if item.get("role") == "system")
+                if is_metadata:
+                    # Track auxiliary real HTTP separately, without consuming
+                    # the deterministic plans intended for user chat replies.
+                    owner.metadata_requests.append(request)
+                    plan = {"delay": 0, "status": 200, "body": None,
+                            "content": '{"title":"讨论桌宠功能","summary":"用户与鲸鱼娘讨论了提供的会话内容。"}'}
+                else:
+                    owner.requests.append(request)
+                    owner.received.set()
+                    plan = owner.plans.get(timeout=2)
                 time.sleep(plan["delay"])
                 if plan["status"] != 200:
                     body = {"error": {"message": plan["content"], "type": "test_error", "code": "test_error"}}

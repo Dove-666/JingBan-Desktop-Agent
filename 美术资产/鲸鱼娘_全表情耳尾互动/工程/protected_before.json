@@ -1,0 +1,414 @@
+[
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\angry.png",
+        "sha256":  "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\happy.png",
+        "sha256":  "0edcf40f1284dbffc11704e8e899dfab612f9abddc1b3448cabdfab2036d5a5f"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\neutral.png",
+        "sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\README.md",
+        "sha256":  "0e1c30a7e0982686e313fbdd303f9666a86cf9037e991a4ad89bcf17dfa2af8e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\sleepy.png",
+        "sha256":  "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\surprised.png",
+        "sha256":  "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\talk_closed.png",
+        "sha256":  "822c519ceb26b212d75e8617993c45751d96826798a81555a59fe7b41b64d8ff"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\talk_open.png",
+        "sha256":  "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\expressions\\thinking.png",
+        "sha256":  "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\base.png",
+        "sha256":  "78bb6bca7ac091e9bb71017160d14a667c198c29fd0a3cab680194c1f7315cb5"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\left_aperture.png",
+        "sha256":  "4f08ffdce2d3f285f2da75bfa1f01adb46ed98c75303979ee5889ce30ec8a362"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\left_iris.png",
+        "sha256":  "beb28f7cc786fe36d2ff936844517abc5342f18c434f43915d88b19894c81044"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\rig.json",
+        "sha256":  "5f0041e89b234b549c7a1116ab5bc2f6ed83b7cbdd5efe1c7148f044cc799e4a"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\right_aperture.png",
+        "sha256":  "b781ac924f88f6b9cc76caec8d36a7593068044a3e86603ab1f8b6d5116bf902"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\angry\\right_iris.png",
+        "sha256":  "d0a6323e63dee973765631178723f6e9bda0bbd26adba19f7e27831419270aa7"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\base.png",
+        "sha256":  "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\left_aperture.png",
+        "sha256":  "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\left_iris.png",
+        "sha256":  "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\rig.json",
+        "sha256":  "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\right_aperture.png",
+        "sha256":  "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\neutral\\right_iris.png",
+        "sha256":  "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\base.png",
+        "sha256":  "efbc4e9159fb0761e5ff2566af7e8d439dfacd0493773b12ac0016ca210160b3"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\left_aperture.png",
+        "sha256":  "60c901e25540ef5bf0af1e6f40712f7e9dc2b81d4329718a6f34d2ee5e896135"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\left_iris.png",
+        "sha256":  "0bd37a59ea86b8bd4145b8a40f6a34708d990ce30224bf03660e9afac92b726f"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\rig.json",
+        "sha256":  "01e215589691bb8424dcb22afffcaa8b719913f5271ccba3cbcb8b46330f3bed"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\right_aperture.png",
+        "sha256":  "7c0b2390924863cf2b09ec9df011d7b3f941b6485fa8f11bdd2e39571c501fb6"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\sleepy\\right_iris.png",
+        "sha256":  "5ab4511d4c2e60236e76d2a31a84790ef162bedc6fc1992c62a3e8e1c80de88b"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\base.png",
+        "sha256":  "405daca9b1dee6ba4b144d67b0a7e055177ac079f911ddd64b68ef955e43398d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\left_aperture.png",
+        "sha256":  "425b75b762c4bc7a6e49c8d4137fc1b18e42d8e265ae92c73f0a13a24469e61f"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\left_iris.png",
+        "sha256":  "1fffb803591391c21343997a54794cc6865fc6c78ed6c9039c9b270eecc994b0"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\rig.json",
+        "sha256":  "e66a363b68d5219e479565b919cfd32a884311dc965434c73b931d51a28856c0"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\right_aperture.png",
+        "sha256":  "15c70a3179496507e7eb51a69b4e8342beb2d267f90908c35c8c54f6f52b7f62"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\surprised\\right_iris.png",
+        "sha256":  "015fb374659cacbca5bc36a5b9b7418cf2ad983ef1a43fce31a5ec49c6d32eed"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\base.png",
+        "sha256":  "e75dd3a63e22cc34811e3bad563c0f8e7af4ccb0067fee220f2b777f92ebdb83"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\left_aperture.png",
+        "sha256":  "e74b601a0a03ddec0b30b2f52961c21fd0e525ae55d818fb5f7af1458b3437ee"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\left_iris.png",
+        "sha256":  "c27de298fe47f4b99b9f90b2b293d91e3b0a8ae1e7e2039da926e6a6c326a707"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\rig.json",
+        "sha256":  "27eec0d371e0e2d5001e446582a12748bcaac4189ad05212f80fb3f7ca9b6c86"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\right_aperture.png",
+        "sha256":  "fb62b2d1042d261e1bc5d6faa7472cf21212188dc4d962f01c61177d6db4609d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\talk_open\\right_iris.png",
+        "sha256":  "26d6b04c2ff3145ebdd484f5017f882c2dac8fc18b2922c3549f99c11e714371"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\base.png",
+        "sha256":  "12b0dc4921a452fd519c73674b08653850c88f5258f7986daa915dd7bf8e6aa7"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\left_aperture.png",
+        "sha256":  "84f0e067affd8b3d09146094b556bc58e06e0dc3509408ea7acb93a0385cfb62"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\left_iris.png",
+        "sha256":  "c1d2d016fefc8f6cd75d5c58b22d01cb7059763b22d201b004553af57d58d0b8"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\rig.json",
+        "sha256":  "bb7442acffa82bba159b339d1fc8ab315d855c584aabdda44ebba7248ae0077b"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\right_aperture.png",
+        "sha256":  "105784f20aaa017e53f33e3d466cf20afb5679dfbe4fcc5bfbe0aacc2418fbde"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\eyes\\thinking\\right_iris.png",
+        "sha256":  "d66c707fbc5682daf00346730e4aa2d471a0a500519f8a5b3109c79757975de0"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\base.png",
+        "sha256":  "a95024b345c2dff5c4efb6ed3fa5fc8d0f81aa526318975238e3cf39db4bebaf"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\cutout_mask.png",
+        "sha256":  "586b4306fb234ec011522b1bc3cb8284a01ec6f79319436c4b4a849e23b277fb"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\left_ear.png",
+        "sha256":  "cbe92b7ff5e0380203cf1ace3e86da074f0ef49a6170e23bf9c1507eb9516b5d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\left_ear_hit.png",
+        "sha256":  "96f71f5572a6a6809d5355f45721960bbd9a56cba8e46828435670bfccf2c93e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\rig.json",
+        "sha256":  "983f439d04251056e7970398e6f73646b29e96afa8a7af7247a865258efd164e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\right_ear.png",
+        "sha256":  "acb60a72280049424e650f9437bfe4e298c76f7de2eb7543b904d1ce7996fcab"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\right_ear_hit.png",
+        "sha256":  "d5c25e7187063f2a2671699b2f4baa98a0e1d60e6de3bab906715c524bc38f79"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\tail.png",
+        "sha256":  "b52b3dee732eb758ed1ef881c84d04eadc6242372c2a8b2808b50f517517d3c7"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\assets\\character\\interactions\\neutral\\tail_hit.png",
+        "sha256":  "7c4040e2da56590ec6cd69befb0edad83350768e305b69381ccdc86ced49eebb"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\README.md",
+        "sha256":  "d07622b49a1ad1862964b6e690a46965965108d687aea102b3fb4b726c9ea686"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\交付说明.txt",
+        "sha256":  "3a60483bda6239f9ed0eb4888231d6e4292de3d6e495473ad9cb200c41800ff4"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\耳尾点击演示.gif",
+        "sha256":  "aedcf1cb87a8c7095224687be539609f344df8a0ceb4969d89f1863cdb179b19"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\耳尾首摆效果.png",
+        "sha256":  "bccc6ef7a268f63bc417b763f3d5aae95975688758d938f6557eaee091e84654"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\PSD\\neutral_interaction_rig.psd",
+        "sha256":  "79e7c88211e4e62772a062dc6a39c0e0e5bd6850ffa5b52c566b418e3f7e1051"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\art_verification.json",
+        "sha256":  "62e995b01b243c9476a4673a2866d9c8403dbc08303470da2a8c136cf8495158"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\build_interaction_rig.jsx",
+        "sha256":  "077863ccfff3b1c24d825d5067385f810a57c0189e7ef5723091e9fbaa28bb6a"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\build_interaction_rig.ps1",
+        "sha256":  "593b033623821d5ce23f212559e7bbee29b3f4d984e085cb76675c1fd3a677c5"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\capture_photoshop.ps1",
+        "sha256":  "fa94d4de735b85d60d431ef8a5f914bdabd175238d9e7d10d70c2ca6a8cab56c"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\export_hit_masks.jsx",
+        "sha256":  "cadf24d6cf881fab4ee0a069187ad06c592c4c9a172b4ed620ff554ee162dc3b"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\inspect_geometry.jsx",
+        "sha256":  "29d506376a271fe3074374536926c1310e24020599988386803259f9e241cabf"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\inspect_parts.jsx",
+        "sha256":  "a4a6d8a75ab210b3a7a96dde21e06d730ac6afdf2d7682f7756ed92e2021b1ae"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\photoshop_interaction.log",
+        "sha256":  "442438c63cae4cea6e9afe5c626057f7d49aae41442a55c2c08f0066bc0e4a4e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\Photoshop_native_layers.png",
+        "sha256":  "8e50a51c0f820f02946977130fdfc12a985c2adf29b2759ef864bca16f289db9"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\source_sha256.txt",
+        "sha256":  "a60376e180b78fcb7d678c33bba952ff03925d3c2de05d448fce5b848e005266"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\工程\\verify_interaction_art.py",
+        "sha256":  "7e27613322f19998591c1c11b679e883a6d137fd86a80cdfd87c1ebabfc5049e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\base.png",
+        "sha256":  "a95024b345c2dff5c4efb6ed3fa5fc8d0f81aa526318975238e3cf39db4bebaf"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\cutout_mask.png",
+        "sha256":  "586b4306fb234ec011522b1bc3cb8284a01ec6f79319436c4b4a849e23b277fb"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\left_ear.png",
+        "sha256":  "cbe92b7ff5e0380203cf1ace3e86da074f0ef49a6170e23bf9c1507eb9516b5d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\left_ear_hit.png",
+        "sha256":  "96f71f5572a6a6809d5355f45721960bbd9a56cba8e46828435670bfccf2c93e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\rig.json",
+        "sha256":  "983f439d04251056e7970398e6f73646b29e96afa8a7af7247a865258efd164e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\right_ear.png",
+        "sha256":  "acb60a72280049424e650f9437bfe4e298c76f7de2eb7543b904d1ce7996fcab"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\right_ear_hit.png",
+        "sha256":  "d5c25e7187063f2a2671699b2f4baa98a0e1d60e6de3bab906715c524bc38f79"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\tail.png",
+        "sha256":  "b52b3dee732eb758ed1ef881c84d04eadc6242372c2a8b2808b50f517517d3c7"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\透明分层\\tail_hit.png",
+        "sha256":  "7c4040e2da56590ec6cd69befb0edad83350768e305b69381ccdc86ced49eebb"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\ears_positive_dark.png",
+        "sha256":  "ea3c7b223e7499372eb74fe63e9740570f56dedff21484fac530bd49460f4f50"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\ears_positive_detail.png",
+        "sha256":  "f3e2a219f390831d981d64bd00b6232c16c805401c7675c177ed14c80a86cc0b"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\ears_positive_transparent.png",
+        "sha256":  "e07112b65526dccdf19bed3ca8dcae0fc555fa14e6e9b3d18d377b8635b00559"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\left_ear_geometry.png",
+        "sha256":  "fd9585cd4685538090fd35b10a8d48bdbb3ababafa0630ca71105d8c120fc546"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\left_ear_source_6x.png",
+        "sha256":  "dddbfbdd3b52816305fdba13bf748df7db9ca5a89284506769af949ebb1d0d74"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\negative_dark.png",
+        "sha256":  "1931f8493dd5df43b48f5b838893bd7b629d778c61ff279764432cbf58ac959c"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\negative_detail.png",
+        "sha256":  "e2d59c14145fafa6653bddc7ffed47a49f1badcc9a5f42d966b28c864ff4b30d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\negative_transparent.png",
+        "sha256":  "3c5871ccd27dbc32247f20dd2209297c5832c3e3b3227fe62a897f510865ace2"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\positive_dark.png",
+        "sha256":  "c7fbd658ed50494803b7ce488a9373e14e5335ed8728ae5ba1a606f7869eb4c2"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\positive_detail.png",
+        "sha256":  "15d04a52fa9d4340cc143309076b36a9d98465c97adf9a6f3135c77d3a1ef38d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\positive_transparent.png",
+        "sha256":  "573604cdebeee975b7776ff4f68816cb06d0b94da8a30c9b51759acf30583dfb"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\rest_split_dark.png",
+        "sha256":  "6e29f830ac8cf70810c85f78ee832f2877ebc5afb13ff82fd3a0365550f5cb23"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\rest_split_detail.png",
+        "sha256":  "1725d00835e672bba5c0a1ca1187da6da6e62dab10cefb5246d22ade19b74cec"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\rest_split_transparent.png",
+        "sha256":  "c61be4993e2eae5ab06afef35b2c0352849b7d56008821f4d658bfa3dcf12b03"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\right_ear_geometry.png",
+        "sha256":  "e8f4c61bb55b5387a28346e964c44a1e4e442fa3f9f3d16960d7e1658229c6c0"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\right_ear_source_6x.png",
+        "sha256":  "eeb7e102f203a137440ee7b6e6c4fb43401116f4c28d0034027587f2b55c9af5"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_geometry.png",
+        "sha256":  "7493f3e939da27b47356446a1fd2438469f0bb8b6be6329104119f5ed847e53e"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_negative_dark.png",
+        "sha256":  "e0701db065d27e6cc2b25a8094a746c16d8a18872a6eab4c761160e573fb1ada"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_negative_detail.png",
+        "sha256":  "6788dc5e3d6887e77edb85b202e0617f683d70a294160259b451a0cf4a3c010d"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_negative_transparent.png",
+        "sha256":  "ffe0b4414f749458d98889d8e6f11deb6f2aa3368c5e602dc94ebaaae2fd8aa2"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_positive_dark.png",
+        "sha256":  "9b7850b634100316a19ec843253b7a3ce5be3a261fd8d05b1f17fb5e583fbdfe"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_positive_detail.png",
+        "sha256":  "8355f5bedbb2739c6477eef263fae8f0c4ea02a029eb3ec03e626518af5ac905"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_positive_transparent.png",
+        "sha256":  "aeed4c1645a331c745e36d5cdfe9a48c268a46c16bd8772047a7ad1e91b0cce5"
+    },
+    {
+        "path":  "E:\\github\\AURA-Desktop-Agent\\美术资产\\鲸鱼娘_耳尾点击试作\\预览\\tail_source_4x.png",
+        "sha256":  "4c38dfd18520608fb282830b9c68e67b2dd0f91717b91a82d51e873df5ea0b8e"
+    }
+]

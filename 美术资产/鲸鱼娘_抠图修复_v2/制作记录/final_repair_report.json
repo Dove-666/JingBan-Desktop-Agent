@@ -1,0 +1,284 @@
+{
+  "status": "pixel_checks_passed; candidate_complete_false_pending_root_publication",
+  "new_generation_requests": {
+    "images": 0,
+    "videos": 0
+  },
+  "source_artwork": {
+    "path": "C:\\Users\\25136\\Desktop\\蓝发鲸鱼少女女仆立绘.png",
+    "sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738"
+  },
+  "native_frames_resegmented_with_real_sam2": 248,
+  "delivered_rgba_frames": 124,
+  "canvas": [
+    1024,
+    1024
+  ],
+  "fps": 12,
+  "source_videos_unchanged": {
+    "think_scratch_head": "f45dbd3f005218ec8c8c8bb73c9d4bf85767b1fd34281d0bf435af69e57ed771",
+    "snarl_cute": "abbc57ecaacb17d2013d4d1e2a3540dd5ab7b453503bb0c66677f038f3e97c49"
+  },
+  "clips": {
+    "think_scratch_head": {
+      "candidate_directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\think_scratch_head_candidate_v4",
+      "pixel_checks": {
+        "native_frames": 124,
+        "delivered_frames": 62,
+        "question_exact_all_frames": true,
+        "alpha_never_added": true,
+        "confident_blue_alpha_exact": true,
+        "transparent_rgb_zero": true,
+        "skin_strong_redness_alpha_changed_pixels": 0,
+        "hole_white_opaque_before": 132722,
+        "hole_white_opaque_after": 0,
+        "max_removed_skin_redness_pixels_per_frame": 0,
+        "white_core_removal_fraction": 1.0
+      },
+      "fixed_placement": {
+        "directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\think_scratch_head_candidate_v4",
+        "native_count": 124,
+        "delivery_count": 62,
+        "qa_warnings": [],
+        "source_union": [
+          674,
+          45,
+          1957,
+          1400
+        ],
+        "shared_scale": 0.4986024471058623,
+        "translation": [
+          -123,
+          262
+        ]
+      },
+      "real_sam2_tracking_seconds": 123.07849621772766,
+      "color_calibration": {
+        "source_palette": [
+          [
+            28.0,
+            51.0,
+            117.0
+          ],
+          [
+            36.0,
+            66.0,
+            140.0
+          ],
+          [
+            47.0,
+            90.0,
+            169.0
+          ],
+          [
+            69.0,
+            120.0,
+            189.0
+          ],
+          [
+            96.0,
+            177.0,
+            244.0
+          ]
+        ],
+        "after_palette": [
+          [
+            28.0,
+            54.0,
+            121.0
+          ],
+          [
+            38.0,
+            70.0,
+            146.0
+          ],
+          [
+            52.0,
+            98.0,
+            176.0
+          ],
+          [
+            72.0,
+            128.0,
+            201.0
+          ],
+          [
+            102.0,
+            184.0,
+            250.0
+          ]
+        ]
+      },
+      "repair_metadata": {
+        "method": "real SAM2.1 locally prompted hair-gap tracking, constrained by white/black source-color matte and blue-hair protection; remove only those independent masks from pre-existing real character alpha; fixed 0.35-native-pixel hole feather",
+        "mask_prompt_file": "sam2_hole_prompts_trial.json",
+        "objects": [
+          "left_upper",
+          "left_lower",
+          "right_upper"
+        ],
+        "native_frames_resegmented": 124,
+        "per_frame_auto_exposure": false,
+        "disconnected_mask_islands": "only largest local component retained per tracked gap; raw masks preserved separately",
+        "reviewed_visibility_gate": {
+          "think_left_upper_gap_fully_hand_occluded_native_indices": [
+            97
+          ]
+        },
+        "color_method": "fixed first-frame blue palette LUT, 75 percent conservative blend to source artwork; skin/neutral whites/black outlines excluded; no per-frame recalibration",
+        "reference_artwork_sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+        "inner_white_edge_decontamination": "invert source-white compositing only inside tracked left hair gaps where alpha was reduced; no global erosion or blue-hair core changes",
+        "lut_sha256": "d855f46d36e8d4edc3c9b394ab75644577e970aec9ee7d8c377e42c3d706b5a1",
+        "warnings": [],
+        "source_native_dir": "artifacts\\asset_pipeline\\outputs\\think_scratch_head_estimated_alpha_native_v2",
+        "source_native_modified": false,
+        "saturation_aware_blue_hair_protection": "blue RGB differences multiplied by fixed saturation membership: <=20% not classified as hair, >=40% fully eligible",
+        "codec_pastel_white_residue": "low-saturation purple source-white compression residues removed as part of gap matte",
+        "candidate_version": 4
+      },
+      "candidate_manifest_sha256": "1e568bfa1e7a7569f1bb30ed76df8aa4f116fb8a1560a50786d5ef4de7e882de"
+    },
+    "snarl_cute": {
+      "candidate_directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\snarl_cute_candidate_v4",
+      "pixel_checks": {
+        "native_frames": 124,
+        "delivered_frames": 62,
+        "question_exact_all_frames": true,
+        "alpha_never_added": true,
+        "confident_blue_alpha_exact": true,
+        "transparent_rgb_zero": true,
+        "skin_strong_redness_alpha_changed_pixels": 0,
+        "hole_white_opaque_before": 237166,
+        "hole_white_opaque_after": 0,
+        "max_removed_skin_redness_pixels_per_frame": 0,
+        "white_core_removal_fraction": 1.0
+      },
+      "fixed_placement": {
+        "directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\snarl_cute_candidate_v4",
+        "native_count": 124,
+        "delivery_count": 62,
+        "qa_warnings": [],
+        "source_union": [
+          427,
+          33,
+          2203,
+          1435
+        ],
+        "shared_scale": 0.4876441515650742,
+        "translation": [
+          -118,
+          276
+        ]
+      },
+      "real_sam2_tracking_seconds": 124.81693005561829,
+      "color_calibration": {
+        "source_palette": [
+          [
+            28.0,
+            46.0,
+            101.0
+          ],
+          [
+            35.0,
+            61.0,
+            123.0
+          ],
+          [
+            46.0,
+            85.0,
+            153.0
+          ],
+          [
+            66.0,
+            108.0,
+            165.0
+          ],
+          [
+            98.0,
+            172.0,
+            232.0
+          ]
+        ],
+        "after_palette": [
+          [
+            28.0,
+            53.0,
+            118.0
+          ],
+          [
+            39.0,
+            70.0,
+            142.0
+          ],
+          [
+            51.0,
+            96.0,
+            172.0
+          ],
+          [
+            75.0,
+            131.0,
+            199.0
+          ],
+          [
+            103.0,
+            184.0,
+            246.0
+          ]
+        ]
+      },
+      "repair_metadata": {
+        "method": "real SAM2.1 locally prompted hair-gap tracking, constrained by white/black source-color matte and blue-hair protection; remove only those independent masks from pre-existing real character alpha; fixed 0.35-native-pixel hole feather",
+        "mask_prompt_file": "sam2_hole_prompts_trial.json",
+        "objects": [
+          "left_upper",
+          "left_lower",
+          "right_upper"
+        ],
+        "native_frames_resegmented": 124,
+        "per_frame_auto_exposure": false,
+        "disconnected_mask_islands": "only largest local component retained per tracked gap; raw masks preserved separately",
+        "reviewed_visibility_gate": {
+          "think_left_upper_gap_fully_hand_occluded_native_indices": [
+            97
+          ]
+        },
+        "color_method": "fixed first-frame blue palette LUT, 75 percent conservative blend to source artwork; skin/neutral whites/black outlines excluded; no per-frame recalibration",
+        "reference_artwork_sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+        "inner_white_edge_decontamination": "invert source-white compositing only inside tracked left hair gaps where alpha was reduced; no global erosion or blue-hair core changes",
+        "lut_sha256": "cc317dfc546c494fcd0dd0d86938df6929c7e3e2355c2fce549459a6ba0df915",
+        "warnings": [],
+        "source_native_dir": "artifacts\\asset_pipeline\\outputs\\snarl_cute_native_draft_v1",
+        "source_native_modified": false,
+        "saturation_aware_blue_hair_protection": "blue RGB differences multiplied by fixed saturation membership: <=20% not classified as hair, >=40% fully eligible",
+        "codec_pastel_white_residue": "low-saturation purple source-white compression residues removed as part of gap matte",
+        "candidate_version": 4
+      },
+      "candidate_manifest_sha256": "9474f0f799ba10dd209c7e1e932acb443ef58e6d160e2f35dce6a45871a7b1c3"
+    }
+  },
+  "algorithm": {
+    "segmentation": "official real SAM2.1 Hiera Tiny; three independent locally reviewed hair-gap tracks on all native frames",
+    "preserved_previous_main_character_sam2_mask": true,
+    "disconnected_noise": "only main local connected component kept; raw masks retained",
+    "source_matte": "fixed white or black palette matte within reviewed gap only, with saturation-aware blue-hair protection and 0.35px native feather",
+    "edge_unmatte": "known source-white mix inverted only on reduced-alpha left-gap boundary; no global erode",
+    "occlusion_gate": "thinking upper-left gap at native97 fully covered by hand; no removal there; source frame retained",
+    "color": "one fixed per-clip blue-palette LUT derived from original artwork, 75 percent strength; no per-frame adaptive exposure",
+    "question_mark": "all native RGBA unchanged from previous reviewed independent SAM2 question/fade estimate",
+    "geometry": "exact previous shared_layout transform reused across all frames; no independent crop or zoom"
+  },
+  "limits": [
+    "Existing MiniMax source motion, pose and identity deviations are unchanged; snarl remains crouching rather than fully prone.",
+    "Background alpha and white-edge unmixing are estimates derived from the flattened source video, not recovered native production alpha.",
+    "No new video generation or cost occurred."
+  ],
+  "previews": [
+    "final_before_after_full_think.jpg",
+    "final_before_after_full_snarl.jpg",
+    "final_before_after_hair_gaps_think.jpg",
+    "final_before_after_hair_gaps_snarl.jpg",
+    "white_inner_edge_v4.png",
+    "fixed_color_trial.png"
+  ]
+}

@@ -1,0 +1,1871 @@
+{
+  "source_size": [
+    2560,
+    1440
+  ],
+  "union_bbox": [
+    427,
+    33,
+    2203,
+    1435
+  ],
+  "union_source_frame_count": 124,
+  "source_frame_bounds": [
+    [
+      682,
+      39,
+      1903,
+      1404
+    ],
+    [
+      685,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      40,
+      1904,
+      1404
+    ],
+    [
+      684,
+      39,
+      1904,
+      1404
+    ],
+    [
+      683,
+      38,
+      1904,
+      1404
+    ],
+    [
+      682,
+      37,
+      1904,
+      1404
+    ],
+    [
+      680,
+      35,
+      1904,
+      1404
+    ],
+    [
+      679,
+      34,
+      1908,
+      1404
+    ],
+    [
+      679,
+      34,
+      1913,
+      1405
+    ],
+    [
+      679,
+      33,
+      1937,
+      1404
+    ],
+    [
+      681,
+      34,
+      1956,
+      1405
+    ],
+    [
+      684,
+      35,
+      1972,
+      1404
+    ],
+    [
+      688,
+      38,
+      1988,
+      1405
+    ],
+    [
+      683,
+      46,
+      2034,
+      1405
+    ],
+    [
+      671,
+      53,
+      2057,
+      1405
+    ],
+    [
+      661,
+      60,
+      2077,
+      1405
+    ],
+    [
+      658,
+      61,
+      2077,
+      1405
+    ],
+    [
+      632,
+      79,
+      2105,
+      1422
+    ],
+    [
+      618,
+      83,
+      2106,
+      1427
+    ],
+    [
+      608,
+      83,
+      2093,
+      1431
+    ],
+    [
+      599,
+      81,
+      2078,
+      1432
+    ],
+    [
+      587,
+      79,
+      2062,
+      1433
+    ],
+    [
+      575,
+      81,
+      2056,
+      1433
+    ],
+    [
+      552,
+      83,
+      2058,
+      1433
+    ],
+    [
+      535,
+      85,
+      2062,
+      1434
+    ],
+    [
+      511,
+      88,
+      2082,
+      1434
+    ],
+    [
+      478,
+      101,
+      2107,
+      1434
+    ],
+    [
+      464,
+      112,
+      2122,
+      1434
+    ],
+    [
+      452,
+      125,
+      2122,
+      1434
+    ],
+    [
+      442,
+      132,
+      2127,
+      1434
+    ],
+    [
+      432,
+      154,
+      2123,
+      1434
+    ],
+    [
+      427,
+      182,
+      2098,
+      1434
+    ],
+    [
+      430,
+      193,
+      2065,
+      1434
+    ],
+    [
+      434,
+      202,
+      2038,
+      1435
+    ],
+    [
+      448,
+      216,
+      1972,
+      1435
+    ],
+    [
+      457,
+      222,
+      1976,
+      1435
+    ],
+    [
+      465,
+      227,
+      1977,
+      1435
+    ],
+    [
+      475,
+      229,
+      1976,
+      1435
+    ],
+    [
+      488,
+      221,
+      1966,
+      1435
+    ],
+    [
+      494,
+      223,
+      1960,
+      1435
+    ],
+    [
+      497,
+      225,
+      1952,
+      1434
+    ],
+    [
+      499,
+      225,
+      1943,
+      1434
+    ],
+    [
+      499,
+      216,
+      1924,
+      1434
+    ],
+    [
+      497,
+      209,
+      1915,
+      1434
+    ],
+    [
+      495,
+      205,
+      1908,
+      1434
+    ],
+    [
+      491,
+      198,
+      1933,
+      1434
+    ],
+    [
+      486,
+      191,
+      1970,
+      1434
+    ],
+    [
+      481,
+      183,
+      2021,
+      1434
+    ],
+    [
+      480,
+      178,
+      2058,
+      1434
+    ],
+    [
+      481,
+      171,
+      2103,
+      1434
+    ],
+    [
+      485,
+      164,
+      2147,
+      1434
+    ],
+    [
+      489,
+      160,
+      2177,
+      1434
+    ],
+    [
+      492,
+      159,
+      2192,
+      1434
+    ],
+    [
+      497,
+      157,
+      2202,
+      1434
+    ],
+    [
+      501,
+      155,
+      2203,
+      1434
+    ],
+    [
+      505,
+      154,
+      2199,
+      1434
+    ],
+    [
+      506,
+      154,
+      2187,
+      1434
+    ],
+    [
+      505,
+      154,
+      2169,
+      1434
+    ],
+    [
+      502,
+      154,
+      2143,
+      1434
+    ],
+    [
+      499,
+      155,
+      2124,
+      1434
+    ],
+    [
+      497,
+      157,
+      2100,
+      1434
+    ],
+    [
+      491,
+      160,
+      2064,
+      1434
+    ],
+    [
+      485,
+      164,
+      2025,
+      1434
+    ],
+    [
+      478,
+      169,
+      1994,
+      1434
+    ],
+    [
+      474,
+      172,
+      1962,
+      1434
+    ],
+    [
+      469,
+      177,
+      1929,
+      1434
+    ],
+    [
+      462,
+      183,
+      1926,
+      1434
+    ],
+    [
+      458,
+      188,
+      1932,
+      1434
+    ],
+    [
+      457,
+      191,
+      1936,
+      1434
+    ],
+    [
+      457,
+      193,
+      1939,
+      1434
+    ],
+    [
+      457,
+      196,
+      1942,
+      1434
+    ],
+    [
+      459,
+      197,
+      1950,
+      1434
+    ],
+    [
+      462,
+      198,
+      1979,
+      1434
+    ],
+    [
+      464,
+      198,
+      2004,
+      1434
+    ],
+    [
+      470,
+      197,
+      2069,
+      1434
+    ],
+    [
+      475,
+      195,
+      2099,
+      1434
+    ],
+    [
+      477,
+      193,
+      2124,
+      1434
+    ],
+    [
+      481,
+      190,
+      2148,
+      1434
+    ],
+    [
+      487,
+      186,
+      2169,
+      1434
+    ],
+    [
+      491,
+      183,
+      2170,
+      1434
+    ],
+    [
+      493,
+      179,
+      2164,
+      1434
+    ],
+    [
+      494,
+      178,
+      2162,
+      1434
+    ],
+    [
+      495,
+      172,
+      2136,
+      1434
+    ],
+    [
+      495,
+      168,
+      2118,
+      1434
+    ],
+    [
+      495,
+      166,
+      2098,
+      1434
+    ],
+    [
+      493,
+      164,
+      2063,
+      1434
+    ],
+    [
+      490,
+      163,
+      2020,
+      1434
+    ],
+    [
+      488,
+      162,
+      1989,
+      1434
+    ],
+    [
+      486,
+      162,
+      1964,
+      1434
+    ],
+    [
+      484,
+      162,
+      1938,
+      1434
+    ],
+    [
+      480,
+      163,
+      1908,
+      1434
+    ],
+    [
+      478,
+      165,
+      1906,
+      1434
+    ],
+    [
+      476,
+      166,
+      1908,
+      1434
+    ],
+    [
+      475,
+      167,
+      1911,
+      1434
+    ],
+    [
+      472,
+      169,
+      1940,
+      1434
+    ],
+    [
+      471,
+      171,
+      1961,
+      1434
+    ],
+    [
+      469,
+      173,
+      1986,
+      1434
+    ],
+    [
+      469,
+      174,
+      2007,
+      1434
+    ],
+    [
+      469,
+      177,
+      2069,
+      1434
+    ],
+    [
+      469,
+      179,
+      2088,
+      1434
+    ],
+    [
+      469,
+      180,
+      2098,
+      1434
+    ],
+    [
+      470,
+      181,
+      2106,
+      1434
+    ],
+    [
+      472,
+      182,
+      2108,
+      1434
+    ],
+    [
+      473,
+      182,
+      2104,
+      1434
+    ],
+    [
+      474,
+      183,
+      2095,
+      1434
+    ],
+    [
+      475,
+      183,
+      2080,
+      1434
+    ],
+    [
+      476,
+      182,
+      2051,
+      1434
+    ],
+    [
+      476,
+      182,
+      2029,
+      1434
+    ],
+    [
+      476,
+      182,
+      2007,
+      1434
+    ],
+    [
+      477,
+      182,
+      1996,
+      1434
+    ],
+    [
+      477,
+      180,
+      1954,
+      1434
+    ],
+    [
+      478,
+      179,
+      1940,
+      1434
+    ],
+    [
+      478,
+      179,
+      1938,
+      1434
+    ]
+  ],
+  "scale": 0.4876441515650742,
+  "resized_canvas": [
+    1248,
+    702
+  ],
+  "translation": [
+    -118,
+    276
+  ],
+  "canvas": {
+    "width": 1024,
+    "height": 1024
+  },
+  "anchor": {
+    "x": 0.5,
+    "y": 0.9375
+  },
+  "shared_transform": true,
+  "frame_count": 62,
+  "placement_mode": "standing_reference_shared_scale",
+  "largest_adjacent_alpha_area_ratio": 1.0354,
+  "warnings": [],
+  "frames": [
+    {
+      "index": 1,
+      "visible_bounds": [
+        213,
+        293,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        212,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 237600,
+      "soft_edge_pixels": 10674
+    },
+    {
+      "index": 2,
+      "visible_bounds": [
+        214,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        214,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 236862,
+      "soft_edge_pixels": 10796
+    },
+    {
+      "index": 3,
+      "visible_bounds": [
+        213,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 236843,
+      "soft_edge_pixels": 10811
+    },
+    {
+      "index": 4,
+      "visible_bounds": [
+        213,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 236970,
+      "soft_edge_pixels": 10802
+    },
+    {
+      "index": 5,
+      "visible_bounds": [
+        213,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 236997,
+      "soft_edge_pixels": 10796
+    },
+    {
+      "index": 6,
+      "visible_bounds": [
+        213,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 237071,
+      "soft_edge_pixels": 10778
+    },
+    {
+      "index": 7,
+      "visible_bounds": [
+        213,
+        294,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 237131,
+      "soft_edge_pixels": 10785
+    },
+    {
+      "index": 8,
+      "visible_bounds": [
+        213,
+        293,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        293,
+        812,
+        963
+      ],
+      "visible_pixels": 237313,
+      "soft_edge_pixels": 10781
+    },
+    {
+      "index": 9,
+      "visible_bounds": [
+        213,
+        292,
+        812,
+        962
+      ],
+      "alpha_bounds": [
+        212,
+        292,
+        812,
+        963
+      ],
+      "visible_pixels": 238259,
+      "soft_edge_pixels": 10725
+    },
+    {
+      "index": 10,
+      "visible_bounds": [
+        211,
+        291,
+        814,
+        962
+      ],
+      "alpha_bounds": [
+        211,
+        290,
+        814,
+        963
+      ],
+      "visible_pixels": 239502,
+      "soft_edge_pixels": 10769
+    },
+    {
+      "index": 11,
+      "visible_bounds": [
+        211,
+        290,
+        828,
+        962
+      ],
+      "alpha_bounds": [
+        211,
+        290,
+        828,
+        963
+      ],
+      "visible_pixels": 241025,
+      "soft_edge_pixels": 10818
+    },
+    {
+      "index": 12,
+      "visible_bounds": [
+        213,
+        291,
+        845,
+        962
+      ],
+      "alpha_bounds": [
+        213,
+        291,
+        846,
+        963
+      ],
+      "visible_pixels": 242431,
+      "soft_edge_pixels": 10922
+    },
+    {
+      "index": 13,
+      "visible_bounds": [
+        213,
+        296,
+        876,
+        963
+      ],
+      "alpha_bounds": [
+        213,
+        296,
+        876,
+        963
+      ],
+      "visible_pixels": 245308,
+      "soft_edge_pixels": 11103
+    },
+    {
+      "index": 14,
+      "visible_bounds": [
+        202,
+        303,
+        896,
+        963
+      ],
+      "alpha_bounds": [
+        202,
+        303,
+        896,
+        963
+      ],
+      "visible_pixels": 246821,
+      "soft_edge_pixels": 11153
+    },
+    {
+      "index": 15,
+      "visible_bounds": [
+        188,
+        313,
+        910,
+        971
+      ],
+      "alpha_bounds": [
+        188,
+        312,
+        910,
+        971
+      ],
+      "visible_pixels": 250722,
+      "soft_edge_pixels": 11090
+    },
+    {
+      "index": 16,
+      "visible_bounds": [
+        176,
+        314,
+        904,
+        976
+      ],
+      "alpha_bounds": [
+        176,
+        314,
+        904,
+        976
+      ],
+      "visible_pixels": 253510,
+      "soft_edge_pixels": 11353
+    },
+    {
+      "index": 17,
+      "visible_bounds": [
+        166,
+        313,
+        889,
+        977
+      ],
+      "alpha_bounds": [
+        166,
+        312,
+        889,
+        977
+      ],
+      "visible_pixels": 257238,
+      "soft_edge_pixels": 11926
+    },
+    {
+      "index": 18,
+      "visible_bounds": [
+        149,
+        314,
+        887,
+        977
+      ],
+      "alpha_bounds": [
+        149,
+        314,
+        887,
+        977
+      ],
+      "visible_pixels": 264243,
+      "soft_edge_pixels": 12621
+    },
+    {
+      "index": 19,
+      "visible_bounds": [
+        129,
+        317,
+        899,
+        977
+      ],
+      "alpha_bounds": [
+        129,
+        317,
+        899,
+        977
+      ],
+      "visible_pixels": 273588,
+      "soft_edge_pixels": 12869
+    },
+    {
+      "index": 20,
+      "visible_bounds": [
+        106,
+        329,
+        918,
+        977
+      ],
+      "alpha_bounds": [
+        106,
+        328,
+        919,
+        977
+      ],
+      "visible_pixels": 282333,
+      "soft_edge_pixels": 13464
+    },
+    {
+      "index": 21,
+      "visible_bounds": [
+        96,
+        338,
+        921,
+        977
+      ],
+      "alpha_bounds": [
+        95,
+        338,
+        921,
+        977
+      ],
+      "visible_pixels": 285853,
+      "soft_edge_pixels": 13734
+    },
+    {
+      "index": 22,
+      "visible_bounds": [
+        88,
+        363,
+        907,
+        977
+      ],
+      "alpha_bounds": [
+        88,
+        363,
+        907,
+        977
+      ],
+      "visible_pixels": 288872,
+      "soft_edge_pixels": 13708
+    },
+    {
+      "index": 23,
+      "visible_bounds": [
+        92,
+        373,
+        877,
+        978
+      ],
+      "alpha_bounds": [
+        91,
+        372,
+        878,
+        978
+      ],
+      "visible_pixels": 288776,
+      "soft_edge_pixels": 13867
+    },
+    {
+      "index": 24,
+      "visible_bounds": [
+        103,
+        382,
+        847,
+        978
+      ],
+      "alpha_bounds": [
+        103,
+        382,
+        847,
+        978
+      ],
+      "visible_pixels": 288908,
+      "soft_edge_pixels": 13215
+    },
+    {
+      "index": 25,
+      "visible_bounds": [
+        112,
+        386,
+        847,
+        977
+      ],
+      "alpha_bounds": [
+        111,
+        385,
+        847,
+        978
+      ],
+      "visible_pixels": 285460,
+      "soft_edge_pixels": 12540
+    },
+    {
+      "index": 26,
+      "visible_bounds": [
+        121,
+        383,
+        839,
+        977
+      ],
+      "alpha_bounds": [
+        121,
+        383,
+        840,
+        978
+      ],
+      "visible_pixels": 283122,
+      "soft_edge_pixels": 12218
+    },
+    {
+      "index": 27,
+      "visible_bounds": [
+        123,
+        384,
+        831,
+        977
+      ],
+      "alpha_bounds": [
+        123,
+        384,
+        831,
+        977
+      ],
+      "visible_pixels": 284907,
+      "soft_edge_pixels": 12040
+    },
+    {
+      "index": 28,
+      "visible_bounds": [
+        122,
+        376,
+        818,
+        977
+      ],
+      "alpha_bounds": [
+        122,
+        376,
+        818,
+        977
+      ],
+      "visible_pixels": 291128,
+      "soft_edge_pixels": 12285
+    },
+    {
+      "index": 29,
+      "visible_bounds": [
+        119,
+        371,
+        826,
+        977
+      ],
+      "alpha_bounds": [
+        119,
+        370,
+        826,
+        977
+      ],
+      "visible_pixels": 295138,
+      "soft_edge_pixels": 12633
+    },
+    {
+      "index": 30,
+      "visible_bounds": [
+        115,
+        363,
+        869,
+        977
+      ],
+      "alpha_bounds": [
+        114,
+        363,
+        869,
+        977
+      ],
+      "visible_pixels": 299653,
+      "soft_edge_pixels": 13413
+    },
+    {
+      "index": 31,
+      "visible_bounds": [
+        115,
+        357,
+        909,
+        977
+      ],
+      "alpha_bounds": [
+        114,
+        357,
+        909,
+        977
+      ],
+      "visible_pixels": 302091,
+      "soft_edge_pixels": 13959
+    },
+    {
+      "index": 32,
+      "visible_bounds": [
+        118,
+        352,
+        945,
+        977
+      ],
+      "alpha_bounds": [
+        118,
+        352,
+        945,
+        977
+      ],
+      "visible_pixels": 301925,
+      "soft_edge_pixels": 14386
+    },
+    {
+      "index": 33,
+      "visible_bounds": [
+        122,
+        351,
+        957,
+        977
+      ],
+      "alpha_bounds": [
+        122,
+        350,
+        958,
+        977
+      ],
+      "visible_pixels": 300659,
+      "soft_edge_pixels": 14424
+    },
+    {
+      "index": 34,
+      "visible_bounds": [
+        126,
+        349,
+        956,
+        977
+      ],
+      "alpha_bounds": [
+        126,
+        349,
+        956,
+        977
+      ],
+      "visible_pixels": 298620,
+      "soft_edge_pixels": 14500
+    },
+    {
+      "index": 35,
+      "visible_bounds": [
+        126,
+        349,
+        941,
+        977
+      ],
+      "alpha_bounds": [
+        126,
+        349,
+        942,
+        977
+      ],
+      "visible_pixels": 298524,
+      "soft_edge_pixels": 14437
+    },
+    {
+      "index": 36,
+      "visible_bounds": [
+        123,
+        350,
+        919,
+        977
+      ],
+      "alpha_bounds": [
+        123,
+        349,
+        920,
+        977
+      ],
+      "visible_pixels": 298117,
+      "soft_edge_pixels": 14133
+    },
+    {
+      "index": 37,
+      "visible_bounds": [
+        119,
+        352,
+        890,
+        977
+      ],
+      "alpha_bounds": [
+        119,
+        352,
+        890,
+        977
+      ],
+      "visible_pixels": 297458,
+      "soft_edge_pixels": 13914
+    },
+    {
+      "index": 38,
+      "visible_bounds": [
+        113,
+        356,
+        856,
+        977
+      ],
+      "alpha_bounds": [
+        113,
+        356,
+        856,
+        977
+      ],
+      "visible_pixels": 297294,
+      "soft_edge_pixels": 13204
+    },
+    {
+      "index": 39,
+      "visible_bounds": [
+        109,
+        360,
+        824,
+        977
+      ],
+      "alpha_bounds": [
+        108,
+        360,
+        825,
+        977
+      ],
+      "visible_pixels": 294326,
+      "soft_edge_pixels": 13050
+    },
+    {
+      "index": 40,
+      "visible_bounds": [
+        103,
+        366,
+        826,
+        977
+      ],
+      "alpha_bounds": [
+        103,
+        365,
+        826,
+        977
+      ],
+      "visible_pixels": 292686,
+      "soft_edge_pixels": 12834
+    },
+    {
+      "index": 41,
+      "visible_bounds": [
+        103,
+        368,
+        829,
+        977
+      ],
+      "alpha_bounds": [
+        103,
+        368,
+        829,
+        977
+      ],
+      "visible_pixels": 293514,
+      "soft_edge_pixels": 12740
+    },
+    {
+      "index": 42,
+      "visible_bounds": [
+        104,
+        370,
+        835,
+        977
+      ],
+      "alpha_bounds": [
+        104,
+        370,
+        835,
+        977
+      ],
+      "visible_pixels": 296111,
+      "soft_edge_pixels": 12939
+    },
+    {
+      "index": 43,
+      "visible_bounds": [
+        106,
+        371,
+        861,
+        977
+      ],
+      "alpha_bounds": [
+        106,
+        370,
+        861,
+        977
+      ],
+      "visible_pixels": 297937,
+      "soft_edge_pixels": 13203
+    },
+    {
+      "index": 44,
+      "visible_bounds": [
+        112,
+        369,
+        907,
+        977
+      ],
+      "alpha_bounds": [
+        111,
+        369,
+        907,
+        977
+      ],
+      "visible_pixels": 299987,
+      "soft_edge_pixels": 14079
+    },
+    {
+      "index": 45,
+      "visible_bounds": [
+        115,
+        367,
+        931,
+        977
+      ],
+      "alpha_bounds": [
+        114,
+        366,
+        931,
+        977
+      ],
+      "visible_pixels": 300129,
+      "soft_edge_pixels": 14568
+    },
+    {
+      "index": 46,
+      "visible_bounds": [
+        119,
+        363,
+        942,
+        977
+      ],
+      "alpha_bounds": [
+        119,
+        363,
+        942,
+        977
+      ],
+      "visible_pixels": 298752,
+      "soft_edge_pixels": 14685
+    },
+    {
+      "index": 47,
+      "visible_bounds": [
+        121,
+        361,
+        938,
+        977
+      ],
+      "alpha_bounds": [
+        121,
+        361,
+        938,
+        977
+      ],
+      "visible_pixels": 298774,
+      "soft_edge_pixels": 14499
+    },
+    {
+      "index": 48,
+      "visible_bounds": [
+        121,
+        356,
+        916,
+        977
+      ],
+      "alpha_bounds": [
+        121,
+        356,
+        916,
+        977
+      ],
+      "visible_pixels": 298511,
+      "soft_edge_pixels": 14176
+    },
+    {
+      "index": 49,
+      "visible_bounds": [
+        120,
+        354,
+        890,
+        977
+      ],
+      "alpha_bounds": [
+        120,
+        354,
+        890,
+        977
+      ],
+      "visible_pixels": 298447,
+      "soft_edge_pixels": 14080
+    },
+    {
+      "index": 50,
+      "visible_bounds": [
+        118,
+        353,
+        854,
+        977
+      ],
+      "alpha_bounds": [
+        118,
+        353,
+        854,
+        977
+      ],
+      "visible_pixels": 297280,
+      "soft_edge_pixels": 12955
+    },
+    {
+      "index": 51,
+      "visible_bounds": [
+        116,
+        353,
+        829,
+        977
+      ],
+      "alpha_bounds": [
+        116,
+        353,
+        829,
+        977
+      ],
+      "visible_pixels": 295053,
+      "soft_edge_pixels": 12946
+    },
+    {
+      "index": 52,
+      "visible_bounds": [
+        113,
+        354,
+        813,
+        977
+      ],
+      "alpha_bounds": [
+        113,
+        354,
+        813,
+        977
+      ],
+      "visible_pixels": 294453,
+      "soft_edge_pixels": 12822
+    },
+    {
+      "index": 53,
+      "visible_bounds": [
+        112,
+        355,
+        816,
+        977
+      ],
+      "alpha_bounds": [
+        111,
+        355,
+        816,
+        977
+      ],
+      "visible_pixels": 295475,
+      "soft_edge_pixels": 12843
+    },
+    {
+      "index": 54,
+      "visible_bounds": [
+        110,
+        357,
+        840,
+        977
+      ],
+      "alpha_bounds": [
+        109,
+        357,
+        840,
+        977
+      ],
+      "visible_pixels": 298397,
+      "soft_edge_pixels": 12976
+    },
+    {
+      "index": 55,
+      "visible_bounds": [
+        109,
+        359,
+        862,
+        977
+      ],
+      "alpha_bounds": [
+        108,
+        359,
+        863,
+        977
+      ],
+      "visible_pixels": 300104,
+      "soft_edge_pixels": 13253
+    },
+    {
+      "index": 56,
+      "visible_bounds": [
+        109,
+        361,
+        902,
+        977
+      ],
+      "alpha_bounds": [
+        109,
+        361,
+        902,
+        977
+      ],
+      "visible_pixels": 301608,
+      "soft_edge_pixels": 14173
+    },
+    {
+      "index": 57,
+      "visible_bounds": [
+        109,
+        362,
+        911,
+        977
+      ],
+      "alpha_bounds": [
+        109,
+        362,
+        911,
+        977
+      ],
+      "visible_pixels": 300864,
+      "soft_edge_pixels": 14297
+    },
+    {
+      "index": 58,
+      "visible_bounds": [
+        111,
+        363,
+        910,
+        977
+      ],
+      "alpha_bounds": [
+        110,
+        363,
+        910,
+        977
+      ],
+      "visible_pixels": 300037,
+      "soft_edge_pixels": 14174
+    },
+    {
+      "index": 59,
+      "visible_bounds": [
+        112,
+        363,
+        898,
+        977
+      ],
+      "alpha_bounds": [
+        111,
+        363,
+        898,
+        977
+      ],
+      "visible_pixels": 299269,
+      "soft_edge_pixels": 14067
+    },
+    {
+      "index": 60,
+      "visible_bounds": [
+        112,
+        363,
+        873,
+        977
+      ],
+      "alpha_bounds": [
+        112,
+        363,
+        873,
+        977
+      ],
+      "visible_pixels": 298752,
+      "soft_edge_pixels": 13860
+    },
+    {
+      "index": 61,
+      "visible_bounds": [
+        113,
+        363,
+        857,
+        977
+      ],
+      "alpha_bounds": [
+        112,
+        363,
+        857,
+        977
+      ],
+      "visible_pixels": 297847,
+      "soft_edge_pixels": 13029
+    },
+    {
+      "index": 62,
+      "visible_bounds": [
+        113,
+        361,
+        830,
+        977
+      ],
+      "alpha_bounds": [
+        113,
+        361,
+        830,
+        977
+      ],
+      "visible_pixels": 294635,
+      "soft_edge_pixels": 12826
+    }
+  ],
+  "limitations": "Integrity/alpha checks only; edge halos, character identity and action consistency require visual review",
+  "hair_repair": {
+    "method": "real SAM2.1 locally prompted hair-gap tracking, constrained by white/black source-color matte and blue-hair protection; remove only those independent masks from pre-existing real character alpha; fixed 0.35-native-pixel hole feather",
+    "mask_prompt_file": "sam2_hole_prompts_trial.json",
+    "objects": [
+      "left_upper",
+      "left_lower",
+      "right_upper"
+    ],
+    "native_frames_resegmented": 124,
+    "per_frame_auto_exposure": false,
+    "disconnected_mask_islands": "only largest local component retained per tracked gap; raw masks preserved separately",
+    "reviewed_visibility_gate": {
+      "think_left_upper_gap_fully_hand_occluded_native_indices": [
+        97
+      ]
+    },
+    "color_method": "fixed first-frame blue palette LUT, 75 percent conservative blend to source artwork; skin/neutral whites/black outlines excluded; no per-frame recalibration",
+    "reference_artwork_sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738",
+    "inner_white_edge_decontamination": "invert source-white compositing only inside tracked left hair gaps where alpha was reduced; no global erosion or blue-hair core changes",
+    "lut_sha256": "cc317dfc546c494fcd0dd0d86938df6929c7e3e2355c2fce549459a6ba0df915",
+    "warnings": [],
+    "source_native_dir": "artifacts\\asset_pipeline\\outputs\\snarl_cute_native_draft_v1",
+    "source_native_modified": false,
+    "saturation_aware_blue_hair_protection": "blue RGB differences multiplied by fixed saturation membership: <=20% not classified as hair, >=40% fully eligible",
+    "codec_pastel_white_residue": "low-saturation purple source-white compression residues removed as part of gap matte",
+    "candidate_version": 4
+  },
+  "publication_review": {
+    "status": "passed",
+    "batch": "hair_repair_v2",
+    "no_new_video_generation": true,
+    "geometry": "original shared whole-clip transform retained"
+  }
+}

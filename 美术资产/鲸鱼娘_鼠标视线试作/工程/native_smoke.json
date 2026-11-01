@@ -1,0 +1,113 @@
+{
+  "checked_utc": "2026-10-30T15:08:07.513811+00:00",
+  "status": "passed",
+  "errors": [],
+  "platform": "windows",
+  "production_settings_touched": false,
+  "credential_backend": "temporary memory-only",
+  "network_used": false,
+  "physical_cursor_moved": true,
+  "original_cursor": [
+    722,
+    444
+  ],
+  "existing_frame_timer_used": true,
+  "injected_gaze_coordinates": false,
+  "directions": [
+    {
+      "code": "left",
+      "target_logical": [
+        536,
+        545
+      ],
+      "actual_cursor_logical": [
+        536,
+        545
+      ],
+      "gaze": [
+        -0.999594482999438,
+        -0.00206541835480468
+      ],
+      "timer_ticks": 18,
+      "own_window_capture": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\原生窗口\\native_left.png"
+    },
+    {
+      "code": "right",
+      "target_logical": [
+        1141,
+        545
+      ],
+      "actual_cursor_logical": [
+        1141,
+        545
+      ],
+      "gaze": [
+        0.9987368987303724,
+        -0.0014833002073597723
+      ],
+      "timer_ticks": 19,
+      "own_window_capture": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\原生窗口\\native_right.png"
+    },
+    {
+      "code": "up",
+      "target_logical": [
+        838,
+        319
+      ],
+      "actual_cursor_logical": [
+        838,
+        319
+      ],
+      "gaze": [
+        -0.00022712242400393915,
+        -0.9993989988119211
+      ],
+      "timer_ticks": 19,
+      "own_window_capture": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\原生窗口\\native_up.png"
+    },
+    {
+      "code": "down",
+      "target_logical": [
+        838,
+        772
+      ],
+      "actual_cursor_logical": [
+        838,
+        772
+      ],
+      "gaze": [
+        -0.0008268655271541931,
+        0.9988254406201155
+      ],
+      "timer_ticks": 19,
+      "own_window_capture": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\原生窗口\\native_down.png"
+    },
+    {
+      "code": "center",
+      "target_logical": [
+        838,
+        545
+      ],
+      "actual_cursor_logical": [
+        838,
+        545
+      ],
+      "gaze": [
+        -0.0012398307960713242,
+        -0.0016247922363978665
+      ],
+      "timer_ticks": 19,
+      "own_window_capture": "美术资产\\鲸鱼娘_鼠标视线试作\\预览\\原生窗口\\native_center.png"
+    }
+  ],
+  "timer_interval_ms": 33,
+  "device_pixel_ratio": 1.5,
+  "window_logical_size": [
+    360,
+    460
+  ],
+  "transparent_window": true,
+  "total_timer_ticks": 102,
+  "pointer_restored": true,
+  "temporary_window_closed": true
+}

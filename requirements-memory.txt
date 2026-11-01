@@ -1,0 +1,3 @@
+# Optional local Mem0 OSS stack. Does not require a hosted Mem0 subscription.
+mem0ai==2.2.1
+qdrant-client==1.20.0

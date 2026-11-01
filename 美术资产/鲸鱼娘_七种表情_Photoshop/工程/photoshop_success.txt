@@ -1,0 +1,2 @@
+SUCCESS count=6
+Photoshop 25.9.0

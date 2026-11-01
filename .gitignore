@@ -1,4 +1,11 @@
 .venv/
+node_modules/
+.venv-assets/
+.asset-cache/
+asset_work/
+third_party/sam2/
+*.pt
+*.pth
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -12,4 +19,17 @@ runtime/
 local_settings/
 settings.ini
 *.sqlite*
+*.db
+*.db-*
+/memory/
+mem0_data/
+conversation_exports/
+model_cache/
+/agent_workspace/
+**/.cache/
+*.onnx
+*.onnx_data
+*.safetensors
 
+# Machine-specific Photoshop preferences; keep art sources tracked.
+/美术资产/鲸鱼娘_七种表情_Photoshop/工程/Photoshop偏好备份/

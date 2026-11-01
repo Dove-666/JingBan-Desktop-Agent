@@ -1,0 +1,519 @@
+{
+  "clips": {
+    "think_scratch_head": {
+      "native_frames": 124,
+      "delivered_frames": 62,
+      "question_exact_all_frames": true,
+      "alpha_never_added": true,
+      "confident_blue_alpha_exact": true,
+      "transparent_rgb_zero": true,
+      "skin_strong_redness_alpha_changed_pixels": 0,
+      "hole_white_opaque_before": 132722,
+      "hole_white_opaque_after": 0,
+      "max_removed_skin_redness_pixels_per_frame": 0,
+      "white_core_removal_fraction": 1.0,
+      "frame_checks": [
+        {
+          "native_index": 0,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 1,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 2,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 3,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 4,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 5,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 6,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 7,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 8,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 9,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 10,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 11,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 12,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 13,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 14,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 15,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 16,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 17,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 18,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 19,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 20,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 21,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 22,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 23,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 24,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 25,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 26,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 27,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 28,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 29,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 30,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 31,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 32,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 33,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 34,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 35,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 36,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 37,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 38,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 39,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 40,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 41,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 42,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 43,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 44,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 45,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 46,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 47,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 48,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 49,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 50,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 51,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 52,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 53,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 54,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 55,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 56,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 57,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 58,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 59,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 60,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 61,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 62,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 63,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 64,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 65,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 66,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 67,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 68,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 69,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 70,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 71,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 72,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 73,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 74,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 75,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 76,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 77,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 78,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 79,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 80,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 81,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 82,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 83,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 84,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 85,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 86,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 87,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 88,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 89,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 90,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 91,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 92,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 93,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 94,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 95,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 96,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 97,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 98,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 99,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 100,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 101,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 102,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 103,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 104,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 105,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 106,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 107,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 108,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 109,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 110,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 111,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 112,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 113,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 114,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 115,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 116,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 117,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 118,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 119,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 120,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 121,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 122,
+          "red_skin_alpha_changed": 0
+        },
+        {
+          "native_index": 123,
+          "red_skin_alpha_changed": 0
+        }
+      ]
+    }
+  },
+  "source_videos_unchanged": {
+    "think_scratch_head": "f45dbd3f005218ec8c8c8bb73c9d4bf85767b1fd34281d0bf435af69e57ed771"
+  },
+  "production_assets_written_by_this_script": false
+}

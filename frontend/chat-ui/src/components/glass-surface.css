@@ -1,0 +1,68 @@
+/* Material only: existing composer/popover rules retain their layout and events. */
+.glass-surface[data-glass-renderer] {
+  border: 1px solid rgba(255, 255, 255, .84);
+  border-radius: var(--glass-radius, 24px);
+  background-color: rgba(247, 251, 255, .64);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, .72), rgba(232, 247, 255, .08) 58%, rgba(255, 255, 255, .38));
+  box-shadow: 0 9px 30px rgba(35, 66, 86, .09), 0 2px 6px rgba(35, 66, 86, .035),
+    inset 0 1px 0 rgba(255, 255, 255, .96), inset 0 -1px 0 rgba(210, 234, 247, .38);
+  -webkit-backdrop-filter: var(--glass-backdrop, blur(16px) saturate(1.08));
+  backdrop-filter: var(--glass-backdrop, blur(16px) saturate(1.08));
+}
+
+.glass-surface[data-glass-renderer="frosted"] {
+  background-color: rgba(248, 251, 254, .9);
+}
+
+/* A stable material: no sampled backdrop or changing SVG render target beneath
+   an editor. Highlights stay on the surface, while text/caret paint normally. */
+.glass-surface[data-glass-renderer="static"] {
+  background-color: #f6fbff;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.glass-surface[data-glass-renderer="solid"] {
+  background: #ffffff;
+  border-color: #d8e1e8;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 3px 12px rgba(35, 66, 86, .06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-surface[data-glass-renderer="svg"],
+  .glass-surface[data-glass-renderer="frosted"] {
+    -webkit-backdrop-filter: blur(16px) saturate(1.08);
+    backdrop-filter: blur(16px) saturate(1.08);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-surface[data-glass-renderer] {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass-surface[data-glass-renderer] {
+    background: #ffffff;
+    border-color: #7a8996;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .glass-surface[data-glass-renderer] {
+    forced-color-adjust: auto;
+    background: Canvas;
+    border-color: ButtonBorder;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

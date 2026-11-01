@@ -1,0 +1,482 @@
+{
+    "schema_version":  1,
+    "created_at":  "2026-10-31T00:11:48.4135135+08:00",
+    "status":  "complete_and_running",
+    "scope":  "Six open-eye expressions track cursor; happy preserves closed eyes",
+    "photoshop":  {
+                      "application":  "Adobe Photoshop 2024",
+                      "version":  "25.9.0",
+                      "new_rigs":  5,
+                      "reused_neutral_rigs":  1,
+                      "layered_psds":  7,
+                      "script":  "工程/build_expression_eyes.jsx",
+                      "geometry":  "工程/geometry.jsx",
+                      "log":  "工程/photoshop_expression_eyes.log",
+                      "native_evidence":  "工程/Photoshop_全表情原生分层证据.png",
+                      "partial_eyelids":  "Per-expression apertures and complete dark-blue iris cap behind fixed lids; source-fragment cleanup before merging",
+                      "new_image_generation_requests":  0
+                  },
+    "entries":  [
+                    {
+                        "stem":  "neutral",
+                        "source":  "assets/expressions/neutral.png",
+                        "source_sha256":  "8886a7865967f73be0b878f3e4ac5da71038f4f3c408563ae9edba99df5e1a2b",
+                        "runtime":  "assets/character/eyes/neutral/rig.json",
+                        "psd":  "PSD/neutral_eye_rig.psd",
+                        "existing_rig_reused":  true,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        414.5,
+                                                        554.4
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             395,
+                                                             532
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        513.5,
+                                                        538.7
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             491,
+                                                             515
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "7cd08064a8d40528539f0b6755888abb8eea955d1dd123224a363c89998d7462"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "f688a15060ead02f04781915a0f64a88189772bdd6b08076db0a426b61dc0e7c"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "ff52faa4a3c71ec3c191431cf1de97054245c06a0f89e46198530cea37cd38e8"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "0b7868867affeb53f2dd0d5ba5584b56e786e9cd7f7958a530cc80ccafcbb15f"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "4dc65fdb3aa3879fc10f7a381406a0d13e9c0293cc3160fc2fd2e7b7d7951eb4"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "fe540f7cb9be2d676cfb8a999154c8a2cbbaa29fbd0c8376fccd5d88d717821a"
+                                      }
+                                  ]
+                    },
+                    {
+                        "stem":  "surprised",
+                        "source":  "assets/expressions/surprised.png",
+                        "source_sha256":  "1776d2d8e215cbd319341338be55242522895a3426410ee05cd34d4daaefb4d2",
+                        "runtime":  "assets/character/eyes/surprised/rig.json",
+                        "psd":  "PSD/surprised_eye_rig.psd",
+                        "existing_rig_reused":  false,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        415.5,
+                                                        553.4
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             396,
+                                                             530
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        512.7,
+                                                        539.5
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             491,
+                                                             515
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "405daca9b1dee6ba4b144d67b0a7e055177ac079f911ddd64b68ef955e43398d"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "1fffb803591391c21343997a54794cc6865fc6c78ed6c9039c9b270eecc994b0"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "015fb374659cacbca5bc36a5b9b7418cf2ad983ef1a43fce31a5ec49c6d32eed"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "425b75b762c4bc7a6e49c8d4137fc1b18e42d8e265ae92c73f0a13a24469e61f"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "15c70a3179496507e7eb51a69b4e8342beb2d267f90908c35c8c54f6f52b7f62"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "e66a363b68d5219e479565b919cfd32a884311dc965434c73b931d51a28856c0"
+                                      }
+                                  ]
+                    },
+                    {
+                        "stem":  "sleepy",
+                        "source":  "assets/expressions/sleepy.png",
+                        "source_sha256":  "54890bc24dd90b564805fbf3b24f5a22fb34e315439d3e8a71108063140c801a",
+                        "runtime":  "assets/character/eyes/sleepy/rig.json",
+                        "psd":  "PSD/sleepy_eye_rig.psd",
+                        "existing_rig_reused":  false,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        415,
+                                                        550.8
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             395,
+                                                             528
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        2.5
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        514.9,
+                                                        534.8
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             493,
+                                                             512
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        2.5
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "efbc4e9159fb0761e5ff2566af7e8d439dfacd0493773b12ac0016ca210160b3"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "0bd37a59ea86b8bd4145b8a40f6a34708d990ce30224bf03660e9afac92b726f"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "5ab4511d4c2e60236e76d2a31a84790ef162bedc6fc1992c62a3e8e1c80de88b"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "60c901e25540ef5bf0af1e6f40712f7e9dc2b81d4329718a6f34d2ee5e896135"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "7c0b2390924863cf2b09ec9df011d7b3f941b6485fa8f11bdd2e39571c501fb6"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "01e215589691bb8424dcb22afffcaa8b719913f5271ccba3cbcb8b46330f3bed"
+                                      }
+                                  ]
+                    },
+                    {
+                        "stem":  "angry",
+                        "source":  "assets/expressions/angry.png",
+                        "source_sha256":  "4151a5fe9fe051091d1d1d78749c3497635a8c3199df22c69163cc56c6d212b9",
+                        "runtime":  "assets/character/eyes/angry/rig.json",
+                        "psd":  "PSD/angry_eye_rig.psd",
+                        "existing_rig_reused":  false,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        415.3,
+                                                        551.7
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             395,
+                                                             528
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        3
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        512.8,
+                                                        538.5
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             491,
+                                                             515
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        3
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "78bb6bca7ac091e9bb71017160d14a667c198c29fd0a3cab680194c1f7315cb5"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "beb28f7cc786fe36d2ff936844517abc5342f18c434f43915d88b19894c81044"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "d0a6323e63dee973765631178723f6e9bda0bbd26adba19f7e27831419270aa7"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "4f08ffdce2d3f285f2da75bfa1f01adb46ed98c75303979ee5889ce30ec8a362"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "b781ac924f88f6b9cc76caec8d36a7593068044a3e86603ab1f8b6d5116bf902"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "5f0041e89b234b549c7a1116ab5bc2f6ed83b7cbdd5efe1c7148f044cc799e4a"
+                                      }
+                                  ]
+                    },
+                    {
+                        "stem":  "thinking",
+                        "source":  "assets/expressions/thinking.png",
+                        "source_sha256":  "1ae35c3329c21333280b9086963f076f3144cfbe479bce2d956ab2a10820ce26",
+                        "runtime":  "assets/character/eyes/thinking/rig.json",
+                        "psd":  "PSD/thinking_eye_rig.psd",
+                        "existing_rig_reused":  false,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        423,
+                                                        551.1
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             404,
+                                                             531
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        4
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        524,
+                                                        530.7
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             504,
+                                                             510
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        6,
+                                                        4
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "12b0dc4921a452fd519c73674b08653850c88f5258f7986daa915dd7bf8e6aa7"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "c1d2d016fefc8f6cd75d5c58b22d01cb7059763b22d201b004553af57d58d0b8"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "d66c707fbc5682daf00346730e4aa2d471a0a500519f8a5b3109c79757975de0"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "84f0e067affd8b3d09146094b556bc58e06e0dc3509408ea7acb93a0385cfb62"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "105784f20aaa017e53f33e3d466cf20afb5679dfbe4fcc5bfbe0aacc2418fbde"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "bb7442acffa82bba159b339d1fc8ab315d855c584aabdda44ebba7248ae0077b"
+                                      }
+                                  ]
+                    },
+                    {
+                        "stem":  "talk_open",
+                        "source":  "assets/expressions/talk_open.png",
+                        "source_sha256":  "0e193961da54a94522cd21bf7f15eefee0c4312bc69ff9385375bf4d922abe26",
+                        "runtime":  "assets/character/eyes/talk_open/rig.json",
+                        "psd":  "PSD/talk_open_eye_rig.psd",
+                        "existing_rig_reused":  false,
+                        "eyes":  [
+                                     {
+                                         "name":  "left",
+                                         "center":  [
+                                                        414.8,
+                                                        554
+                                                    ],
+                                         "iris":  "left_iris.png",
+                                         "iris_origin":  [
+                                                             395,
+                                                             531
+                                                         ],
+                                         "aperture":  "left_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     },
+                                     {
+                                         "name":  "right",
+                                         "center":  [
+                                                        514.3,
+                                                        539.2
+                                                    ],
+                                         "iris":  "right_iris.png",
+                                         "iris_origin":  [
+                                                             492,
+                                                             515
+                                                         ],
+                                         "aperture":  "right_aperture.png",
+                                         "travel":  [
+                                                        8,
+                                                        5
+                                                    ]
+                                     }
+                                 ],
+                        "files":  [
+                                      {
+                                          "file":  "base.png",
+                                          "sha256":  "e75dd3a63e22cc34811e3bad563c0f8e7af4ccb0067fee220f2b777f92ebdb83"
+                                      },
+                                      {
+                                          "file":  "left_iris.png",
+                                          "sha256":  "c27de298fe47f4b99b9f90b2b293d91e3b0a8ae1e7e2039da926e6a6c326a707"
+                                      },
+                                      {
+                                          "file":  "right_iris.png",
+                                          "sha256":  "26d6b04c2ff3145ebdd484f5017f882c2dac8fc18b2922c3549f99c11e714371"
+                                      },
+                                      {
+                                          "file":  "left_aperture.png",
+                                          "sha256":  "e74b601a0a03ddec0b30b2f52961c21fd0e525ae55d818fb5f7af1458b3437ee"
+                                      },
+                                      {
+                                          "file":  "right_aperture.png",
+                                          "sha256":  "fb62b2d1042d261e1bc5d6faa7472cf21212188dc4d962f01c61177d6db4609d"
+                                      },
+                                      {
+                                          "file":  "rig.json",
+                                          "sha256":  "27eec0d371e0e2d5001e446582a12748bcaac4189ad05212f80fb3f7ca9b6c86"
+                                      }
+                                  ]
+                    }
+                ],
+    "closed_happy":  {
+                         "png":  "闭眼表情/happy.png",
+                         "psd":  "PSD/happy_closed.psd",
+                         "behavior":  "Original closed-eye static art"
+                     },
+    "talk_closed":  {
+                        "behavior":  "Canonical pixels identical to neutral; reuses neutral cached rig",
+                        "additional_generation":  false
+                    },
+    "runtime":  {
+                    "module":  "desktop_pet/eye_tracking.py",
+                    "paint_and_cursor_hook":  "desktop_pet/pet_window.py",
+                    "menu_toggle":  "眼睛跟随鼠标",
+                    "toggle_and_gaze_preserved_across_expressions":  true,
+                    "rig_io":  "Startup cache only",
+                    "drag_and_return":  "Freeze current gaze",
+                    "sequences":  "Use original animation frames",
+                    "invalid_one_rig":  "Only that expression falls back to original static art",
+                    "production_restart":  "工程/live_restart.json",
+                    "production_live_check":  "工程/live_startup_verified.json"
+                },
+    "verification":  {
+                         "status":  "passed",
+                         "tests":  {
+                                       "count":  102,
+                                       "seconds":  40.148,
+                                       "log":  "工程/targeted_tests.log"
+                                   },
+                         "pixel_and_state_qa":  "工程/verification.json",
+                         "native_mouse_qa":  "工程/native_smoke.json",
+                         "directions":  54,
+                         "scale_combinations":  36,
+                         "native_display_scale":  1.5,
+                         "protected_source_files_checked":  17,
+                         "eye_region_only_changes":  true,
+                         "alpha_silhouette_unchanged":  true
+                     },
+    "previews":  {
+                     "animated":  "预览/全表情鼠标视线效果.gif",
+                     "comparison":  "预览/全表情_左中右对照.png"
+                 }
+}

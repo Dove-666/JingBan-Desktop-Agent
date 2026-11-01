@@ -1,0 +1,28 @@
+# Visual loop audit — 2026-11-01
+
+Scope: installed `@ui-tars/sdk`, `@ui-tars/operator-nut-js` and shared/action-parser packages, all pinned at 1.2.3, plus AURA's bridge. Inspection and tests used synthetic pixels, a localhost model stub and fake operators. No desktop screenshots, physical input, cloud requests or credentials were used.
+
+Update during the same change: AURA now bypasses the SDK's fixed five-image slice with `TaskModelContext` and a model instance wrapper. All current-task pictures and action messages reach the provider; output token limits are omitted. Provider window errors are explicit and are not retried with reduced context. Observation/action progress now reports running, completed after the operation returns, or failed after an exception. No upstream package files were patched.
+
+## Confirmed behavior
+
+- AURA's `GuardedOperator.screenshot()` calls `super.screenshot()` on every observation, rather than caching a frame (`sdk-adapter.mjs`). The SDK takes a screenshot before each model invocation (`node_modules/@ui-tars/sdk/dist/GUIAgent.mjs:110`).
+- The SDK adds that new frame to the conversation (`GUIAgent.mjs:134`), then prepares the image/message history and invokes the model (`GUIAgent.mjs:165`, `:180`). The last supplied image is the newest observation.
+- Upstream limits image history to the newest five (`sdk/dist/utils.mjs:21`; `shared/dist/constants/vlm.mjs:7`). AURA captures current-task conversation objects from `onData` before this slice and restores all images/messages at the model boundary (`model-context.mjs`). Full and delta callbacks are deduplicated by object identity; the SDK-injected first task/system text is retained.
+- `test/unlimited.test.mjs` drives the real SDK through 17 different artificial frames. Every request is checked for its latest image, the exact sequence of all retained frames and all preceding assistant action messages. It also proves cancellation at request 13 prevents action 13, and that timeout and `call_user` still terminate an unlimited run.
+- Protocol `maxSteps: 0` becomes `Infinity` only inside the SDK configuration. The actual pinned SDK loop uses `loopCnt >= maxLoopCount` (`GUIAgent.mjs:96`), so this does not impose an integer substitute or revert to its default.
+- Explicit `coordinate_profile: pixel` aligns supplied image dimensions with the 1.5 parser's coordinate space and states current pixel dimensions on each request (`pixel-profile.mjs:75`). The default `native` profile retains dedicated-model SDK behavior.
+
+## Remaining SDK and integration limitations
+
+1. **Multiple actions may share one old observation.** The SDK iterates all `parsedPredictions` and executes them before the next screenshot (`GUIAgent.mjs:254`). The pixel prompt asks for one action, but the SDK itself does not enforce this. If a model emits a click and `finished()` together, it can finish without observing the click result (`GUIAgent.mjs:281`).
+2. **Completion is model-reported.** `finished/end` sets completed status; it does not independently verify an application window or file result (`GUIAgent.mjs:281`, `sdk-adapter.mjs:137`). Screenshot refresh alone does not prove correct visual interpretation.
+3. **Malformed predictions can consume repeated requests.** Parser exceptions return an empty prediction list (`sdk/dist/Model.mjs:194`); the loop can observe and ask again without an explicit parse-error feedback message. With unlimited steps, cancellation and timeout remain the boundaries.
+4. **There is no explicit action-effect feedback.** New screenshots and previous model actions are supplied, but the SDK does not report whether the screen changed, whether focus reached the intended element, or whether a launch succeeded. A model can repeatedly choose an ineffective action. The Windows pixel prompt requests observing and changing route, but this is a prompt instruction.
+5. **Full task histories grow to the model window.** AURA now retains all pictures and current-task assistant messages. The separate SDK 30-message formatter applies to externally supplied `historyMessages`, not the accumulating current task (`utils.mjs:122`). A long run can reach the provider context window; AURA explicitly reports this rather than silently deleting history.
+6. **Application transitions need observation time.** AURA adds a 250 ms loop interval (`sdk-adapter.mjs:124`) and interruptible `wait()` pauses. There is no native application-ready detector. A next frame may still show loading or an animation.
+7. **Native action support is narrower than its published prompt.** The operator only implements vertical scroll (`operator-nut-js/dist/index.mjs:196`) although its manual mentions horizontal directions. Invalid native hotkey components are silently filtered (`index.mjs:86`); pixel mode rejects invalid chords and normalizes common Windows aliases first.
+8. **Native drag edge cases remain.** The upstream drag code checks coordinate truthiness, so zero-valued edge coordinates may be skipped (`operator-nut-js/dist/index.mjs:140`). This was observed in source, not exercised against the physical desktop.
+9. **Native and generic coordinate assumptions differ.** The 1.5 parser divides by its smart-resized dimensions (`action-parser/dist/actionParser.mjs:55`, `:106`), while SDK image preprocessing only scales for maximum pixels (`sdk/dist/utils.mjs:100`). Dedicated models can apply their trained preprocessing internally. A generic vision model needs the explicit pixel adapter; supporting the action syntax alone does not establish dedicated UI-TARS visual capability.
+
+No upstream package files were modified during this audit.

@@ -1,0 +1,7 @@
+Normal restart without modifier keys succeeded.
+RESTART_OPEN_OK Photoshop 25.9.0 document=happy.psd layers=2
+Photoshop scratch disk E was selected through native Ctrl+Alt startup dialog.
+Per-process TEMP/TMP set to project engineering cache; no system environment changed.
+MachinePrefs.psp rebuilt after preserving corrupt 6-byte file; no full user preference reset.
+Repaired MachinePrefs.psp: 27342 bytes, saved 2026-10-30 22:24:11 Asia/Shanghai.
+Raw generated input files preserved. Actual PSD/PNG cutout work was entirely Photoshop.

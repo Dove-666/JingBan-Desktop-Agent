@@ -1,0 +1,2 @@
+# Optional encrypted device-to-device transport. Install with the app's venv.
+iroh==1.2.0

@@ -1,0 +1,23 @@
+{
+  "verified_date": "2026-10-31",
+  "platform": "win32",
+  "node": "v24.15.0",
+  "sdk": "1.2.3",
+  "operator": "1.2.3",
+  "explicit_upstream_dependency_repair": "uuid@14.0.3",
+  "native_import": "passed",
+  "static_check": "passed",
+  "tests_passed": 15,
+  "modern_gpt_transport": "verified against localhost fake HTTP server; max_completion_tokens >=4096, reasoning_effort low, unsupported fields omitted, legacy models unchanged",
+  "synthetic_model_probe": "verified with localhost fake model and real SDK; parsed target hit and two-step finish; no native operator imported",
+  "test_models": "localhost synthetic OpenAI-compatible responses only",
+  "test_operator": "fake",
+  "desktop_screenshots_captured": 0,
+  "physical_mouse_actions": 0,
+  "physical_keyboard_actions": 0,
+  "cloud_api_calls": 0,
+  "real_gui_task_verified": false,
+  "single_monitor_constraint": true,
+  "runtime_automatic_dependency_install": false,
+  "model_configuration": "provided per run by host through stdin"
+}
