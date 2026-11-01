@@ -46,13 +46,56 @@ The content security policy and native resource interceptor block remote content
 
 ## UI behavior
 
+- Windows launch entries configure Chromium software rendering before Qt starts
+  (`--disable-gpu`). This process-local compatibility path avoids GPU content
+  rendering for the 2D chat; it does not change the OS graphics profile, Qt Quick
+  backend, application preferences, or another application's environment.
+  Set `AURA_WEBENGINE_RENDERER=auto` before launch to retain the original path.
+- Web drafts stay in the host draft dictionary while the native editor is hidden.
+  The native document is restored on switching to compatibility chat. Identical
+  snapshots and unused visual-observer countdown ticks do not repaint chat;
+  explicit ready/reload/open acknowledgements still force the required snapshot.
+- The ice-white theme adds restrained whale-blue accents and stable glass
+  highlights around the composer and conversation menu. Live editors use no
+  backdrop filters or SVG maps, avoiding Qt compositing invalidations while
+  typing. SVG refraction remains an explicit opt-in for non-editing surfaces.
+  Reduced transparency/forced colors use a solid fallback.
+- Draft changes keep the message converter and message context stable. A hidden
+  measurement textarea handles growth/shrink and width changes without resetting
+  the live editor's height on each keystroke.
+- The original UI files and production bundle are preserved in
+  `artifacts/ui_glass_20261031/baseline`. With the pet exited, run
+  `artifacts/ui_glass_20261031/restore_ui.bat` to restore the baseline. The script
+  first archives current files; it never resets the repository or user settings.
+- The white chat surface keeps history titles, messages and the composer in focus.
+  Routine storage/keyboard hints and permanent observation status bars are omitted.
+  Each sidebar conversation menu contains find, export, rename, clear and delete.
+  Find/export/clear load the selected conversation before acting; failed loads or
+  navigation cancel the queued action. The top header has no duplicate tools or
+  new-conversation button. New conversation stays in the sidebar; Ctrl+N remains available.
+  Model, memory, observation, reading and context-budget controls live in settings.
+  Chat errors and active generation remain visible in the chat surface.
 - Enter sends, Shift+Enter inserts a line break; IME composition never sends.
-- Ctrl+N opens a new conversation; Ctrl+F searches history; Escape dismisses tools.
+- Ctrl+N opens a new conversation; Ctrl+F searches history; Ctrl+Shift+F finds
+  messages in the current conversation; Escape dismisses the conversation menu.
 - The sidebar becomes a dismissible overlay on narrow windows.
 - New replies follow the latest message only when the reader is near the bottom.
+- Synced image attachments appear automatically above the user's question as
+  inline thumbnails. Clicking the image opens the existing native preview.
+  The host validates the current message reference and generates a bounded PNG
+  thumbnail in a worker; original files and local paths stay outside the web state.
+- The composer plus button opens the native image picker. A conversation-scoped
+  preview can be removed before sending; image-only sends use a default question.
+  Picking an image does not call the model. Imports use the same bounded inbox
+  and history image references as phone images, so they can sync to the phone.
 - Screen context is collapsed until requested, and native focus requests expand it.
-- Service settings, long-term memory, budget, export and destructive confirmations
-  retain the existing native application behavior.
+- Export and destructive confirmations retain the existing native behavior.
+- The sidebar settings action opens the chat window's embedded native settings
+  page instead of a debug window. API error recovery targets the API category.
+  The web view stays mounted while settings are shown, preserving drafts and
+  reading position. Credentials never enter the WebChannel snapshot.
 
 Dependency licenses are included with the offline production asset in
 `desktop_pet/ui/web_chat/THIRD_PARTY_NOTICES.txt`.
+The adapted SVG refraction sources and upstream MIT notices are recorded in
+`third_party/liquid_glass/` and included in that generated notice file.

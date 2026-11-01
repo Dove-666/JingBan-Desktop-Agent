@@ -16,10 +16,14 @@ from typing import Iterator
 from uuid import uuid4
 
 from .chronology import register_timestamp_order
+from ..chat_images import IMAGE_ERRORS
+from ..agents.service import _ERROR_MESSAGES as AGENT_ERRORS
+from ..execution_trace import normalize_execution, merge_execution, interrupted_execution
+from ..agent_presentation import AGENT_ACTIVITY, public_agent_trace_sql
 
 
 SCHEMA_VERSION = 3
-REMOTE_SYNC_SCHEMA_VERSION = 2
+REMOTE_SYNC_SCHEMA_VERSION = 7
 REMOTE_SYNC_MAX_CHANGES = 10000
 REMOTE_SYNC_MAX_CHANGE_BYTES = 32 * 1024 * 1024
 REMOTE_SYNC_PRUNE_BATCH = 512
@@ -86,6 +90,31 @@ def remote_sync_projection(entity: str, prefix: str = "") -> str:
                      + f"EXISTS (SELECT 1 FROM messages AS reply_user WHERE reply_user.id = {reply} "
                      + f"AND reply_user.conversation_id = {column('conversation_id')} "
                      + "AND reply_user.role = 'user') THEN " + reply + " END END")
+        image = f"json_extract({metadata}, '$.image_id')"
+        pairs.append("'image_id', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + f"{column('role')} = 'user' AND json_type({metadata}, '$.image_id') = 'text' "
+                     + f"AND length({image}) = 64 AND {image} NOT GLOB '*[^0-9a-f]*' "
+                     + "THEN " + image + " END END")
+        image_error = f"json_extract({metadata}, '$.image_error_code')"
+        codes = ",".join("'" + code + "'" for code in IMAGE_ERRORS)
+        pairs.append("'image_error', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + f"{column('role')} = 'user' AND {status} = 'failed' AND {image_error} IN ({codes}) "
+                     + "THEN " + image_error + " END END")
+        mode = f"json_extract({metadata}, '$.execution_mode')"
+        pairs.append("'execution_mode', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + mode + " = 'agent' THEN 'agent' END END")
+        agent_error = f"json_extract({metadata}, '$.agent_error_code')"
+        error_codes = ",".join("'" + code + "'" for code in AGENT_ERRORS)
+        pairs.append("'agent_error_code', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + status + " IN ('failed','cancelled','interrupted') AND " + agent_error
+                     + f" IN ({error_codes}) THEN " + agent_error + " END END")
+        labels = ",".join("'" + label.replace("'", "''") + "'" for label in sorted(AGENT_ACTIVITY))
+        pairs.append("'agent_activity', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + status + " = 'pending' THEN (SELECT json_extract(value, '$.label') FROM json_each("
+                     + metadata + ", '$.execution.events') WHERE "
+                     + f"CASE WHEN type = 'object' THEN json_extract(value, '$.label') END IN ({labels}) "
+                     + "ORDER BY CAST(key AS INTEGER) DESC LIMIT 1) END END")
+        pairs.append("'agent_trace', json(" + public_agent_trace_sql(metadata, column("role"), mode) + ")")
     return "json_object(" + ", ".join(pairs) + ")"
 
 
@@ -216,8 +245,10 @@ class ConversationStore:
             raise StoreError("远程同步数据库来自更新版本，请升级程序后再打开。")
         if version == REMOTE_SYNC_SCHEMA_VERSION:
             return
-        if version == 1:
-            ConversationStore._migrate_remote_retention(connection)
+        if version in (1, 2, 3, 4, 5, 6):
+            if version == 1:
+                ConversationStore._migrate_remote_retention(connection)
+            ConversationStore._migrate_remote_image_refs(connection)
             return
         statements = (
             """CREATE TABLE remote_sync_changes (
@@ -272,6 +303,7 @@ class ConversationStore:
                 END""")
         connection.execute("INSERT INTO remote_sync_schema(id, version) VALUES (1, 1)")
         ConversationStore._migrate_remote_retention(connection)
+        ConversationStore._migrate_remote_image_refs(connection)
 
     @staticmethod
     def _migrate_remote_retention(connection: sqlite3.Connection) -> None:
@@ -318,6 +350,27 @@ class ConversationStore:
                 BEGIN INSERT INTO remote_sync_changes
                     (entity, entity_id, conversation_id, deleted, payload)
                     VALUES ('{entity}', NEW.id, {cid}, 0, {after}); END""")
+        connection.execute("UPDATE remote_sync_schema SET version = ? WHERE id = 1",
+                           (2,))
+
+    @staticmethod
+    def _migrate_remote_image_refs(connection: sqlite3.Connection) -> None:
+        """Refresh message projection: image refs plus current safe Agent fields.
+
+        v7 refreshes installed SQL triggers for the bounded public execution
+        trace as well as current safe error/activity labels for paired peers.
+        """
+        connection.execute("DELETE FROM remote_sync_snapshots")
+        after = remote_sync_projection("message", "NEW.")
+        before = remote_sync_projection("message", "OLD.")
+        for operation in ("insert", "update"):
+            connection.execute(f"DROP TRIGGER remote_sync_message_{operation}")
+            condition = f" WHEN {before} IS NOT {after}" if operation == "update" else ""
+            connection.execute(f"""CREATE TRIGGER remote_sync_message_{operation}
+                AFTER {operation.upper()} ON messages{condition}
+                BEGIN INSERT INTO remote_sync_changes
+                    (entity, entity_id, conversation_id, deleted, payload)
+                    VALUES ('message', NEW.id, NEW.conversation_id, 0, {after}); END""")
         connection.execute("UPDATE remote_sync_schema SET version = ? WHERE id = 1",
                            (REMOTE_SYNC_SCHEMA_VERSION,))
 
@@ -542,7 +595,7 @@ class ConversationStore:
             return result
 
     def complete_request(self, conversation_id: str, user_message_id: str, content: str,
-                         *, emotion: str = "neutral") -> dict:
+                         *, emotion: str = "neutral", execution=None) -> dict:
         """Save the assistant turn and complete its user turn in one transaction.
 
         A disk failure cannot leave a reply with a retryable user turn. Replaying
@@ -551,6 +604,8 @@ class ConversationStore:
         _identifier(conversation_id)
         _identifier(user_message_id)
         _text(content)
+        if execution is not None:
+            execution = normalize_execution(execution)
         timestamp, message_id = _now(), str(uuid4())
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -564,16 +619,26 @@ class ConversationStore:
                 AND json_extract(metadata, '$.reply_to') = ? LIMIT 1""",
                 (conversation_id, user_message_id)).fetchone()
             if existing is not None:
+                user["metadata"].pop("image_error_code", None)
                 connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
                                    (_metadata(dict(user["metadata"], request_status="complete")),
                                     user_message_id, conversation_id))
                 return _decoded(existing)
             metadata = dict(user["metadata"], request_status="complete")
+            metadata.pop("image_error_code", None)
+            metadata.pop("agent_error_code", None)
+            if execution is not None:
+                metadata["execution"] = merge_execution(metadata.get("execution"), execution)
+            assistant_metadata = {"emotion": emotion, "reply_to": user_message_id}
+            if metadata.get("execution_mode") == "agent":
+                assistant_metadata["execution_mode"] = "agent"
+            if isinstance(metadata.get("execution"), dict):
+                assistant_metadata["execution"] = normalize_execution(metadata["execution"])
             connection.execute("""INSERT INTO messages
                 (id, conversation_id, role, content, created_at, source, metadata)
                 VALUES (?, ?, 'assistant', ?, ?, 'assistant', ?)""",
                 (message_id, conversation_id, content, timestamp,
-                 _metadata({"emotion": emotion, "reply_to": user_message_id})))
+                  _metadata(assistant_metadata)))
             connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
                                (_metadata(metadata), user_message_id, conversation_id))
             self._touch(connection, conversation_id, timestamp)
@@ -667,13 +732,25 @@ class ConversationStore:
                 connection.execute("""UPDATE conversations SET summary = ?, summary_through_id = ?
                     WHERE id = ?""", (summary, summary_through_id, conversation_id))
 
-    def set_message_status(self, conversation_id: str, message_id: str, status: str) -> None:
+    def set_message_status(self, conversation_id: str, message_id: str, status: str, *,
+                           image_error_code=None, agent_error_code=None, execution=None) -> None:
         """Keep failed attempts visible while excluding them from later context."""
         _identifier(conversation_id)
         _identifier(message_id)
         if status not in {"pending", "failed", "complete", "cancelled", "interrupted"}:
             raise StoreError("消息请求状态无效。")
+        if image_error_code is not None and (status != "failed" or image_error_code not in IMAGE_ERRORS):
+            raise StoreError("图片错误状态无效。")
+        if agent_error_code is not None and (status not in {"failed", "cancelled", "interrupted"}
+                                            or not isinstance(agent_error_code, str)
+                                            or agent_error_code not in AGENT_ERRORS):
+            raise StoreError("任务错误状态无效。")
+        if execution is not None:
+            execution = normalize_execution(execution)
         with self._connection() as connection:
+            # Stop persistence and the finishing worker can update this row at
+            # once. Lock before reading so neither overwrites newer metadata.
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT metadata FROM messages WHERE id = ? AND conversation_id = ?",
                                      (message_id, conversation_id)).fetchone()
             if row is None:
@@ -681,11 +758,58 @@ class ConversationStore:
             try:
                 metadata = json.loads(row["metadata"])
                 metadata["request_status"] = status
+                if image_error_code is not None:
+                    metadata["image_error_code"] = image_error_code
+                elif status != "failed":
+                    metadata.pop("image_error_code", None)
+                if agent_error_code is not None:
+                    metadata["agent_error_code"] = agent_error_code
+                elif status in {"pending", "complete"}:
+                    metadata.pop("agent_error_code", None)
+                if execution is not None:
+                    metadata["execution"] = merge_execution(metadata.get("execution"), execution)
                 encoded = _metadata(metadata)
             except (TypeError, ValueError):
                 raise StoreError("消息附加信息损坏，无法更新请求状态。") from None
             connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
                                (encoded, message_id, conversation_id))
+
+    def update_execution(self, conversation_id: str, message_id: str, execution) -> None:
+        """Persist public progress atomically, preserving a newer terminal state."""
+        _identifier(conversation_id)
+        _identifier(message_id)
+        execution = normalize_execution(execution)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT metadata FROM messages WHERE id = ? AND conversation_id = ?",
+                                     (message_id, conversation_id)).fetchone()
+            if row is None:
+                return  # A user may clear/delete the session while a task ends.
+            metadata = json.loads(row["metadata"])
+            metadata["execution"] = merge_execution(metadata.get("execution"), execution)
+            connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
+                               (_metadata(metadata), message_id, conversation_id))
+
+    def reserve_agent_execution(self, conversation_id: str, message_id: str) -> None:
+        """Reserve side effects once, including after crashes or chat retries.
+
+        The marker follows the original user message and is deleted with it;
+        tool failures never cause an implicit replay of already issued actions.
+        """
+        _identifier(conversation_id)
+        _identifier(message_id)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT metadata FROM messages WHERE id = ? AND conversation_id = ? AND role = 'user'",
+                                     (message_id, conversation_id)).fetchone()
+            if row is None:
+                raise StoreError("任务对应的用户消息不存在，本轮未启动任务助手。")
+            metadata = json.loads(row["metadata"])
+            if metadata.get("agent_execution_started"):
+                raise StoreError("这条消息已经启动过任务助手；为避免重复操作，请先检查结果，再发送新的任务消息。")
+            metadata["agent_execution_started"] = True
+            connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
+                               (_metadata(metadata), message_id, conversation_id))
 
     def recover_pending_message(self, conversation_id: str, message_id: str) -> dict:
         """Recover an orphaned pending turn without overwriting a newer state.
@@ -721,7 +845,12 @@ class ConversationStore:
             old_status = message["metadata"].get("request_status")
             status = ("complete" if reply is not None else "interrupted"
                       if message["role"] == "user" and old_status == "pending" else old_status)
-            if status != old_status:
+            execution = message["metadata"].get("execution")
+            trace_interrupted = (status == "interrupted" and isinstance(execution, dict)
+                                 and execution.get("state") == "running")
+            if trace_interrupted:
+                message["metadata"]["execution"] = interrupted_execution(execution)
+            if status != old_status or trace_interrupted:
                 message["metadata"]["request_status"] = status
                 connection.execute("UPDATE messages SET metadata = ? WHERE id = ? AND conversation_id = ?",
                                    (_metadata(message["metadata"]), message_id, conversation_id))

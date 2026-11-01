@@ -201,27 +201,28 @@ class PetEdgeDragTests(unittest.TestCase):
         self.assertIsNone(pet._press_global)
         self.assertFalse(pet._dragged)
 
-    def test_sequence_placement_uses_one_stable_union_without_cropping_frames(self):
+    def test_sequence_placement_uses_cached_frame_bounds_without_cropping_or_relayout(self):
         pet = self.make_pet()
         frames = (self.frame(QRect(120, 180, 240, 650)),
                   self.frame(QRect(600, 240, 300, 620)))
         pet.set_frame_sequence(frames)
         original_size = pet._sprite.size()
-        stable = QRectF(pet.character_placement_bounds)
+        bounds = tuple(QRectF(b) for b in pet._sequence_bounds)
         first = self.visible_local(pet)
         with patch.object(pet, "_layout_character", side_effect=AssertionError("per-frame relayout")), \
                 patch("desktop_pet.pet_window.load_character", side_effect=AssertionError("per-frame disk read")):
             pet.set_frame_index(1)
             second = self.visible_local(pet)
-            self.assertEqual(pet.character_placement_bounds, stable)
+            self.assertEqual(pet.character_placement_bounds, bounds[1])
             self.assertEqual(pet._sprite.size(), original_size)
             self.assertGreater(second.left(), first.left())
             for index in (0, 1, 0, 1):
                 pet.set_frame_index(index)
-                self.assertEqual(pet.character_placement_bounds, stable)
-        self.assertTrue(stable.adjusted(-1, -1, 1, 1).contains(first.united(second)))
-        # Union width must still exclude both clips' shared transparent border.
-        self.assertLess(stable.width(), pet.sprite_rect.width())
+                self.assertEqual(pet.character_placement_bounds, bounds[index])
+        self.assertNotEqual(bounds[0], bounds[1])
+        for envelope, visible in zip(bounds, (first, second)):
+            self.assertTrue(envelope.adjusted(-1, -1, 1, 1).contains(visible))
+            self.assertLess(envelope.width(), pet.sprite_rect.width())
 
     def test_all_transparent_character_does_not_produce_invalid_placement(self):
         path = self.root / "empty.png"
@@ -300,7 +301,10 @@ class PetEdgeDragTests(unittest.TestCase):
                                 self.assertLessEqual(max(gaps), 1.5, "Frozen frame retains the old union margin")
                                 maximum_visible_gap = max(maximum_visible_gap, *gaps)
                                 cases += 1
-                                legacy = clamp_visible_position(pet.pos(), pet.character_placement_bounds, self.available)
+                                legacy_bounds = QRectF()
+                                for bounds in pet._sequence_bounds:
+                                    legacy_bounds = legacy_bounds.united(bounds)
+                                legacy = clamp_visible_position(pet.pos(), legacy_bounds, self.available)
                                 maximum_legacy_gap = max(maximum_legacy_gap, (legacy - pet.pos()).manhattanLength())
                                 released = QPoint(pet.pos())
                                 self.send(pet, QEvent.Type.MouseButtonRelease, end)
@@ -322,12 +326,12 @@ class PetEdgeDragTests(unittest.TestCase):
                                     previous = QPoint(pet.pos())
                                 safe = pet.character_placement_bounds.translated(pet.pos())
                                 self.assertTrue(area.adjusted(-1, -1, 1, 1).contains(safe))
-                                # Subsequent clip frames can now resume without
-                                # any window correction or work-area clipping.
-                                position = QPoint(pet.pos())
+                                # Future frames follow their own safe planned
+                                # placement, retaining the same resting anchor.
+                                home = pet.frame_home_position
                                 for next_index in (0, len(clip.frames) - 1):
                                     pet.set_frame_index(next_index)
-                                    self.assertEqual(pet.pos(), position)
+                                    self.assertEqual(pet.frame_home_position, home)
                                     self.assertTrue(area.adjusted(-1, -1, 1, 1).contains(
                                         self.painted_local(pet).translated(pet.pos())))
                                 pet.set_frame_index(index)

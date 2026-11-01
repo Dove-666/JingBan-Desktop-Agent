@@ -86,7 +86,7 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
             llm_credentials=CredentialStore(account="mem0-llm-key", backend=self.vault),
             embedding_credentials=CredentialStore(account="mem0-embedding-key", backend=self.vault),
         )
-        self.service.save_settings(replace(self.service.load_settings(), enabled=True, automatic=True,
+        self.service.save_settings(replace(self.service.load_settings(), enabled=True, automatic=True, embedding_provider="openai",
                                           embedding_base_url="http://127.0.0.1:1/v1", embedding_model="fixture-embedding",
                                           embedding_dimensions=8), embedding_key="fixture-only-embedding-key")
         self.helpers = []
@@ -272,7 +272,7 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
                 self.assertFalse(helper.terminated)
                 self.assertEqual(helper.payload["operation"], operation)
 
-    def test_busy_management_ui_can_pause_immediately_without_disk_write_or_cancelling_management(self):
+    def test_busy_management_ui_can_disable_immediately_then_persist_without_cancelling_management(self):
         controller = MemoryController(self.service)
         self.qt_objects.append(controller)
         spin_until(lambda: not controller.busy)
@@ -284,9 +284,10 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
             controller.refresh()
             spin_until(helper.started.is_set)
             self.assertTrue(controller.busy)
-            self.assertTrue(panel.pause_checkbox.isEnabled())
+            self.assertTrue(panel.automatic_checkbox.isChecked())
+            self.assertTrue(panel.automatic_checkbox.isEnabled())
             start = time.monotonic()
-            panel.pause_checkbox.click()
+            panel.automatic_checkbox.click()
             self.assertLess(time.monotonic() - start, 0.1)
             self.assertTrue(controller.automatic_paused)
             self.assertTrue(self.service.automatic_paused)
@@ -294,11 +295,12 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
             self.assertEqual(self.service.config_path.read_bytes(), before)
             self.assertFalse(helper.terminated)
             controller.settings_changed.emit(controller.settings)  # An older saved snapshot cannot unpause.
-            self.assertTrue(panel.pause_checkbox.isChecked())
-            self.assertIn("本次运行", panel.pause_checkbox.text())
+            self.assertFalse(panel.automatic_checkbox.isChecked())
             helper.release.set()
             spin_until(lambda: not controller.busy)
-        self.assertTrue(panel.pause_checkbox.isChecked())
+        self.assertFalse(panel.automatic_checkbox.isChecked())
+        self.assertFalse(self.service.load_settings().automatic)
+        self.assertTrue(self.service.load_settings().enabled)
 
     def test_paused_automatic_memory_keeps_ordinary_chat_and_retrieval_working(self):
         self.service.set_automatic_paused(True)
@@ -338,14 +340,14 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
         self.assertFalse(marker.exists())
         self.service.save_settings(replace(self.service.load_settings(), embedding_provider="fastembed"))
 
-    def test_legacy_ui_controller_without_runtime_api_reports_error_without_saving(self):
+    def test_legacy_ui_controller_without_managed_switch_api_reports_error_without_saving(self):
         controller = MemoryControllerFake()
         panel = MemoryPanel(controller)
         self.qt_objects.append(panel)
-        with patch.object(controller, "set_automatic_paused", None):
-            panel.pause_checkbox.click()
-        self.assertFalse(panel.pause_checkbox.isChecked())
-        self.assertIn("重启", panel.error_label.text())
+        with patch.object(controller, "set_automatic_enabled", None):
+            panel.automatic_checkbox.click()
+        self.assertFalse(panel.automatic_checkbox.isChecked())
+        self.assertIn("暂时无法保存", panel.error_label.text())
         self.assertFalse(controller.calls)
 
 

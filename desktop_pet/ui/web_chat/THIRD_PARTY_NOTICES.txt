@@ -5289,3 +5289,84 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+AURA GlassSurface: adapted SVG refraction sources
+
+--- PROVENANCE.txt ---
+AURA GlassSurface attribution and implementation notes
+=====================================================
+
+Local implementation:
+  frontend/chat-ui/src/components/GlassSurface.tsx
+  frontend/chat-ui/src/components/glass-surface.css
+
+Upstream rounded-rectangle SDF / Canvas displacement-map reference:
+  https://github.com/shuding/liquid-glass
+  Commit: a2d2e847f793430e3409a52927af815a23f4d372
+  File: liquid-glass.js
+  https://github.com/shuding/liquid-glass/blob/a2d2e847f793430e3409a52927af815a23f4d372/liquid-glass.js
+  License: MIT (LICENSE in this directory), Copyright (c) 2025 Shu Ding.
+
+Upstream SVG RGB channel displacement / screen-combination reference:
+  https://github.com/rdev/liquid-glass-react
+  Commit: ac48eab18d1f7f444ae30002d240cae29c863a21
+  File: src/index.tsx (GlassFilter)
+  https://github.com/rdev/liquid-glass-react/blob/ac48eab18d1f7f444ae30002d240cae29c863a21/src/index.tsx
+  License: MIT (LICENSE-rdev in this directory), Copyright 2025 MAX ROVENSKY.
+
+AURA modifications:
+- React 19 component with ordinary div attributes; existing layout is retained.
+- Edge-only rounded-rectangle normal map, capped at 160,000 pixels / 640 pixels per axis.
+- No WebGL, external assets, package dependencies, pointer capture or continuous animation.
+- Recompute map only for a measured size or radius change, with a single coalesced timer.
+- Pause size observation and scheduled work while the document/surface is hidden.
+- Clean up observers, timers and media-query/document listeners on unmount.
+- Keep foreground text/inputs sharp through backdrop-filter, never a foreground filter.
+- Frosted/solid fallback for unsupported filters and accessibility preferences.
+
+The upstream demos, artwork, screenshots and project UI are not bundled.
+
+--- LICENSE ---
+MIT License
+
+Copyright (c) 2025 Shu Ding
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--- LICENSE-rdev ---
+Copyright 2025 MAX ROVENSKY
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to
+do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

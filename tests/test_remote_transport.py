@@ -12,7 +12,9 @@ switch to a direct path; a configured public relay does not prove relay traffic.
 import asyncio
 import base64
 from concurrent.futures import Future
+from contextlib import redirect_stderr
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -45,6 +47,37 @@ class _Reader:
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_frame_stage_callback_never_receives_header_values_or_json_content(self):
+        stages = []
+        value = {"id": str(uuid4()), "method": "chat.send", "params": {"text": "private-content"}}
+        self.assertEqual(asyncio.run(read_frame(_Reader(encode_frame(value)), on_stage=stages.append)), value)
+        self.assertEqual(stages, ["header_wait", "header_read", "payload_wait", "payload_read"])
+        self.assertNotIn(value["id"], repr(stages))
+        self.assertNotIn("private-content", repr(stages))
+
+    def test_transport_trace_is_silent_by_default_and_allowlists_all_output(self):
+        secret = "d" * 64
+        with patch.dict(os.environ, {"AURA_REMOTE_TRACE": "0"}):
+            transport = IrohTransport(secret, lambda *_: {}, lambda *_: None)
+        output = io.StringIO()
+        with redirect_stderr(output):
+            transport._trace(1, "header_wait")
+        self.assertEqual(output.getvalue(), "")
+        with patch.dict(os.environ, {"AURA_REMOTE_TRACE": "1"}):
+            transport = IrohTransport(secret, lambda *_: {}, lambda *_: None)
+        with redirect_stderr(output):
+            transport._trace(1, "header_read")
+            transport._trace(1, "dispatch", "image.upload")
+            transport._trace(1, "dispatch", "private-payload")
+            transport._trace(1, "private-stage", "status")
+        self.assertEqual(output.getvalue().splitlines(), [
+            "AURA_REMOTE_TRACE n=1 stage=header_read",
+            "AURA_REMOTE_TRACE n=1 stage=dispatch method=image.upload",
+            "AURA_REMOTE_TRACE n=1 stage=dispatch method=other",
+        ])
+        self.assertNotIn(secret, output.getvalue())
+        self.assertNotIn("private", output.getvalue())
+
     def test_unicode_frame_round_trip(self):
         value = {"id": str(uuid4()), "method": "chat.send", "params": {"text": "你好 🌊"}}
         self.assertEqual(asyncio.run(read_frame(_Reader(encode_frame(value)))), value)
@@ -135,7 +168,8 @@ class RealIrohTests(unittest.TestCase):
             self.identities.append(peer_id)
             return {"id": value["id"], "ok": True,
                     "result": {"method": value["method"], "value": value["params"].get("value")}}
-        self.transport = IrohTransport(secrets.token_hex(32), dispatch, status)
+        # Tests must not claim the production service's stable LAN port.
+        self.transport = IrohTransport(secrets.token_hex(32), dispatch, status, listen_port=0)
         self.addCleanup(self.transport.stop)
         self.transport.start()
         self.assertTrue(self.listening.wait(35), "Endpoint did not finish starting")
@@ -150,10 +184,13 @@ class RealIrohTests(unittest.TestCase):
                          "Remote worker threads remained after shutdown")
 
     def test_real_encrypted_round_trip_and_authenticated_identity(self):
+        import iroh
         secret = secrets.token_hex(32)
         async def smoke():
             async with IrohPeerClient(secret) as client:
-                await client.connect(self.states[-1]["ticket"])
+                ticket = self.states[-1]["ticket"]
+                expected_relay = bool(iroh.EndpointTicket.from_string(ticket).endpoint_addr().relay_url())
+                await client.connect(ticket)
                 responses = await asyncio.gather(*[
                     client.request({"id": str(uuid4()), "method": "status",
                                     "params": {"value": number}}) for number in range(4)])
@@ -161,7 +198,7 @@ class RealIrohTests(unittest.TestCase):
                     self.assertTrue(response["ok"])
                     self.assertEqual(response["result"]["value"], number)
                 self.assertTrue(all(peer == client.endpoint_id for peer in self.identities))
-                self.assertTrue(client.public_relay_configured)
+                self.assertEqual(client.public_relay_configured, expected_relay)
                 print(json.dumps({"real_quic_round_trip": True,
                                   "public_relay_configured": client.public_relay_configured,
                                   "observed_connection_type": client.connection_type,

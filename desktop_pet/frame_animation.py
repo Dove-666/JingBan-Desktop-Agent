@@ -17,12 +17,20 @@ from PySide6.QtGui import QImage, QImageReader, QPainter
 from .animation_controller import AnimationState
 from .async_tasks import TaskRunner
 from .config import PROJECT_ROOT
+from .static_idle_smoothing import smooth_static_idle
 
 
 ANIMATIONS = {
     "think_scratch_head": "思考 · 挠头",
     "snarl_cute": "趴下 · 奶凶呲牙",
     "idle_puff_cheeks": "待机 · 轻轻鼓腮",
+    "idle_tiptoe_look": "待机 · 踮脚眺望",
+    "idle_pinch_cheeks": "待机 · 轻轻捏脸",
+    "idle_sleepy_nod": "待机 · 站着打盹",
+    "idle_tail_blanket": "待机 · 尾巴小毯子",
+    "idle_balloon_float": "待机 · 气球轻飘",
+    "idle_proud_pose": "待机 · 得意挺胸",
+    "idle_tsundere": "待机 · 傲娇抱臂",
 }
 MAX_FRAMES = 96  # At most 384 MiB of clip pixels, plus two bounded optional bridges.
 MAX_TRANSITION_MS = 1000
@@ -42,6 +50,7 @@ class ClipManifest:
     completion: str
     anchor: tuple[float, float]
     transition_ms: int = 0
+    static_pose_idle: bool = False
 
     @property
     def duration(self) -> float:
@@ -117,7 +126,8 @@ def read_manifest(directory: Path, name: str) -> ClipManifest:
             if not frame.is_file():
                 raise FrameAssetError("动画帧不完整，尚未就绪；请补齐 manifest 列出的 PNG。")
             paths.append(frame)
-        return ClipManifest(name, tuple(paths), float(fps), loop, completion, values, transition_ms)
+        return ClipManifest(name, tuple(paths), float(fps), loop, completion, values, transition_ms,
+                            origin.get("kind") == "static_pose_idle")
     except FrameAssetError:
         raise
     except (OSError, ValueError, TypeError, KeyError, OverflowError):
@@ -195,7 +205,8 @@ def prepare_transitions(clip: LoadedClip, source: QImage) -> LoadedClip:
         return clip
     baseline = static_canvas(source)
     return replace(clip, static_frame=baseline,
-                   entry_frames=transition_frames(baseline, clip.frames[0], clip.manifest.transition_ms))
+                   entry_frames=(() if baseline == clip.frames[0] else
+                                 transition_frames(baseline, clip.frames[0], clip.manifest.transition_ms)))
 
 
 class ClipClock:
@@ -214,11 +225,15 @@ class ClipClock:
             return self.index
         self.elapsed += seconds
         count = len(self.manifest.paths)
-        frame = int((self.elapsed + 1e-10) * self.manifest.fps)
         if self.manifest.loop:
-            self.index = frame % count
             self.elapsed %= self.manifest.duration
+            # Match frame selection's epsilon at a loop boundary, so frame 0
+            # cannot retain almost a full cycle of elapsed time/fraction 1.
+            if self.elapsed + 1e-10 >= self.manifest.duration:
+                self.elapsed = 0.0
+            self.index = int((self.elapsed + 1e-10) * self.manifest.fps) % count
         else:
+            frame = int((self.elapsed + 1e-10) * self.manifest.fps)
             self.index = min(frame, count - 1)
             self.finished = frame >= count
         return self.index
@@ -238,6 +253,7 @@ class FrameAnimationPlayer(QObject):
         self._clock = None
         self._installed = False
         self._loading = False
+        self._loading_generation = None
         self._stop_pending = False
         self._pending_smooth_stop = False
         self._active_frames = ()
@@ -245,10 +261,27 @@ class FrameAnimationPlayer(QObject):
         self._clip_offset = 0
         self._phase = "idle"
         self._transition_elapsed = 0.0
+        self._frame_times = ()
+        self._exit_home_index = None
+        self._exit_home_moved = False
         self.name = ""
         self.status = "未播放素材动画；缺失素材不会用单帧假装动作。"
         pet.frame_tick.connect(self.advance)
         pet.closed.connect(self.shutdown)
+
+    @property
+    def loading(self) -> bool:
+        """A decoder still owns its bounded frame allocation, even if cancelled."""
+        return self._loading
+
+    @property
+    def playing(self) -> bool:
+        """Include the entry/exit bridges and a deliberately held last frame."""
+        return self._clip is not None
+
+    @property
+    def busy(self) -> bool:
+        return self.loading or self.playing
 
     def catalog(self) -> list[tuple[str, str, str]]:
         result = []
@@ -265,7 +298,7 @@ class FrameAnimationPlayer(QObject):
         self.name, self.status = name, text
         self.status_changed.emit(name, text)
 
-    def play(self, name: str) -> bool:
+    def play(self, name: str, *, once: bool = False) -> bool:
         if self._closed:
             return False
         if self._loading:
@@ -283,16 +316,27 @@ class FrameAnimationPlayer(QObject):
         self._generation += 1
         generation = self._generation
         self._loading = True
+        self._loading_generation = generation
         self._status(name, "正在后台加载和验证 RGBA 序列帧…")
         # QPixmap belongs to the GUI thread; workers only receive a detached
         # QImage and paint into their own QImages.
         source = self.pet._source.toImage().copy()
-        self.runner.submit(lambda: prepare_transitions(load_clip(self.directory, name), source),
-                           lambda result, error: self._loaded(generation, name, result, error))
+
+        def prepare():
+            clip = smooth_static_idle(load_clip(self.directory, name))
+            if once:
+                # Automatic idle actions finish once, without rewriting the
+                # original loop/hold settings used by manual asset previews.
+                clip = replace(clip, manifest=replace(clip.manifest, loop=False, completion="idle"))
+            return prepare_transitions(clip, source)
+
+        self.runner.submit(prepare, lambda result, error: self._loaded(generation, name, result, error))
         return True
 
     def _loaded(self, generation, name, result, error):
-        self._loading = False
+        if generation == self._loading_generation:
+            self._loading = False
+            self._loading_generation = None
         if self._closed or generation != self._generation:
             return
         if error:
@@ -305,6 +349,10 @@ class FrameAnimationPlayer(QObject):
         self._active_frames = result.entry_frames + result.frames
         self._phase = "enter" if result.entry_frames else "play"
         self._transition_elapsed = 0.0
+        entry_duration = result.manifest.transition_ms / 1000 if result.entry_frames else 0
+        count = len(result.entry_frames)
+        self._frame_times = tuple(entry_duration * (i / max(1, count-1)) for i in range(count)) + tuple(
+            entry_duration + i/result.manifest.fps for i in range(len(result.frames)))
         self.pet.animation.return_to_idle()
         self._status(name, "素材已验证；拖动期间冻结，释放后沿用平滑恢复。")
         self.advance(0)
@@ -324,9 +372,19 @@ class FrameAnimationPlayer(QObject):
         if paused:
             return
         if not self._installed:
-            self.pet.set_frame_sequence(self._active_frames, self._clip.manifest.anchor)
+            self.pet.set_frame_sequence(self._active_frames, self._clip.manifest.anchor,
+                                        frame_times=self._frame_times)
             self._installed = True
             self._shown_index = 0
+        reanchor_index = self.pet.consume_frame_reanchor()
+        if reanchor_index is not None:
+            if self._phase == "play":
+                native_index = max(0, reanchor_index-self._clip_offset)
+                self._clock.elapsed = native_index / self._clip.manifest.fps
+                self._clock.index = native_index
+            elif self._phase == "enter":
+                self._transition_elapsed = (self._clip.manifest.transition_ms / 1000
+                                            * (reanchor_index / max(1, self._clip_offset-1)))
         if self._phase in {"enter", "exit"}:
             duration = self._clip.manifest.transition_ms / 1000
             remaining = max(0.0, duration-self._transition_elapsed)
@@ -335,19 +393,36 @@ class FrameAnimationPlayer(QObject):
             if self._transition_elapsed + 1e-10 < duration:
                 count = self._clip_offset if self._phase == "enter" else len(self._active_frames)
                 index = min(count-1, int(self._transition_elapsed / duration * (count-1)))
-                self._show_index(index)
+                if self._phase == "exit":
+                    self._show_exit_index(index)
+                else:
+                    self._show_index(index)
+                    self.pet.set_frame_progress(self._transition_elapsed / duration * (count-1) - index)
                 return
             if self._phase == "exit":
+                self._show_exit_index(len(self._active_frames)-1)
                 self._clear_playback()
                 self._status("", "素材动画已停止，恢复当前静态角色与待机。")
                 return
             self._phase = "play"
             self._show_index(self._clip_offset)
             seconds -= consumed
+        previous_elapsed = self._clock.elapsed
         index = self._clock.advance(seconds)
+        if (self._clip.manifest.loop and seconds > 0
+                and previous_elapsed + seconds + 1e-10 >= self._clip.manifest.duration):
+            self.pet.restart_frame_cycle(self._clip_offset)
         self._show_index(self._clip_offset + index)
+        fraction = max(0.0, min(1.0, self._clock.elapsed * self._clip.manifest.fps - index))
+        self.pet.set_frame_progress(fraction)
         if self._clock.finished and self._clip.manifest.completion == "idle":
-            self.stop(smooth=bool(self._clip.manifest.transition_ms))
+            # Prepared idles already finish on the exact static destination.
+            # Do not append another neutral->neutral bridge or a window glide.
+            # A one-pixel raster envelope difference needs no exit animation.
+            at_static = (self._clip.static_frame is not None
+                         and self._active_frames[self._shown_index] == self._clip.static_frame
+                         and (self.pet.pos() - self.pet.frame_home_position).manhattanLength() <= 1)
+            self.stop(smooth=bool(self._clip.manifest.transition_ms) and not at_static)
         elif self._clock.finished and "末帧" not in self.status:
             self._status(self.name, "动画已结束，保持末帧；点击停止可恢复静态角色。")
 
@@ -356,6 +431,14 @@ class FrameAnimationPlayer(QObject):
             self.pet.set_frame_index(index)
             self._shown_index = index
 
+    def _show_exit_index(self, index):
+        if (self._exit_home_index is not None and not self._exit_home_moved
+                and index >= self._exit_home_index):
+            self._show_index(self._exit_home_index)
+            self.pet.place_frame_home()
+            self._exit_home_moved = True
+        self._show_index(index)
+
     def _clear_playback(self):
         self._stop_pending = self._pending_smooth_stop = False
         self._clip = self._clock = None
@@ -363,6 +446,9 @@ class FrameAnimationPlayer(QObject):
         self._clip_offset = self._shown_index = 0
         self._phase = "idle"
         self._transition_elapsed = 0.0
+        self._frame_times = ()
+        self._exit_home_index = None
+        self._exit_home_moved = False
         self._installed = False
         self.pet.clear_frame_sequence()
         if self.pet.animation.state != AnimationState.DRAGGING:
@@ -380,12 +466,27 @@ class FrameAnimationPlayer(QObject):
         if (smooth and self._installed and self._clip is not None
                 and self._clip.manifest.transition_ms and self._clip.static_frame is not None):
             current = self._active_frames[self._shown_index]
-            self._active_frames = transition_frames(current, self._clip.static_frame,
-                                                    self._clip.manifest.transition_ms)
+            self._exit_home_index = None
+            self._exit_home_moved = False
+            if self.pet.pos() != self.pet.frame_home_position:
+                # Interrupting an edge-avoiding pose must not drag its restored
+                # static destination across the desktop. Fade out where it is,
+                # relocate while fully transparent, then fade in at its home.
+                blank = QImage(current.size(), QImage.Format.Format_ARGB32_Premultiplied)
+                blank.fill(Qt.GlobalColor.transparent)
+                half = self._clip.manifest.transition_ms // 2
+                fade_out = transition_frames(current, blank, half)
+                fade_in = transition_frames(blank, self._clip.static_frame,
+                                             self._clip.manifest.transition_ms-half)
+                self._active_frames = fade_out + fade_in[1:]
+                self._exit_home_index = len(fade_out)-1
+            else:
+                self._active_frames = transition_frames(current, self._clip.static_frame,
+                                                        self._clip.manifest.transition_ms)
             self._phase = "exit"
             self._transition_elapsed = 0.0
             self._stop_pending = self._pending_smooth_stop = False
-            self.pet.set_frame_sequence(self._active_frames, self._clip.manifest.anchor)
+            self.pet.set_frame_sequence(self._active_frames, self._clip.manifest.anchor, plan_motion=False)
             self._shown_index = 0
             self._status(self.name, "正在平滑恢复播放前的静态角色…")
             return
@@ -395,5 +496,8 @@ class FrameAnimationPlayer(QObject):
     def shutdown(self):
         self._closed = True
         self._generation += 1
+        self._loading = False
+        self._loading_generation = None
         self._clear_playback()
+        self.pet._restore_sequence_position()
         self.runner.shutdown()

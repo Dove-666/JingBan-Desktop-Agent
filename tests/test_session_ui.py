@@ -104,6 +104,17 @@ class MemoryControllerFake(QObject):
         self.calls = []
         self.automatic_paused = False
 
+    def set_automatic_enabled(self, enabled):
+        self.calls.append(("automatic", bool(enabled)))
+        self.settings = replace(self.settings, enabled=True, automatic=bool(enabled))
+        self.automatic_paused = False
+        self.settings_changed.emit(self.settings)
+        return True
+
+    def prepare_automatic_memory(self):
+        self.calls.append(("prepare",))
+        return True
+
     def set_automatic_paused(self, paused):
         self.automatic_paused = bool(paused)
         self.calls.append(("pause_automatic", bool(paused)))
@@ -176,7 +187,7 @@ class SessionUiTests(unittest.TestCase):
         self.assertEqual(self.chat.calls[-1], ("new",))
         self.assertEqual(self.panel.title_label.text(), "新对话")
         self.assertIsNone(self.panel.conversation_list.currentItem())
-        self.assertIn("还没有消息", self.panel.transcript.toPlainText())
+        self.assertIn("今天想聊些什么？", self.panel.transcript.toPlainText())
         self.assertEqual(self.panel.input.toPlainText(), "")
 
     def test_click_history_opens_correct_id_and_updates_title(self):
@@ -281,58 +292,39 @@ class MemoryUiTests(unittest.TestCase):
         self.panel.deleteLater()
         self.app.processEvents()
 
-    def test_independent_embedding_settings_save_without_exposing_keys(self):
-        self.panel.enabled_checkbox.setChecked(True)
-        self.panel.use_chat_checkbox.setChecked(False)
-        self.panel.llm_key_input.setText("not-a-real-llm-key")
-        self.panel.embedding_key_input.setText("not-a-real-embedding-key")
-        self.panel.embedding_model_input.setText("separate-embedding")
-        self.panel.dimensions_input.setValue(768)
-        self.panel.extraction_context_input.setValue(32768)
-        self.panel.extraction_output_input.setValue(512)
-        self.panel.save_button.click()
-        call = self.controller.calls[-1]
-        self.assertEqual(call[0], "save")
-        self.assertEqual(call[1].embedding_model, "separate-embedding")
-        self.assertEqual(call[1].embedding_dimensions, 768)
-        self.assertEqual(call[1].extraction_context_tokens, 32768)
-        self.assertEqual(call[1].extraction_output_tokens, 512)
-        self.assertFalse(call[1].use_chat_model)
-        self.assertEqual(call[2:], ("not-a-real-llm-key", "not-a-real-embedding-key"))
-        self.assertEqual(self.panel.llm_key_input.text(), "")
-        self.assertEqual(self.panel.embedding_key_input.text(), "")
-        self.assertIn("stable-test-user", self.panel.user_id_label.text())
+    def test_memory_configuration_is_managed_and_toggle_persists(self):
+        self.assertFalse(hasattr(self.panel, "embedding_key_input"))
+        self.assertFalse(hasattr(self.panel, "tabs"))
+        self.panel.automatic_checkbox.click()
+        self.assertEqual(self.controller.calls, [("automatic", True)])
+        self.assertTrue(self.controller.settings.automatic)
+        self.assertTrue(self.controller.settings.enabled)
 
-    def test_credential_status_is_separate_plain_text_and_survives_local_status_updates(self):
+    def test_internal_credentials_and_success_logs_are_not_displayed(self):
         controller = CredentialAwareMemoryControllerFake()
         panel = MemoryPanel(controller)
         try:
-            self.assertIn("Embedding 密钥：未保存", panel.credentials_status_label.text())
             controller.status_changed.emit("已从本地读取 0 条长期记忆；此次操作未验证连接。")
-            self.assertIn("Embedding 密钥：未保存", panel.credentials_status_label.text())
             controller.credentials_status_changed.emit("Embedding 密钥：<b>不可读取</b>")
-            self.assertEqual(panel.credentials_status_label.text(), "Embedding 密钥：<b>不可读取</b>")
-            self.assertEqual(panel.credentials_status_label.textFormat(), Qt.TextFormat.PlainText)
-            self.assertIn("从本地读取", panel.status_label.text())
+            self.assertFalse(hasattr(panel, "credentials_status_label"))
+            self.assertTrue(panel.status_label.isHidden())
         finally:
             panel.close()
             panel.deleteLater()
 
-    def test_legacy_controller_without_credential_signal_still_exposes_scoped_test(self):
-        self.assertIn("凭据状态尚未读取", self.panel.credentials_status_label.text())
-        self.assertEqual(self.panel.test_button.text(), "测试记忆检索")
-        self.panel.test_button.click()
-        self.assertEqual(self.controller.calls[-1], ("test",))
-        self.assertIn("不会提炼", self.panel.test_button.toolTip())
+    def test_preparation_is_explicit_and_retry_does_not_change_automatic_choice(self):
+        self.assertFalse(self.controller.calls)
+        self.controller.error_changed.emit("Embedding 模型未准备好")
+        self.panel.retry_button.click()
+        self.assertEqual(self.controller.calls, [("prepare",)])
+        self.assertFalse(self.controller.settings.automatic)
 
-    def test_pause_automatic_is_independent_from_reading_memories(self):
+    def test_disabling_automatic_keeps_reading_memories_available(self):
         self.controller.settings = replace(self.controller.settings, enabled=True, automatic=True)
         self.controller.settings_changed.emit(self.controller.settings)
-        self.panel.pause_checkbox.click()
-        self.assertTrue(self.controller.automatic_paused)
-        self.assertTrue(self.controller.settings.automatic)
+        self.panel.automatic_checkbox.click()
+        self.assertFalse(self.controller.settings.automatic)
         self.assertTrue(self.controller.settings.enabled)
-        self.assertFalse(any(call[0] == "save" for call in self.controller.calls))
         self.panel.search_input.setText("AURA 项目")
         self.panel.refresh_button.click()
         self.assertEqual(self.controller.calls[-1], ("refresh", "AURA 项目"))
@@ -350,24 +342,23 @@ class MemoryUiTests(unittest.TestCase):
             self.panel.clear_button.click()
         self.assertEqual(self.controller.calls, [("delete", "memory-id"), ("clear",)])
 
-    def test_busy_disables_destructive_operations_and_errors_are_plain_and_redacted(self):
+    def test_busy_disables_destructive_operations_and_errors_stay_plain(self):
         self.controller.busy = True
         self.controller.busy_changed.emit(True)
         self.assertFalse(self.panel.clear_button.isEnabled())
-        self.assertFalse(self.panel.save_button.isEnabled())
-        self.panel.embedding_key_input.setText("pending-test-key")
-        self.controller.error_changed.emit("<b>失败</b> pending-test-key")
-        self.assertIn("[密钥已隐藏]", self.panel.error_label.text())
-        self.assertNotIn("pending-test-key", self.panel.error_label.text())
+        self.assertFalse(self.panel.refresh_button.isEnabled())
+        self.controller.error_changed.emit("Embedding 密钥不可用")
+        self.assertIn("重新准备", self.panel.error_label.text())
+        self.assertNotIn("Embedding", self.panel.error_label.text())
         self.assertEqual(self.panel.error_label.textFormat(), Qt.TextFormat.PlainText)
 
-    def test_close_hides_and_discards_sensitive_drafts(self):
-        self.panel.llm_key_input.setText("pending-test-value")
+    def test_close_hides_and_open_preserves_current_search(self):
+        self.panel.search_input.setText("偏好")
         self.panel.close()
         self.assertFalse(self.panel.isVisible())
-        self.assertEqual(self.panel.llm_key_input.text(), "")
         self.panel.present()
         self.assertTrue(self.panel.isVisible())
+        self.assertEqual(self.panel.search_input.text(), "偏好")
 
 
 if __name__ == "__main__":

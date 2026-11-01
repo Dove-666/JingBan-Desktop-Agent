@@ -6,6 +6,7 @@ from .animation_controller import AnimationState
 from .config import DEFAULT_IMAGE, PROJECT_ROOT
 from .expression_manager import EXPRESSIONS, Expression, ExpressionManager
 from .frame_animation import FrameAnimationPlayer
+from .idle_behavior import IdleBehaviorPolicy
 from .pet_window import PetWindow
 from .settings_manager import SettingsManager
 
@@ -54,6 +55,14 @@ class PetController(QObject):
         self.appearance_status = original.status if self._uses_project_character else "使用 --image 指定的自定义图片。"
         self.asset_player = FrameAnimationPlayer(pet, animation_directory, self)
         self.asset_player.status_changed.connect(self.asset_animation_changed.emit)
+        self.behavior = IdleBehaviorPolicy()
+        self._conversation_busy = False
+        self._idle_clip_owned = False
+        self._idle_exit_pending = False
+        self._behavior_applying = False
+        self._queued_context = None
+        self._behavior_closed = False
+        self._unavailable_idle = set()
         self._pending_expression = None
         self._pending_expression_animate = True
         pet.frame_tick.connect(self._finish_deferred_expression)
@@ -69,6 +78,76 @@ class PetController(QObject):
         pet.set_scale_percent(self._scale_percent)
         pet.set_character_source(neutral.pixmap if neutral.pixmap is not None else self._base_character)
         pet.click_handler = self.set_expression
+        pet.part_clicked.connect(self._on_part_clicked)
+        pet.interaction_started.connect(lambda: self.behavior.register_activity())
+        pet.frame_tick.connect(self._advance_behavior)
+        pet.closed.connect(self._stop_behavior)
+
+    def set_conversation_busy(self, busy: bool) -> None:
+        self._conversation_busy = bool(busy)
+        # busy=False is emitted just before the reply's expression. Reset the
+        # quiet period, rather than starting an idle clip inside that signal.
+        self.behavior.register_activity()
+        if busy and self._idle_clip_owned:
+            self.asset_player.stop(smooth=True)
+
+    def _stop_behavior(self) -> None:
+        self._behavior_closed = True
+        self._queued_context = None
+        self.pet.sequence_part_hits_enabled = False
+
+    def _behavior_expression(self, code: str) -> None:
+        self._behavior_applying = True
+        try:
+            self.set_expression(code, feedback=False, animate=False)
+        finally:
+            self._behavior_applying = False
+
+    def _on_part_clicked(self, part: str) -> None:
+        if self._behavior_closed:
+            return
+        event = self.behavior.record_part_click(part)
+        if self._idle_clip_owned:
+            self.asset_player.stop(smooth=True)
+        if event is not None:
+            self._queued_context = None
+            self._behavior_expression("angry")
+
+    def _advance_behavior(self, seconds: float) -> None:
+        if self._behavior_closed:
+            return
+        if self._idle_clip_owned and not self.asset_player.busy:
+            self._idle_clip_owned = False
+            self.pet.sequence_part_hits_enabled = False
+        allowed = (self._uses_project_character and self.appearance == "original"
+                   and self.pet.isVisible() and not self._conversation_busy
+                   and not self.pet.bubble.isVisible() and self._pending_expression is None
+                   and self.pet.animation.state == AnimationState.IDLE
+                   and not self.asset_player.busy
+                   and (self._auto_expression_enabled or self._expression == "neutral"))
+        event = self.behavior.advance(seconds, idle_allowed=allowed)
+        if event is None:
+            return
+        kind, name = event
+        if kind == "calmed":
+            context, self._queued_context = self._queued_context, None
+            if (context is not None and self._auto_expression_enabled
+                    and (self._conversation_busy or self.pet.bubble.isVisible())):
+                self.apply_context_expression(context[0], source=context[1])
+            else:
+                self._behavior_expression("neutral")
+        elif kind == "idle" and name not in self._unavailable_idle:
+            # Every prepared idle clip starts and ends on the neutral canvas.
+            # Clear expression de-duplication so a later identical API emotion
+            # still replaces this neutral state.
+            if self._expression != "neutral":
+                self._behavior_expression("neutral")
+            self._last_context_code = None
+            if self.asset_player.play(name, once=True):
+                self._idle_clip_owned = True
+                self.pet.sequence_part_hits_enabled = True
+            else:
+                self._unavailable_idle.add(name)
 
     @property
     def scale_percent(self) -> int:
@@ -107,6 +186,8 @@ class PetController(QObject):
             self._pending_expression = None
             self._expression, self._expression_status = restored.code, restored.status
             self.expression_changed.emit(restored.code, restored.status)
+        if not enabled:
+            self._queued_context = None
         self._set_auto_expression_status("已开启：下次 API 分析时按语境选择表情。" if enabled
                                          else "已关闭：保留手动选择的表情。")
         self.auto_expression_changed.emit(enabled)
@@ -123,6 +204,11 @@ class PetController(QObject):
         if (not self._auto_expression_enabled or not isinstance(code, str) or code not in EXPRESSIONS
                 or not isinstance(source, str) or source not in sources):
             return False
+        self.behavior.register_activity(hold_seconds=8.0)
+        if self.behavior.is_angry:
+            self._queued_context = (code, source)
+            self._set_auto_expression_status(f"API · {sources[source]}：{EXPRESSIONS[code][0]}；互动生气结束后恢复。")
+            return True
         if self._last_context_code != code or self._expression != code:
             restore = self._pending_context_restore or self._resolve_expression(self._expression)
             self.set_expression(code, feedback=False, animate=False)
@@ -180,6 +266,10 @@ class PetController(QObject):
         self.set_scale(100)
 
     def set_expression(self, code: str, *, feedback: bool = True, animate: bool = True) -> None:
+        if not self._behavior_applying:
+            self.behavior.cancel_anger()
+            self.behavior.register_activity(hold_seconds=8.0)
+            self._queued_context = None
         self._last_context_code = None
         self._pending_context_restore = None
         try:
@@ -202,12 +292,23 @@ class PetController(QObject):
 
     def _finish_deferred_expression(self, _seconds):
         if (self._pending_expression is not None
+                and not (self._idle_exit_pending and self.asset_player.playing)
                 and self.pet.animation.state not in {AnimationState.DRAGGING, AnimationState.RETURNING}):
             expression, self._pending_expression = self._pending_expression, None
+            self._idle_exit_pending = False
             self._pending_context_restore = None
             self._render_expression(expression, animate=self._pending_expression_animate)
 
     def _render_expression(self, expression, *, animate=True):
+        if self._idle_clip_owned and self.asset_player.playing:
+            self._pending_expression = expression
+            self._pending_expression_animate = animate
+            self._idle_exit_pending = True
+            self.asset_player.stop(smooth=True)
+            return
+        self._idle_clip_owned = False
+        self._idle_exit_pending = False
+        self.pet.sequence_part_hits_enabled = False
         self.asset_player.stop()
         self.pet.set_character_source(expression.pixmap if expression.pixmap is not None else self._base_character)
         animation = self.pet.animation
@@ -244,6 +345,11 @@ class PetController(QObject):
             self.appearance_changed.emit(self.appearance, appearance.status)
             return False
         self.asset_player.stop()
+        self.behavior.cancel_anger()
+        self.behavior.register_activity(hold_seconds=8.0)
+        self._queued_context = None
+        self._idle_clip_owned = self._idle_exit_pending = False
+        self.pet.sequence_part_hits_enabled = False
         self._pending_expression = None
         self._last_context_code = None
         self._pending_context_restore = None
@@ -260,12 +366,18 @@ class PetController(QObject):
     def play_asset_animation(self, name: str) -> bool:
         accepted = self.asset_player.play(name)
         if accepted:
+            self.behavior.cancel_anger()
+            self.behavior.register_activity(hold_seconds=8.0)
+            self._queued_context = None
+            self._idle_clip_owned = self._idle_exit_pending = False
+            self.pet.sequence_part_hits_enabled = False
             self._pending_expression = None
             self._last_context_code = None
             self._pending_context_restore = None
         return accepted
 
     def stop_asset_animation(self) -> None:
+        self.behavior.register_activity(hold_seconds=8.0)
         self.asset_player.stop(smooth=True)
 
     def test_expression(self) -> None:
@@ -274,6 +386,8 @@ class PetController(QObject):
     def play_motion(self, emotion: str = "neutral", *, source: str = "screen") -> None:
         changed = self._last_context_code != emotion or self._expression != emotion
         if not self.apply_context_expression(emotion, source=source):
+            return
+        if self.behavior.is_angry:
             return
         if not changed:
             return

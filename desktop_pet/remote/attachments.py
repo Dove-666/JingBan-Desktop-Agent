@@ -14,6 +14,7 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice
 from PySide6.QtGui import QImageReader
 
 from .errors import RemoteError
+from ..chat_images import IMAGE_ID
 
 
 MAX_IMAGE_BYTES = 4 * 1024 * 1024
@@ -147,15 +148,40 @@ class ImageInbox:
             finally:
                 db.close()
 
+    def metadata(self, image_id):
+        """Check a reference without loading its image bytes on the UI thread."""
+        if not isinstance(image_id, str) or not IMAGE_ID.fullmatch(image_id):
+            raise RemoteError("invalid_image", "图片标识无效。")
+        with self._lock:
+            db = self._db()
+            try:
+                row = db.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
+                if row is None or not (self.directory / (row["id"] + row["extension"])).is_file():
+                    raise RemoteError("image_missing", "引用的图片不存在或已删除，请重新发送图片后重试。")
+                return self._public(row)
+            finally:
+                db.close()
+
     def get(self, image_id):
+        if not isinstance(image_id, str) or not IMAGE_ID.fullmatch(image_id):
+            raise RemoteError("invalid_image", "图片标识无效。")
         with self._lock:
             db = self._db()
             try:
                 row = db.execute("SELECT * FROM images WHERE id = ?", (image_id,)).fetchone()
                 if row is None:
                     raise RemoteError("not_found", "图片不存在。")
-                data = (self.directory / (row["id"] + row["extension"])).read_bytes()
-                if hashlib.sha256(data).hexdigest() != row["sha256"]:
+                try:
+                    path = self.directory / (row["id"] + row["extension"])
+                    if path.stat().st_size > MAX_IMAGE_BYTES:
+                        raise RemoteError("storage_error", "本地图片大小无效，请重新传输。")
+                    with path.open("rb") as handle:
+                        data = handle.read(MAX_IMAGE_BYTES + 1)
+                except FileNotFoundError:
+                    raise RemoteError("not_found", "图片不存在。") from None
+                except OSError:
+                    raise RemoteError("storage_error", "无法读取本地图片，请重新传输。") from None
+                if len(data) != row["size"] or hashlib.sha256(data).hexdigest() != row["sha256"]:
                     raise RemoteError("storage_error", "本地图片校验失败，请重新传输。")
                 return {**self._public(row), "data_base64": base64.b64encode(data).decode("ascii")}
             finally:

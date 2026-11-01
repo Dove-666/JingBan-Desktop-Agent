@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
 
 /**
@@ -31,12 +32,15 @@ class AndroidDesktopE2eTest {
         val configuration = File(context.filesDir, "aura-e2e-config.json")
         assumeTrue("Start the isolated Python fixture and inject private config first", configuration.isFile)
         val input = JSONObject(configuration.readText())
+        assumeTrue("Legacy test requires the isolated legacy mock fixture", !input.optBoolean("direct_api") && input.optBoolean("mock_chat_model"))
         require(input.optBoolean("isolated_fixture")) { "Only isolated mock-model fixtures are permitted" }
         val databaseName = "android-e2e-${UUID.randomUUID()}.db"
         val database = CompanionDatabase(context, databaseName)
         val repository = AppRepository(context, IrohRpcClient(context), database)
         val steps = mutableListOf<String>()
         var selectedPath = "unknown"
+        var finalChatRequests = 0
+        var finalImageRequests = 0
         var passed = false
         try {
             repository.pair(input.getString("pairing_uri"), "Android emulator isolated QA")
@@ -51,12 +55,12 @@ class AndroidDesktopE2eTest {
             steps += "real_pair_and_snapshot"
 
             val conversation = repository.newConversation()
-            repository.sendMessage(conversation, "ANDROID_E2E_ONLINE")
+            repository.sendLegacyMessage(conversation, "ANDROID_E2E_ONLINE")
             await("first mocked AI reply", repository) { repository.state.value.messages.any { it.content == "Android E2E reply 1" } }
             steps += "android_to_desktop_mock_ai_reply"
 
             repository.disconnect()
-            repository.sendMessage(conversation, "ANDROID_E2E_OFFLINE")
+            repository.sendLegacyMessage(conversation, "ANDROID_E2E_OFFLINE")
             val queued = repository.state.value.outbox.single { it.text == "ANDROID_E2E_OFFLINE" }
             assertEquals("queued", queued.status)
             repository.reconnect()
@@ -84,8 +88,75 @@ class AndroidDesktopE2eTest {
             steps += "real_image_upload_download_without_ai"
             steps += "real_pet_command"
 
+            val expectedImageId = MessageDigest.getInstance("SHA-256").digest(imageBytes)
+                .joinToString("") { "%02x".format(it.toInt() and 255) }
+            repository.stageImage(conversation, imageBytes, "android-vision.png", "image/png")
+            assertEquals(expectedImageId, repository.state.value.pendingImages[conversation]!!.attachmentId)
+            assertEquals(2, command("inspect").getInt("mock_chat_requests"))
+            steps += "staged_image_waits_for_explicit_send"
+
+            val imagePrompt = "ANDROID_E2E_IMAGE 请描述这张图片的颜色"
+            repository.sendLegacyMessage(conversation, imagePrompt)
+            await("real image/text mocked AI reply", repository) {
+                repository.state.value.messages.any { it.content == "Android E2E reply 3" }
+            }
+            val imageMessage = repository.state.value.messages.single { it.content == imagePrompt }
+            assertNull("The image turn must be canonical desktop history", imageMessage.localState)
+            assertEquals(expectedImageId, imageMessage.attachmentId)
+            assertNull(imageMessage.imageError)
+            assertFalse(repository.state.value.pendingImages.containsKey(conversation))
+            val imageInspection = command("inspect")
+            assertEquals(3, imageInspection.getInt("mock_chat_requests"))
+            assertEquals(1, imageInspection.getInt("image_requests"))
+            assertTrue(imageInspection.getBoolean("image_payloads_valid"))
+            assertEquals(expectedImageId, imageInspection.getString("last_image_sha256"))
+            assertEquals("[3]", imageInspection.getJSONArray("image_request_indexes").toString())
+            steps += "image_text_reaches_model_and_canonical_history"
+
+            // Remove the actual source bytes after canonical sync. This must
+            // recover through image.get, not an optimistic outbox-only image.
+            repository.state.value.images.firstOrNull { it.id == imageMessage.attachmentId }?.localPath?.let { File(it).delete() }
+            database.clearImagePath(expectedImageId)
+            val canonicalImage = repository.downloadImage(imageMessage.attachmentId!!)
+            assertNotNull(canonicalImage)
+            assertArrayEquals(imageBytes, canonicalImage!!.readBytes())
+            steps += "canonical_image_get_recovers_deleted_cache"
+
+            val followup = "上面那张图片是什么颜色？ ANDROID_E2E_IMAGE_FOLLOWUP"
+            repository.sendLegacyMessage(conversation, followup)
+            await("same-conversation image follow-up", repository) {
+                repository.state.value.messages.any { it.content == "Android E2E reply 4" }
+            }
+            assertEquals(expectedImageId, repository.state.value.messages.single { it.content == followup }.attachmentId)
+            val followupInspection = command("inspect")
+            assertEquals(4, followupInspection.getInt("mock_chat_requests"))
+            assertEquals(2, followupInspection.getInt("image_requests"))
+            assertTrue(followupInspection.getBoolean("image_payloads_valid"))
+            assertEquals("[3,4]", followupInspection.getJSONArray("image_request_indexes").toString())
+            val imageDigests = followupInspection.getJSONArray("image_sha256")
+            assertEquals(2, imageDigests.length())
+            assertEquals(expectedImageId, imageDigests.getString(0))
+            assertEquals(expectedImageId, imageDigests.getString(1))
+            steps += "same_conversation_followup_reuses_image"
+
+            val otherConversation = repository.newConversation()
+            repository.sendLegacyMessage(otherConversation, "ANDROID_E2E_OTHER_CONVERSATION")
+            await("other conversation stays text-only", repository) {
+                repository.state.value.messages.any { it.content == "Android E2E reply 5" }
+            }
+            assertNull(repository.state.value.messages.single { it.content == "ANDROID_E2E_OTHER_CONVERSATION" }.attachmentId)
+            val isolationInspection = command("inspect")
+            finalChatRequests = isolationInspection.getInt("mock_chat_requests")
+            finalImageRequests = isolationInspection.getInt("image_requests")
+            assertEquals(5, finalChatRequests)
+            assertEquals(2, finalImageRequests)
+            assertFalse(isolationInspection.getBoolean("last_request_has_image"))
+            assertEquals("[false,false,true,true,false]", isolationInspection.getJSONArray("request_has_image").toString())
+            steps += "other_conversation_does_not_inherit_image"
+            repository.selectConversation(conversation)
+
             repository.disconnect()
-            repository.sendMessage(conversation, "ANDROID_E2E_MUST_NOT_REVIVE")
+            repository.sendLegacyMessage(conversation, "ANDROID_E2E_MUST_NOT_REVIVE")
             command("delete_conversation", JSONObject().put("conversation_id", conversation))
             repository.reconnect()
             await("desktop deletion propagated", repository) {
@@ -93,7 +164,7 @@ class AndroidDesktopE2eTest {
                     it.text == "ANDROID_E2E_MUST_NOT_REVIVE" && it.status == "needs_attention"
                 }
             }
-            assertEquals(2, command("inspect").getInt("mock_chat_requests"))
+            assertEquals(5, command("inspect").getInt("mock_chat_requests"))
             steps += "deleted_conversation_does_not_replay_queue"
 
             repository.deleteImage(image.id)
@@ -113,6 +184,7 @@ class AndroidDesktopE2eTest {
                 .put("selected_path", selectedPath).put("mock_chat_model", true).put("emulator_app_tested", true)
                 .put("phone_hardware_tested", false).put("cross_network_tested", false)
                 .put("public_relay_path_observed", selectedPath == "relay")
+                .put("mock_chat_requests", finalChatRequests).put("image_requests", finalImageRequests)
             File(context.filesDir, "aura-e2e-result.json").writeText(report.toString(2))
             configuration.delete() // Remove the consumed temporary authorization code.
             repository.close()

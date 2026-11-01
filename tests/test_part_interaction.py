@@ -316,14 +316,16 @@ class PartInteractionTests(unittest.TestCase):
     def test_part_clicks_across_scales_use_logical_coordinates_and_leave_body_behavior(self):
         window = self.window(animated=True)
         handled = []
+        parts = []
         window.click_handler = handled.append
+        window.part_clicked.connect(parts.append)
         with patch("desktop_pet.pet_window.work_area", return_value=self.available), \
                 patch("desktop_pet.pet_window.screen_for_point", return_value=None), \
                 patch("desktop_pet.pet_window.screen_for_rect", return_value=None):
-            for percent in (50, 75, 100, 125, 150, 200):
+            for percent_index, percent in enumerate((50, 75, 100, 125, 150, 200)):
                 window.set_scale_percent(percent)
                 window.animation.advance(.13)
-                for name, source in (("left_ear", QPointF(260, 370)), ("right_ear", QPointF(760, 370)), ("tail", QPointF(770, 740))):
+                for part_index, (name, source) in enumerate((("left_ear", QPointF(260, 370)), ("right_ear", QPointF(760, 370)), ("tail", QPointF(770, 740)))):
                     with self.subTest(percent=percent, name=name):
                         window._part_interaction.reset()
                         next_click = window._next_click_happy
@@ -334,6 +336,8 @@ class PartInteractionTests(unittest.TestCase):
                         window._part_interaction.advance(.08)
                         self.assertNotEqual(window._part_interaction.angle(name), 0)
                         self.assertEqual(handled, [])
+                        self.assertEqual(parts[-1], name)
+                        self.assertEqual(len(parts), (percent_index * 3) + part_index + 1)
                         self.assertEqual(window._next_click_happy, next_click)
                         self.assertFalse(window.bubble.isVisible())
             window._part_interaction.reset()
@@ -341,11 +345,14 @@ class PartInteractionTests(unittest.TestCase):
             send_mouse(window, QEvent.Type.MouseButtonPress, point, pressed=True)
             send_mouse(window, QEvent.Type.MouseButtonRelease, point)
             self.assertEqual(handled, ["happy"])
+            self.assertEqual(len(parts), 18)
 
     def test_drag_from_part_never_triggers_and_active_motion_resumes_on_release(self):
         window = self.window()
         handled = []
+        parts = []
         window.click_handler = handled.append
+        window.part_clicked.connect(parts.append)
         interaction = window._part_interaction
         interaction.trigger("tail")
         interaction.advance(.1)
@@ -367,6 +374,7 @@ class PartInteractionTests(unittest.TestCase):
         self.assertNotEqual(interaction.angle("tail"), frozen)
         self.assertEqual(interaction.angle("left_ear"), 0)
         self.assertEqual(handled, [])
+        self.assertEqual(parts, [])
         self.assertFalse(window.bubble.isVisible())
 
     def test_unsupported_source_and_sequence_frames_bypass_parts(self):
@@ -383,6 +391,90 @@ class PartInteractionTests(unittest.TestCase):
         self.assertFalse(window.part_interaction_active)
         window.set_character_source(original)
         self.assertTrue(window.part_interaction_active)
+
+    def test_sequence_clicks_emit_parts_without_rig_animation_or_painting_over_video(self):
+        window = self.window()
+        handled, parts = [], []
+        window.click_handler = handled.append
+        window.part_clicked.connect(parts.append)
+        frame = QImage(str(self.source_path))
+        painter = QPainter(frame)
+        painter.fillRect(QRect(450, 650, 50, 60), QColor("#ff11aa"))
+        painter.end()
+        window.set_frame_sequence((frame,))
+        window.sequence_part_hits_enabled = True
+        self.assertFalse(window.part_interaction_active)
+        with patch("desktop_pet.pet_window.work_area", return_value=self.available), \
+                patch("desktop_pet.pet_window.screen_for_point", return_value=None), \
+                patch("desktop_pet.pet_window.screen_for_rect", return_value=None), \
+                patch.object(window._part_interaction, "trigger", side_effect=AssertionError("Rig must not animate video")), \
+                patch.object(window._part_interaction, "paint", side_effect=AssertionError("Rig must not cover video")):
+            baseline = capture(window)
+            for name, source in (("left_ear", QPointF(260, 370)), ("right_ear", QPointF(760, 370)),
+                                 ("tail", QPointF(770, 740))):
+                with self.subTest(part=name):
+                    point = global_for_source(window, source)
+                    self.assertEqual(window._part_at(window.mapFromGlobal(point.toPoint())), name)
+                    send_mouse(window, QEvent.Type.MouseButtonPress, point, pressed=True)
+                    send_mouse(window, QEvent.Type.MouseButtonRelease, point)
+                    self.assertEqual(parts[-1], name)
+                    self.assertFalse(window.part_interaction_active)
+                    self.assertFalse(window._part_interaction.animating)
+                    window.animation.advance(1)
+                    self.assertEqual(capture(window), baseline)
+            self.assertEqual(parts, ["left_ear", "right_ear", "tail"])
+            self.assertEqual(handled, [])
+            body = global_for_source(window, QPointF(500, 700))
+            send_mouse(window, QEvent.Type.MouseButtonPress, body, pressed=True)
+            send_mouse(window, QEvent.Type.MouseButtonRelease, body)
+            self.assertEqual(handled, ["happy"])
+            self.assertEqual(parts, ["left_ear", "right_ear", "tail"])
+
+    def test_sequence_part_hits_require_frame_alpha_static_mask_and_enabled_interaction(self):
+        window = self.window()
+        handled, parts = [], []
+        window.click_handler = handled.append
+        window.part_clicked.connect(parts.append)
+        frame = QImage(str(self.source_path))
+        painter = QPainter(frame)
+        # A true video-frame hole in a normally solid part must pass through.
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+        painter.fillRect(QRect(245, 355, 40, 35), Qt.GlobalColor.transparent)
+        # Conversely an opaque frame pixel cannot invent a canonical ear mask.
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        painter.fillRect(QRect(215, 350, 15, 25), QColor("#ff22bb"))
+        painter.end()
+        window.set_frame_sequence((frame,))
+        window.sequence_part_hits_enabled = True
+        with patch("desktop_pet.pet_window.work_area", return_value=self.available), \
+                patch("desktop_pet.pet_window.screen_for_point", return_value=None), \
+                patch("desktop_pet.pet_window.screen_for_rect", return_value=None):
+            hole = global_for_source(window, QPointF(260, 370))
+            self.assertIsNone(window._part_at(window.mapFromGlobal(hole.toPoint())))
+            send_mouse(window, QEvent.Type.MouseButtonPress, hole, pressed=True)
+            self.assertIsNone(window._press_global)
+            send_mouse(window, QEvent.Type.MouseButtonRelease, hole)
+            self.assertEqual((parts, handled), ([], []))
+
+            mask_hole = global_for_source(window, QPointF(220, 360))
+            self.assertIsNone(window._part_at(window.mapFromGlobal(mask_hole.toPoint())))
+            send_mouse(window, QEvent.Type.MouseButtonPress, mask_hole, pressed=True)
+            send_mouse(window, QEvent.Type.MouseButtonRelease, mask_hole)
+            self.assertEqual((parts, handled), ([], ["happy"]))
+            window.animation.advance(1)
+
+            ear = QPointF(760, 370)
+            for sequence_hits, interactions in ((False, True), (True, False)):
+                with self.subTest(sequence_hits=sequence_hits, interactions=interactions):
+                    window.sequence_part_hits_enabled = sequence_hits
+                    window.set_part_interaction_enabled(interactions)
+                    point = global_for_source(window, ear)
+                    self.assertIsNone(window._part_at(window.mapFromGlobal(point.toPoint())))
+                    send_mouse(window, QEvent.Type.MouseButtonPress, point, pressed=True)
+                    send_mouse(window, QEvent.Type.MouseButtonRelease, point)
+                    self.assertEqual(parts, [])
+                    window.animation.advance(1)
+            self.assertEqual(handled, ["happy", "surprised", "happy"])
 
     def test_context_menu_toggle_restores_static_pixels_and_regular_click_behavior(self):
         window = self.window()

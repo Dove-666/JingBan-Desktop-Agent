@@ -1,5 +1,6 @@
 """Asynchronous facade; Qt views do not know Mem0's SDK or vector store."""
 import threading
+from concurrent.futures import Future
 from datetime import datetime
 from PySide6.QtCore import QObject, Signal
 
@@ -56,6 +57,24 @@ class LazyMemoryService:
     def __getattr__(self, name):
         return lambda *args, **kwargs: getattr(self._get(), name)(*args, **kwargs)
 
+    def set_automatic_enabled(self, enabled, *, cancelled=None):
+        if enabled:
+            return self._get().set_automatic_enabled(True, cancelled=cancelled)
+        # A previously accepted privacy-enhancing disk write must finish even
+        # when exit closes the lazy facade before its queued worker starts.
+        # No other operation may construct/use a service after shutdown.
+        with self._lock:
+            if self._instance is None:
+                instance = self._factory()
+                binder = getattr(instance, "bind_automatic_pause", None)
+                if callable(binder):
+                    binder(self._automatic_pause)
+                self._instance = instance
+                if self._closed:
+                    instance.shutdown()
+            instance = self._instance
+        return instance.set_automatic_enabled(False, cancelled=cancelled)
+
     def shutdown(self):
         # A factory may be waiting on disk in a worker. Publishing then
         # rechecking _closed in _get handles a late instance without making
@@ -78,6 +97,8 @@ class MemoryController(QObject):
     memory_update_finished = Signal(str, bool, str)
     settings_saved = Signal()
     readiness_changed = Signal(str)
+    setup_state_changed = Signal(str)
+    automatic_setup_finished = Signal(bool, str)
 
     def __init__(self, service, parent=None):
         super().__init__(parent)
@@ -102,6 +123,12 @@ class MemoryController(QObject):
         self._extraction_tested_at = ""
         self._local_model_verified = False
         self._embedding_last_failed = False
+        self.setup_state = "idle"
+        self.setup_error = ""
+        self._automatic_setup_cancel = threading.Event()
+        self._automatic_requested = None
+        self._pending_automatic_disable = False
+        self._accepted_disable_write = None
         self.readiness = "正在读取本地配置；尚未验证任何模型连接。"
         paused = getattr(service, "automatic_paused", False)
         self.automatic_paused = paused if type(paused) is bool else False
@@ -114,20 +141,23 @@ class MemoryController(QObject):
             return False
         self.busy = True
         self.busy_changed.emit(True)
-        self.error = ""
-        self.error_changed.emit("")
+        self.error = self.setup_error
+        self.error_changed.emit(self.error)
         def done(result, error):
             self.busy = False
             self.busy_changed.emit(False)
             if error:
-                self.error = error
-                self.error_changed.emit(error)
+                self.error = self.setup_error or error
+                self.error_changed.emit(self.error)
                 self._status("记忆操作未完成，聊天与会话记录仍可使用。")
                 if failure is not None:
                     failure(error)
             else:
                 success(result)
-            if self._pending_refresh and not self._closed:
+            if self._pending_automatic_disable and not self._closed:
+                self._pending_automatic_disable = False
+                self._change_automatic_enabled(False)
+            elif self._pending_refresh and not self._closed:
                 self._pending_refresh = False
                 self.refresh(self.memory_query, offset=self.memory_offset)
         self._runner.submit(function, done)
@@ -192,6 +222,173 @@ class MemoryController(QObject):
             if paused else "本次运行的自动提炼暂停已解除；是否自动提炼仍由已保存的启用与自动提炼设置决定。"
         )
         return True
+
+    @property
+    def automatic_enabled(self):
+        return bool(self.settings.enabled and self.settings.automatic and not self.automatic_paused)
+
+    @property
+    def automatic_requested(self):
+        return self._automatic_requested
+
+    def _setup_state(self, state):
+        self.setup_state = state
+        self.setup_state_changed.emit(state)
+
+    def handle_chat_memory_status(self, text):
+        """Keep actionable automatic-memory failures visible outside logs."""
+        self._status(str(text))
+        if self._closed or not self.settings.enabled:
+            return
+        failed = ("提炼未完成" in text and self.settings.automatic and self._automatic_requested is not False) or (
+            "检索" in text and any(word in text for word in ("失败", "未完成", "不可用"))
+        )
+        if failed:
+            if "重启后可能恢复" not in self.setup_error:
+                self.setup_error = "记忆暂时不可用，请重新准备后再试；聊天记录已保留。"
+            self.error = self.setup_error
+            self.error_changed.emit(self.error)
+            self._setup_state("failed")
+
+    def set_automatic_enabled(self, enabled):
+        """A persistent switch; an off action always closes the gate at once."""
+        if self._closed or type(enabled) is not bool or (
+            enabled and (self.busy or self._pending_automatic_disable)
+        ):
+            return False
+        self._automatic_requested = enabled
+        if not enabled:
+            self._automatic_setup_cancel.set()
+        else:
+            self._automatic_setup_cancel = threading.Event()
+        if not self.set_automatic_paused(True):
+            return False
+        if self.busy:
+            self._pending_automatic_disable = True
+            if self._accepted_disable_write is None:
+                # Submit the disk write now, rather than waiting for a GUI
+                # callback that is deliberately discarded during shutdown.
+                accepted = Future()
+                self._accepted_disable_write = accepted
+                def persist_disabled():
+                    try:
+                        result = self.service.set_automatic_enabled(False, cancelled=cancelled)
+                        accepted.set_result((result, ""))
+                    except Exception as exception:
+                        error = (str(exception) if type(exception).__module__.startswith("desktop_pet.")
+                                 else "关闭自动记忆设置未能保存。")
+                        accepted.set_result((None, error))
+                cancelled = self._automatic_setup_cancel
+                self._runner.submit(persist_disabled, lambda *_args: None)
+            self._status("正在关闭自动记忆；已有记忆仍可使用。")
+            return True
+        return self._change_automatic_enabled(enabled)
+
+    def prepare_automatic_memory(self):
+        """Explicit retry; opening a panel never downloads a model."""
+        if self._closed or self.busy:
+            return False
+        if self.settings.enabled and not self.settings.automatic:
+            return self._repair_retrieval()
+        if self._automatic_requested is False:
+            return False
+        if not (self.settings.enabled and self.settings.automatic) and not (
+            self.setup_state == "failed" and self._automatic_requested is True
+        ):
+            return False
+        return self.set_automatic_enabled(True)
+
+    def _repair_retrieval(self):
+        """Repair existing memory without enabling automatic collection."""
+        self.setup_error = ""
+        self._setup_state("repairing")
+        self._status("正在准备已有记忆…")
+        def perform():
+            settings = self.service.load_settings()
+            if settings.embedding_provider == "fastembed":
+                self.service.prepare_local_model()
+            self.service.search("记忆功能检查", limit=1)
+            return self._load_state()
+        def done(state):
+            self._loaded(state)
+            self.setup_error = self.error = ""
+            self.error_changed.emit("")
+            self._local_model_verified = self.settings.embedding_provider == "fastembed"
+            self._setup_state("ready")
+            self._status("已有记忆可以继续使用；自动记忆保持关闭。")
+            self.automatic_setup_finished.emit(True, "")
+        def failed(_error):
+            self.setup_error = self.error = "记忆暂时不可用，请稍后重新准备；聊天仍可正常使用。"
+            self.error_changed.emit(self.error)
+            self._setup_state("failed")
+            self.automatic_setup_finished.emit(False, self.error)
+        return self._operate(perform, done, failed)
+
+    def _change_automatic_enabled(self, enabled):
+        cancelled = self._automatic_setup_cancel
+        accepted = self._accepted_disable_write if not enabled else None
+        if accepted is not None:
+            self._accepted_disable_write = None
+        if enabled:
+            self.setup_error = ""
+            self._setup_state("preparing")
+            self._status("正在准备记忆功能，首次使用可能需要下载文件…")
+        def perform():
+            result, error = None, ""
+            try:
+                if accepted is not None:
+                    result, error = accepted.result()
+                else:
+                    result = self.service.set_automatic_enabled(enabled, cancelled=cancelled)
+            except Exception as exception:
+                error = (str(exception) if type(exception).__module__.startswith("desktop_pet.")
+                         else "记忆暂时无法准备，请稍后重试；聊天仍可正常使用。")
+            try:
+                state = self._load_state()
+            except Exception:
+                state = None
+                error = error or "无法读取记忆状态，请稍后重试；聊天仍可正常使用。"
+            return state, result, error
+        def done(payload):
+            state, result, error = payload
+            if state is not None:
+                self._loaded(state)
+            # A later off request owns the gate, even when an earlier enable
+            # finished committing just before cancellation reached its worker.
+            superseded = enabled and (cancelled.is_set() or self._automatic_requested is False)
+            if superseded:
+                self._setup_state("idle")
+                return
+            if error:
+                self._setup_state("failed")
+                if not enabled:
+                    error = "本次运行已停止自动记忆，但关闭设置未能保存；重启后可能恢复，请重试。"
+                self.setup_error = error
+                self.error = error
+                self.error_changed.emit(error)
+                self._status("记忆设置未完成，原有记忆和聊天记录已保留。")
+                self.automatic_setup_finished.emit(False, error)
+                return
+            if enabled:
+                if not self.set_automatic_paused(False):
+                    self.setup_error = "自动记忆未能开启，请重试。"
+                    self.error = self.setup_error
+                    self.error_changed.emit(self.error)
+                    self._setup_state("failed")
+                    self.automatic_setup_finished.emit(False, "自动记忆未能开启，请重试。")
+                    return
+                self._local_model_verified = bool(isinstance(result, dict) and result.get("prepared"))
+                self._setup_state("ready")
+                self._status("自动记忆已开启。")
+            else:
+                self._setup_state("idle")
+                self._status("自动记忆已关闭；已有记忆仍可使用。")
+            self.setup_error = self.error = ""
+            self.error_changed.emit("")
+            self.settings_saved.emit()
+            self._update_readiness()
+            self.automatic_setup_finished.emit(True, "")
+        return self._operate(perform, done)
 
     def save_settings(self, settings, llm_key="", embedding_key=""):
         def perform():
@@ -394,5 +591,6 @@ class MemoryController(QObject):
 
     def shutdown(self):
         self._closed = True
+        self._automatic_setup_cancel.set()
         self._runner.shutdown()
         self.service.shutdown()

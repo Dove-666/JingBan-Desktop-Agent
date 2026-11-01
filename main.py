@@ -4,6 +4,10 @@ import sys
 
 
 if __name__ == "__main__":
+    # Chromium chooses its rendering backend during initialization, before a
+    # chat window exists. Apply our Windows compatibility policy first.
+    from desktop_pet.web_rendering import configure_webengine_rendering
+    configure_webengine_rendering()
     try:
         from desktop_pet.app import main
     except ModuleNotFoundError as exc:

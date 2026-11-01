@@ -1,6 +1,7 @@
 package com.aura.companion.data
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -172,5 +173,162 @@ class CompanionDatabaseTest {
         assertTrue(message.content.contains("不会自动识图或回复"))
         assertNull(message.requestStatus)
         assertEquals("image.upload", db.outbox().single().method)
+    }
+
+    private fun image(id: String = "a".repeat(64)) = ImageItem(id, "photo.png", "image/png", 100, 1, 1,
+        "2026-10-31T01:00:00Z", "/local/cache/$id.img", "staged")
+
+    @Test fun canonicalImageAttachmentSurvivesSnapshotAndPullWithoutPrivateMetadata() {
+        val id = "a".repeat(64)
+        val item = message()
+        item.getJSONObject("data").put("image_id", id).put("image_error", "vision_rejected")
+            .put("image_path", "/private/capture.png").put("metadata", JSONObject().put("secret", "SECRET"))
+        db.stageSnapshotPage(snapshot(listOf(conversation(), item), 3), true)
+        assertEquals(id, db.messages(cid).single().attachmentId)
+        assertEquals("vision_rejected", db.messages(cid).single().imageError)
+        val updated = message().put("seq", 4)
+        updated.getJSONObject("data").put("image_id", id).put("image_error", "image_missing")
+        db.applyPull(pull(listOf(updated), 4))
+        assertEquals(id, db.messages(cid).single().attachmentId)
+        assertEquals("image_missing", db.messages(cid).single().imageError)
+        val unsafe = message(UUID.randomUUID().toString()).put("seq", 5)
+        unsafe.getJSONObject("data").put("image_id", "../../private.png").put("image_error", "SECRET_INTERNAL_ERROR")
+        db.applyPull(pull(listOf(unsafe), 5))
+        assertNull(db.messages(cid).last { it.id != mid }.attachmentId)
+        assertNull(db.messages(cid).last { it.id != mid }.imageError)
+    }
+
+    @Test fun agentProgressAndErrorsPersistOnlyAsPublicWhitelistedMetadata() {
+        val item = message()
+        item.getJSONObject("data").put("execution_mode", "agent").put("request_status", "pending")
+            .put("agent_error_code", "cancelled").put("agent_error", "PRIVATE_PROVIDER_KEY")
+            .put("agent_activity", "正在规划任务…").put("agent_context", "PRIVATE_TOOL_OUTPUT")
+        db.stageSnapshotPage(snapshot(listOf(conversation(), item), 3), true)
+        val saved = db.messages(cid).single()
+        assertEquals("agent", saved.executionMode); assertEquals("cancelled", saved.agentErrorCode)
+        assertEquals(AGENT_ERROR_MESSAGES.getValue("cancelled"), saved.agentError)
+        assertEquals("正在规划任务…", saved.agentActivity)
+        val unsafe = message().put("seq", 4)
+        unsafe.getJSONObject("data").put("agent_error_code", "PRIVATE_KEY").put("agent_error", "PRIVATE_KEY")
+            .put("agent_activity", "PRIVATE_TOOL_ARGUMENT").put("execution_mode", "PRIVATE_EXECUTION")
+        db.applyPull(pull(listOf(unsafe), 4))
+        val cleared = db.messages(cid).single()
+        assertNull(cleared.agentErrorCode); assertNull(cleared.agentError)
+        assertNull(cleared.agentActivity); assertNull(cleared.executionMode)
+        listOf("gui_desktop_locked", "gui_desktop_session_unavailable",
+            "gui_screenshot_display_unavailable", "gui_screenshot_black_frame").forEachIndexed { index, code ->
+            val seq = 5L + index
+            val update = message().put("seq", seq)
+            update.getJSONObject("data").put("request_status", "failed").put("agent_error_code", code)
+                .put("agent_error", "PRIVATE_NATIVE_EXCEPTION").put("agent_activity", "查找已安装应用")
+            db.applyPull(pull(listOf(update), seq))
+            assertEquals(code, db.messages(cid).single().agentErrorCode)
+            assertEquals(AGENT_ERROR_MESSAGES.getValue(code), db.messages(cid).single().agentError)
+            assertEquals("查找已安装应用", db.messages(cid).single().agentActivity)
+        }
+        listOf("检查电脑状态", "检查磁盘占用", "查看目录信息").forEachIndexed { index, label ->
+            val seq = 9L + index
+            val update = message().put("seq", seq)
+            update.getJSONObject("data").put("request_status", "pending").put("agent_activity", label)
+            db.applyPull(pull(listOf(update), seq))
+            assertEquals(label, db.messages(cid).single().agentActivity)
+        }
+    }
+
+    @Test fun stagedImageIsConversationSpecificAndQueueConsumptionIsAtomic() {
+        val first = db.createConversation(); val second = db.createConversation()
+        db.stageImage(first, image()); db.stageImage(second, image("b".repeat(64)))
+        val request = db.queueMessage(first, "看图")
+        assertEquals(setOf(second), db.pendingImages().keys)
+        val chat = db.operation(request)!!
+        assertEquals("a".repeat(64), chat.item.attachmentId)
+        assertEquals("a".repeat(64), chat.params.getString("image_id"))
+        assertNotNull(chat.dependencyId)
+        assertEquals("image.upload", db.operation(chat.dependencyId!!)!!.item.method)
+        assertTrue(db.operation(chat.dependencyId!!)!!.item.hidden)
+        assertFalse(chat.item.hidden)
+        // Keep both durable operations available, while the UI can show one chat.
+        assertEquals(2, db.outbox().size)
+        assertEquals(listOf(request), db.outbox().filterNot { it.hidden }.map { it.requestId })
+        assertEquals(listOf(request), db.outgoing().map { it.item.requestId })
+        assertEquals(1, db.messages(first).size)
+        assertEquals("b".repeat(64), db.pendingImages()[second]!!.attachmentId)
+        assertEquals(setOf("a".repeat(64), "b".repeat(64)), db.protectedImageIds())
+    }
+
+    @Test fun fullQueueRollsBackUploadAndLeavesComposerAttachmentIntact() {
+        val local = db.createConversation()
+        db.stageImage(local, image())
+        val sql = db.writableDatabase
+        sql.beginTransaction()
+        try {
+            repeat(999) { index -> sql.execSQL("""INSERT INTO outbox(id,method,params,text,state,created_at)
+                VALUES(?,'chat.send','{}','old','queued',?)""", arrayOf("old-$index", "2026-10-31T01:00:00Z")) }
+            sql.setTransactionSuccessful()
+        } finally { sql.endTransaction() }
+        assertThrows(IllegalArgumentException::class.java) { db.queueMessage(local, "不能部分提交") }
+        assertEquals("a".repeat(64), db.pendingImage(local)!!.attachmentId)
+        assertEquals(999, db.outbox().size)
+        assertTrue(db.outbox().none { it.method == "image.upload" })
+    }
+
+    @Test fun replacingComputerCannotAttachAnOldComputersComposerImage() {
+        db.saveDevice(DeviceInfo("A", "desktop-a", "ticket-a"), "phone")
+        val local = db.createConversation()
+        db.stageImage(local, image())
+        db.saveDevice(DeviceInfo("B", "desktop-b", "ticket-b"), "phone")
+        assertThrows(IllegalArgumentException::class.java) { db.queueMessage(local, "不要发送给 B") }
+        assertNotNull(db.pendingImage(local))
+        assertTrue(db.outbox().isEmpty())
+    }
+
+    @Test fun versionOneUpgradePreservesHistoryLegacyInboxQueueAndPairing() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "version-one-${UUID.randomUUID()}.db"
+        val file = context.getDatabasePath(name)
+        file.parentFile!!.mkdirs()
+        SQLiteDatabase.openOrCreateDatabase(file, null).use { old ->
+            old.execSQL("CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
+            old.execSQL("""CREATE TABLE conversations(id TEXT PRIMARY KEY,title TEXT NOT NULL,created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,message_count INTEGER NOT NULL DEFAULT 0,local_only INTEGER NOT NULL DEFAULT 0)""")
+            old.execSQL("""CREATE TABLE messages(id TEXT PRIMARY KEY,conversation_id TEXT NOT NULL,role TEXT NOT NULL,
+                content TEXT NOT NULL,created_at TEXT NOT NULL,source TEXT NOT NULL,request_status TEXT,reply_to TEXT)""")
+            old.execSQL("CREATE INDEX messages_conversation ON messages(conversation_id,created_at,id)")
+            old.execSQL("CREATE TABLE tombstones(entity TEXT NOT NULL,id TEXT NOT NULL,PRIMARY KEY(entity,id))")
+            old.execSQL("CREATE TABLE snapshot_items(entity TEXT NOT NULL,id TEXT NOT NULL,conversation_id TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(entity,id))")
+            old.execSQL("""CREATE TABLE outbox(id TEXT PRIMARY KEY,method TEXT NOT NULL,params TEXT NOT NULL,
+                conversation_id TEXT,text TEXT NOT NULL,state TEXT NOT NULL,created_at TEXT NOT NULL,message_id TEXT,
+                attachment_id TEXT,error TEXT,attempted INTEGER NOT NULL DEFAULT 0,authority_id TEXT NOT NULL DEFAULT '',
+                checked_at INTEGER NOT NULL DEFAULT 0)""")
+            old.execSQL("""CREATE TABLE images(id TEXT PRIMARY KEY,filename TEXT NOT NULL,mime_type TEXT NOT NULL,
+                size INTEGER NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,created_at TEXT NOT NULL,
+                local_path TEXT,upload_state TEXT NOT NULL DEFAULT 'received')""")
+            old.execSQL("INSERT INTO settings VALUES('device_ticket','public-ticket')")
+            old.execSQL("INSERT INTO settings VALUES('device_id','old-desktop')")
+            old.execSQL("INSERT INTO settings VALUES('sync_cursor','42')")
+            old.execSQL("INSERT INTO settings VALUES('sync_ready','1')")
+            old.execSQL("INSERT INTO conversations VALUES(?,'历史会话','old','old',1,0)", arrayOf(cid))
+            old.execSQL("INSERT INTO messages VALUES(?,?,'user','已有消息','old','user',NULL,NULL)", arrayOf(mid, cid))
+            old.execSQL("""INSERT INTO outbox(id,method,params,conversation_id,text,state,created_at,attachment_id,authority_id)
+                VALUES('legacy-upload','image.upload',?,?,'旧版图片收件箱','queued','old',?,'old-desktop')""",
+                arrayOf(JSONObject().put("sha256", "a".repeat(64)).toString(), cid, "a".repeat(64)))
+            old.version = 1
+        }
+        try {
+            val upgraded = CompanionDatabase(context, name)
+            try {
+            assertEquals(5, upgraded.readableDatabase.version)
+                assertEquals("public-ticket", upgraded.device()!!.ticket)
+                assertEquals(42L, upgraded.cursor())
+                assertEquals("已有消息", upgraded.messages(cid).first { it.id == mid }.content)
+                assertNull(upgraded.messages(cid).first { it.id == mid }.attachmentId)
+                assertEquals("image.upload", upgraded.operation("legacy-upload")!!.item.method)
+                assertNull(upgraded.operation("legacy-upload")!!.dependencyId)
+                assertEquals(listOf("legacy-upload"), upgraded.outgoing().map { it.item.requestId })
+                upgraded.stageImage(cid, image())
+                assertNotNull(upgraded.pendingImage(cid))
+                assertEquals("chat.send", upgraded.operation(upgraded.queueMessage(cid, "新图文"))!!.item.method)
+            } finally { upgraded.close() }
+        } finally { context.deleteDatabase(name) }
     }
 }

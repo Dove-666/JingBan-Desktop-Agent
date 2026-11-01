@@ -15,6 +15,7 @@ from .config import PetConfig
 from .eye_tracking import EyeTracker, cursor_in_source
 from .part_interaction import PartInteraction
 from .placement import clamp_visible_position, screen_for_point, screen_for_rect
+from .sequence_placement import plan_axis
 from .windows_work_area import work_area
 
 
@@ -58,6 +59,8 @@ class PetWindow(QWidget):
     debug_requested = Signal()
     chat_requested = Signal()
     closed = Signal()
+    part_clicked = Signal(str)
+    interaction_started = Signal()
 
     def __init__(self, config: PetConfig) -> None:
         super().__init__()
@@ -69,11 +72,24 @@ class PetWindow(QWidget):
         self._part_interaction = PartInteraction()
         self._part_interaction.bind_source(self._source.toImage())
         self._part_interaction_enabled = True
+        self.sequence_part_hits_enabled = False
         self._sequence_frames: tuple[QImage, ...] = ()
         self._sequence_sprites: tuple[tuple[QPixmap, QImage], ...] = ()
         self._sequence_alpha_rects: tuple[QRectF, ...] = ()
         self._sequence_index = 0
         self._sequence_anchor = (.5, .9375)
+        # A large prop may need temporary work-area clearance. Keep that
+        # clearance separate from the resting position chosen by the user.
+        self._sequence_rest_position: QPoint | None = None
+        self._sequence_area = None
+        self._sequence_times = ()
+        self._sequence_bounds = ()
+        self._sequence_positions = ()
+        self._sequence_plan_motion = True
+        self._sequence_anchor_index = 0
+        self._sequence_cycle_start = 0
+        self._sequence_fraction = 0.0
+        self._sequence_anchor_fraction = 0.0
         self._sprite = QPixmap()
         self._hit_image = QImage()
         self._sprite_rect = QRect()
@@ -104,6 +120,11 @@ class PetWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)
+        self.setToolTipDuration(4500)
+        self.setAccessibleName("鲸鱼娘桌宠")
+        self.setAccessibleDescription("单击身体打开聊天；单击耳朵或尾巴互动。拖动可移动位置，右键打开菜单。")
 
         self.bubble = SpeechBubble(self)
         screen = QGuiApplication.primaryScreen()
@@ -187,15 +208,17 @@ class PetWindow(QWidget):
 
     @property
     def character_placement_bounds(self) -> QRectF:
-        """Stable visible envelope, independent of a clip's current frame/phase."""
+        """Worst-pose envelope of the current image, not a whole clip's props."""
         return QRectF(self._character_placement_bounds)
 
     def _cache_placement_bounds(self, alpha: QRectF) -> None:
+        self._character_placement_bounds = self._placement_bounds_for(alpha)
+
+    def _placement_bounds_for(self, alpha: QRectF) -> QRectF:
         if self.part_interaction_active:
             alpha = alpha.united(self._part_display_bounds(self._part_interaction.swept_bounds()))
         if alpha.isEmpty():
-            self._character_placement_bounds = QRectF(self.rect())
-            return
+            return QRectF(self.rect())
         visible = alpha.translated(self._sprite_rect.topLeft())
         base, area = QRectF(self._sprite_rect), self._drawing_area
         tuning = self.config.animation
@@ -216,7 +239,7 @@ class PetWindow(QWidget):
         for scale in scales:
             for offset in offsets:
                 envelope = envelope.united(self._pose_transform(scale, offset).mapRect(visible))
-        self._character_placement_bounds = envelope
+        return envelope
 
     def _constrain_character(self, screen=None) -> None:
         bounds = self.visible_character_rect if self.animation.state == AnimationState.DRAGGING else self.character_placement_bounds
@@ -308,7 +331,12 @@ class PetWindow(QWidget):
                 round((.5 - self._sequence_anchor[0]) * self._sprite.width()),
                 round((.9375 - self._sequence_anchor[1]) * self._sprite.height()),
             )
-        self._cache_placement_bounds(alpha)
+        if self._sequence_frames:
+            self._sequence_bounds = tuple(self._placement_bounds_for(a) for a in self._sequence_alpha_rects)
+            self._character_placement_bounds = self._sequence_bounds[self._sequence_index]
+            self._build_sequence_positions()
+        else:
+            self._cache_placement_bounds(alpha)
         self.bubble.set_scale(factor)
         self.bubble.reposition()
 
@@ -333,12 +361,16 @@ class PetWindow(QWidget):
         old_position = self.pos()
         self._scale_percent = percent
         self._edge_recovery = None
+        self._sequence_rest_position = None
+        self._sequence_area = None
         screen = screen_for_rect(footprint)
         self._fit_to_screen(screen)
         desired = (center - self.character_placement_bounds.center()).toPoint()
         self.move(clamp_visible_position(desired, self.character_placement_bounds, work_area(screen)))
         if self._press_global is not None:
             self._press_origin += self.pos() - old_position
+        if self._sequence_frames:
+            self._remember_sequence_home(screen)
         self.update()
 
     def set_character_source(self, pixmap: QPixmap) -> None:
@@ -392,6 +424,22 @@ class PetWindow(QWidget):
 
     def _part_at(self, local: QPoint | QPointF) -> str | None:
         source = self._part_source_position(local)
+        if (source is None and self.sequence_part_hits_enabled and self._sequence_frames
+                and self._part_interaction_enabled and self._part_interaction.active):
+            # A playing idle clip still accepts conservative ear/tail clicks.
+            # Gate the canonical masks by the current frame's actual alpha;
+            # the rig never paints over the video or claims transparent pixels.
+            inverse, invertible = self.character_transform.inverted()
+            if not invertible or self._sprite.isNull():
+                return None
+            point = inverse.map(QPointF(local)) - QPointF(self._sprite_rect.topLeft())
+            x, y = math.floor(point.x()), math.floor(point.y())
+            if (not 0 <= x < self._hit_image.width() or not 0 <= y < self._hit_image.height()
+                    or self._hit_image.pixelColor(x, y).alpha() == 0):
+                return None
+            canvas = self._part_interaction.rig.canvas
+            source = QPointF(point.x() * canvas.width() / self._sprite.width(),
+                             point.y() * canvas.height() / self._sprite.height())
         return self._part_interaction.hit_test(source) if source is not None else None
 
     def set_eye_tracking_enabled(self, enabled: bool) -> None:
@@ -413,38 +461,178 @@ class PetWindow(QWidget):
         if source_position is not None:
             tracker.advance(seconds, source_position)
 
-    def set_frame_sequence(self, frames: tuple[QImage, ...], anchor=(.5, .9375)) -> None:
+    def set_frame_sequence(self, frames: tuple[QImage, ...], anchor=(.5, .9375), *,
+                           frame_times=None, plan_motion=True) -> None:
         """Install already decoded images; called on the GUI thread once per clip."""
         if not frames or any(image.isNull() or image.size() != frames[0].size() for image in frames):
             raise ValueError("动画帧必须有效且共享同一画布。")
+        if self._sequence_rest_position is None:
+            self._sequence_rest_position = QPoint(self.pos())
+            self._sequence_area = work_area(screen_for_rect(self.character_placement_bounds.translated(self.pos())))
+        times = tuple(frame_times) if frame_times is not None else tuple(i / 12 for i in range(len(frames)))
+        if (len(times) != len(frames) or any(not math.isfinite(t) for t in times)
+                or any(b < a for a, b in zip(times, times[1:]))):
+            raise ValueError("动画帧时间必须有效且按时间递增。")
+        self._sequence_times = times
+        self._sequence_plan_motion = bool(plan_motion)
+        self._sequence_anchor_index = 0
+        self._sequence_cycle_start = 0
+        self._sequence_fraction = self._sequence_anchor_fraction = 0.0
+        # Installing an exit bridge or a new clip must keep the same home,
+        # including when a preceding clip is still easing back to that home.
+        self._edge_recovery = None
         self._sequence_frames = frames
         self._part_interaction.reset()
         self._pressed_part = None
         self._sequence_index = 0
         self._sequence_anchor = anchor
         self._layout_character()
-        self._constrain_character()
+        self.set_frame_progress(0)
         self.update()
+
+    def _remember_sequence_home(self, screen=None) -> None:
+        self._sequence_rest_position = QPoint(self.pos())
+        self._sequence_area = work_area(screen or screen_for_rect(self.visible_character_rect.translated(self.pos())))
+        self._sequence_anchor_index = self._sequence_index
+        self._sequence_anchor_fraction = self._sequence_fraction
+        self._build_sequence_positions()
+
+    def consume_frame_reanchor(self) -> int | None:
+        """Let the player restart this PNG interval after a new drop or size.
+
+        Keeping only the old interval's remaining fraction would squeeze a
+        full placement step into a few milliseconds when playback resumes.
+        """
+        if not self._sequence_anchor_fraction:
+            return None
+        self._sequence_fraction = self._sequence_anchor_fraction = 0.0
+        return self._sequence_index
+
+    def restart_frame_cycle(self, start_index: int = 0) -> None:
+        """A dragged frame is an anchor for its current pass, not every loop."""
+        if not 0 <= start_index < len(self._sequence_frames):
+            return
+        self._sequence_cycle_start = self._sequence_anchor_index = start_index
+        self._sequence_fraction = self._sequence_anchor_fraction = 0.0
+        self._build_sequence_positions()
+
+    def _build_sequence_positions(self) -> None:
+        self._sequence_positions = ()
+        if (not self._sequence_plan_motion or not self._sequence_bounds
+                or self._sequence_rest_position is None or self._sequence_area is None):
+            return
+        home = self._sequence_rest_position
+        frame_minimum = [clamp_visible_position(QPoint(-100000000, -100000000), b, self._sequence_area)
+                         for b in self._sequence_bounds]
+        frame_maximum = [clamp_visible_position(QPoint(100000000, 100000000), b, self._sequence_area)
+                         for b in self._sequence_bounds]
+        cycle_start = min(self._sequence_cycle_start, len(frame_minimum)-1)
+        anchor = max(cycle_start, min(self._sequence_anchor_index, len(frame_minimum)-1))
+        # The next placement is approached while the preceding PNG is still
+        # painted. It must fit both images, otherwise current-frame clamping
+        # holds back the return and releases it as a jump at the PNG switch.
+        minimum, maximum = [], []
+        for index, (low, high) in enumerate(zip(frame_minimum, frame_maximum)):
+            if index > cycle_start and index != anchor:
+                previous_low, previous_high = frame_minimum[index-1], frame_maximum[index-1]
+                low = QPoint(max(low.x(), previous_low.x()), max(low.y(), previous_low.y()))
+                high = QPoint(min(high.x(), previous_high.x()), min(high.y(), previous_high.y()))
+            minimum.append(low)
+            maximum.append(high)
+        positions = []
+        for coordinate in ('x', 'y'):
+            low = [getattr(p, coordinate)() for p in minimum]
+            high = [getattr(p, coordinate)() for p in maximum]
+            target = getattr(home, coordinate)()
+            def segment(start, stop):
+                return plan_axis(self._sequence_times[start:stop], low[start:stop], high[start:stop],
+                                 target, start=target, end=target, speed=120 * self._scene_scale)
+            if anchor > cycle_start:
+                values = segment(cycle_start, anchor+1)[:-1] + segment(anchor, len(low))
+            else:
+                values = segment(cycle_start, len(low))
+            # Entry images stay cached but never participate in later cycles.
+            # Preserve the full frame cache's index mapping for the painter.
+            values = (values[0],) * cycle_start + values
+            positions.append(values)
+        self._sequence_positions = tuple(QPointF(x, y) for x, y in zip(*positions))
+
+    def set_frame_progress(self, fraction: float) -> None:
+        """Interpolate cached placement on the GUI clock, including between PNGs."""
+        fraction = max(0.0, min(1.0, fraction))
+        self._sequence_fraction = fraction
+        if (not self._sequence_positions or self._press_global is not None
+                or self.animation.state in {AnimationState.DRAGGING, AnimationState.RETURNING}):
+            return
+        index = self._sequence_index
+        start = self._sequence_positions[index]
+        end = self._sequence_positions[min(index+1, len(self._sequence_positions)-1)]
+        if index == self._sequence_anchor_index and self._sequence_anchor_fraction:
+            # A drop/resize can happen partway through a PNG's display time.
+            # Continue from that instant rather than replaying its old fraction
+            # against the newly chosen home on the first resumed GUI tick.
+            remaining = 1.0 - self._sequence_anchor_fraction
+            fraction = (max(0.0, fraction - self._sequence_anchor_fraction) / remaining
+                        if remaining > 1e-9 else 0.0)
+        desired = (start * (1-fraction) + end * fraction).toPoint()
+        self.move(clamp_visible_position(desired, self.character_placement_bounds, self._sequence_area))
+
+    @property
+    def frame_home_position(self) -> QPoint:
+        return QPoint(self._sequence_rest_position if self._sequence_rest_position is not None else self.pos())
+
+    def place_frame_home(self) -> None:
+        """Relocate a faded-out frame before showing the static destination."""
+        home = self.frame_home_position
+        bounds = self._sequence_bounds[-1] if self._sequence_bounds else self.character_placement_bounds
+        area = self._sequence_area or work_area(screen_for_rect(bounds.translated(home)))
+        if self._visible_alpha_rect.isEmpty() and self.isVisible():
+            self.repaint()
+        self.move(clamp_visible_position(home, bounds, area))
+        self._edge_recovery = None
 
     def set_frame_index(self, index: int) -> None:
         """A frame switch swaps cached paint/hit images without I/O or scaling."""
         if not 0 <= index < len(self._sequence_sprites):
             return
+        if index != self._sequence_index:
+            self._sequence_anchor_fraction = 0.0
         self._sequence_index = index
         self._sprite, self._hit_image = self._sequence_sprites[index]
         self._visible_alpha_rect = self._sequence_alpha_rects[index]
+        self._character_placement_bounds = self._sequence_bounds[index]
+        self.set_frame_progress(0)
         if self.bubble.isVisible():
             self.bubble.reposition()
         self.update()
 
-    def clear_frame_sequence(self) -> None:
+    def clear_frame_sequence(self, *, smooth_position: bool = False) -> None:
         if self._sequence_frames:
             self._sequence_frames = self._sequence_sprites = ()
             self._sequence_alpha_rects = ()
             self._sequence_index = 0
+            self._sequence_cycle_start = 0
+            self._sequence_fraction = self._sequence_anchor_fraction = 0.0
+            self._sequence_bounds = self._sequence_positions = self._sequence_times = ()
             self._layout_character()
             self._constrain_character()
+            self._restore_sequence_position(smooth=smooth_position)
+            self._sequence_area = None
             self.update()
+
+    def _restore_sequence_position(self, *, smooth: bool = False) -> None:
+        if self._sequence_rest_position is None:
+            return
+        if smooth:
+            self._begin_edge_recovery()
+            if self._edge_recovery is not None:
+                return
+        else:
+            home = self._sequence_rest_position
+            screen = screen_for_rect(self.character_placement_bounds.translated(home))
+            self.move(clamp_visible_position(home, self.character_placement_bounds, work_area(screen)))
+            self._edge_recovery = None
+        self._sequence_rest_position = None
 
     def character_contains(self, local: QPoint | QPointF) -> bool:
         source = self._part_source_position(local)
@@ -470,9 +658,13 @@ class PetWindow(QWidget):
 
     def _work_area_changed(self, *_args) -> None:
         self._edge_recovery = None
+        self._sequence_rest_position = None
+        self._sequence_area = None
         screen = screen_for_rect(self.character_placement_bounds.translated(self.pos()))
         self._fit_to_screen(screen)
         self._constrain_character(screen)
+        if self._sequence_frames:
+            self._remember_sequence_home(screen)
 
     def _on_frame(self) -> None:
         seconds = self._clock.restart() / 1000.0
@@ -497,10 +689,12 @@ class PetWindow(QWidget):
 
     def _begin_edge_recovery(self) -> None:
         """Reserve upcoming poses smoothly after the frozen frame touched an edge."""
-        screen = screen_for_rect(self.visible_character_rect.translated(self.pos()))
+        home = (self._sequence_rest_position if not self._sequence_frames
+                and self._sequence_rest_position is not None else self.pos())
+        screen = screen_for_rect(self.character_placement_bounds.translated(home))
         area = work_area(screen)
         start = QPoint(self.pos())
-        target = clamp_visible_position(start, self.character_placement_bounds, area)
+        target = clamp_visible_position(home, self.character_placement_bounds, area)
         self._edge_recovery = (start, target, 0.0, area) if target != start else None
 
     def _advance_edge_recovery(self, seconds: float) -> None:
@@ -516,6 +710,8 @@ class PetWindow(QWidget):
         # inside the work area even before the union-safe target is reached.
         self.move(clamp_visible_position(desired, self.visible_character_rect, area))
         self._edge_recovery = (start, target, elapsed, area) if progress < 1.0 else None
+        if self._edge_recovery is None and not self._sequence_frames:
+            self._sequence_rest_position = None
 
     def paintEvent(self, event) -> None:
         # Unpainted pixels stay alpha=0: Windows lets clicks reach windows below.
@@ -541,6 +737,27 @@ class PetWindow(QWidget):
         else:
             painter.drawPixmap(self._sprite_rect.topLeft(), self._sprite)
 
+    def _update_hover_hint(self, local: QPoint | QPointF) -> None:
+        """Describe the existing hit target; never create another input surface."""
+        if self._press_global is not None:
+            return
+        if not self.character_contains(QPointF(local).toPoint()):
+            text = ""
+        else:
+            part = self._part_at(local)
+            if part in ("left_ear", "right_ear"):
+                text = "摸摸耳朵 · 拖动移动 · 右键更多"
+            elif part == "tail":
+                text = "戳戳尾巴 · 拖动移动 · 右键更多"
+            else:
+                text = "单击聊天 · 拖动移动 · 右键更多"
+        if self.toolTip() != text:
+            self.setToolTip(text)
+
+    def leaveEvent(self, event) -> None:
+        self.setToolTip("")
+        super().leaveEvent(event)
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.character_contains(event.position().toPoint()):
             self._press_global = event.globalPosition().toPoint()
@@ -553,13 +770,16 @@ class PetWindow(QWidget):
             self._pressed_part = self._part_at(event.position())
             self._edge_recovery = None
             self.animation.start_dragging()
+            self.interaction_started.emit()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            self.setToolTip("")
             event.accept()
             return
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self._press_global is None or not event.buttons() & Qt.MouseButton.LeftButton:
+            self._update_hover_hint(event.position())
             super().mouseMoveEvent(event)
             return
         global_pos = event.globalPosition().toPoint()
@@ -567,6 +787,11 @@ class PetWindow(QWidget):
         if delta.manhattanLength() >= QApplication.startDragDistance():
             self._dragged = True
         if self._dragged:
+            # A real drag establishes a new resting placement. A click alone
+            # must not discard the home of an automatically shifted clip.
+            self._sequence_rest_position = None
+            self._sequence_area = None
+            self._sequence_positions = ()
             screen = screen_for_point(global_pos)
             self._fit_to_screen(screen)
             self.move(clamp_visible_position(
@@ -587,10 +812,22 @@ class PetWindow(QWidget):
             self._dragged = False
             self.animation.finish_dragging()
             self._begin_edge_recovery()
+            if self._sequence_frames and self._sequence_rest_position is None:
+                # Choose the settled drop as the new home, then plan only
+                # around that anchor; never replay a pre-drag return path.
+                target = self._edge_recovery[1] if self._edge_recovery is not None else self.pos()
+                self._sequence_rest_position = QPoint(target)
+                self._sequence_area = work_area(screen_for_point(event.globalPosition().toPoint()))
+                self._sequence_anchor_index = self._sequence_index
+                self._sequence_anchor_fraction = self._sequence_fraction
+                self._build_sequence_positions()
             self.setCursor(Qt.CursorShape.OpenHandCursor)
+            self._update_hover_hint(event.position())
             if clicked and pressed_part is not None:
                 if self._part_at(event.position()) == pressed_part:
-                    self._part_interaction.trigger(pressed_part)
+                    if self.part_interaction_active:
+                        self._part_interaction.trigger(pressed_part)
+                    self.part_clicked.emit(pressed_part)
                     self.update()
             elif clicked:
                 expression = "happy" if self._next_click_happy else "surprised"
@@ -621,7 +858,7 @@ class PetWindow(QWidget):
             self._menu.close()
             self._menu.deleteLater()
         self._menu = QMenu(self)
-        self._menu.addAction("打开调试面板", self.debug_requested.emit)
+        self._menu.addAction("设置", self.debug_requested.emit)
         self._menu.addAction("打开聊天窗口", self.chat_requested.emit)
         if self._eye_tracking.has_rigs:
             # A session-only opt-out keeps this visual trial easy to disable.

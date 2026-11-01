@@ -97,7 +97,7 @@ class ScreenObserverTests(unittest.TestCase):
 
     def test_other_aura_instance_windows_are_blocked_before_capture(self):
         titles = ("AURA · 鲸鱼娘桌宠", "鲸鱼娘 · 调试面板 · 2026.10.30-r7",
-                  "和鲸鱼娘聊天", "鲸鱼娘 · 长期记忆",
+                  "和鲸鱼娘聊天", "设置 · 鲸鱼娘", "鲸鱼娘 · 长期记忆",
                   "鲸鱼娘 · 调试面板 · 2026.10.30-r7 - 鲸鱼娘桌宠",
                   "确认删除会话 - 鲸鱼娘桌宠")
         for host in ("python.exe", "PythonW.EXE", "AURA-Desktop-Agent.exe"):
@@ -217,6 +217,81 @@ class ScreenObserverTests(unittest.TestCase):
             with self.subTest(info=info):
                 self.metadata.return_value = info
                 self.assertFalse(self.observer.is_current(observation, self.settings))
+        self.capture.assert_not_called()
+
+    def test_explicit_request_allows_valid_local_idle_but_automatic_stays_paused(self):
+        for idle in (self.settings.idle_pause_seconds, 1000000.0):
+            with self.subTest(idle=idle):
+                self.metadata.return_value = safe_info(idle_seconds=idle)
+                self.capture.reset_mock()
+                automatic = self.observer.observe(self.settings)
+                self.assertIsNone(automatic.image)
+                self.capture.assert_not_called()
+                explicit = self.observer.observe_explicit(self.settings)
+                self.assertEqual(explicit.blocked_code, "")
+                self.assertEqual((explicit.image.width(), explicit.image.height()), (640, 360))
+                self.capture.assert_called_once()
+                self.assertTrue(self.observer.is_current_explicit(explicit, self.settings))
+                self.assertFalse(self.observer.is_current(explicit, self.settings))
+
+    def test_disabled_explicit_capture_and_current_check_read_no_metadata(self):
+        disabled = replace(self.settings, enabled=False)
+        result = self.observer.observe_explicit(disabled)
+        self.assertEqual(result.blocked_code, "disabled")
+        self.assertIsNone(result.image)
+        self.assertFalse(self.observer.is_current_explicit(Observation(safe_info(), synthetic_image()), disabled))
+        self.metadata.assert_not_called()
+        self.capture.assert_not_called()
+
+    def test_explicit_request_never_bypasses_privacy_own_window_or_invalid_idle(self):
+        blocked = [safe_info(pid=999), safe_info(pid=12345, process_name="python.exe",
+                   title="AURA \u00b7 \u9cb8\u9c7c\u5a18\u684c\u5ba0"),
+                   safe_info(process_name="KeePassXC.EXE"), safe_info(title="Password SYNTHETIC-PRIVATE"),
+                   ForegroundInfo(), safe_info(available=False), safe_info(hwnd=0), safe_info(title=" ")]
+        blocked += [safe_info(idle_seconds=value) for value in (float("nan"), float("inf"), -1, True, None, "unknown")]
+        for info in blocked:
+            with self.subTest(info=info):
+                self.capture.reset_mock()
+                self.metadata.return_value = info
+                result = self.observer.observe_explicit(self.settings)
+                self.assertIsNone(result.image)
+                self.assertIn(result.blocked_code, {"own_window", "privacy"})
+                self.assertNotIn("SYNTHETIC-PRIVATE", result.blocked_reason)
+                self.capture.assert_not_called()
+
+    def test_explicit_capture_rechecks_window_and_privacy_after_pixels(self):
+        before = safe_info(idle_seconds=1000000)
+        for after in (safe_info(hwnd=101, idle_seconds=1000000), safe_info(title="Another document", idle_seconds=1000000),
+                      safe_info(pid=999), safe_info(process_name="bitwarden.exe"), safe_info(title="Password"),
+                      safe_info(available=False), safe_info(idle_seconds=float("nan"))):
+            with self.subTest(after=after):
+                self.metadata.side_effect = [before, after]
+                result = self.observer.observe_explicit(self.settings)
+                self.assertIsNone(result.image)
+                self.assertIn(result.blocked_code, {"own_window", "context_changed"})
+        self.metadata.side_effect = [before, safe_info(idle_seconds=2000000)]
+        self.assertIsNotNone(self.observer.observe_explicit(self.settings).image)
+
+    def test_explicit_capture_still_rejects_black_null_and_nonimage_pixels(self):
+        black = synthetic_image(); black.fill(QColor("black"))
+        self.metadata.return_value = safe_info(idle_seconds=1000000)
+        for image in (black, QImage(), None, "not an image"):
+            with self.subTest(image_type=type(image).__name__):
+                self.capture.return_value = image
+                observed = self.observer.observe_explicit(self.settings)
+                self.assertIsNone(observed.image)
+                self.assertEqual(observed.blocked_code, "capture_unavailable")
+
+    def test_explicit_current_validation_keeps_all_identity_and_privacy_guards(self):
+        observation = Observation(safe_info(idle_seconds=1000000), synthetic_image(100, 100))
+        self.metadata.return_value = observation.info
+        self.assertTrue(self.observer.is_current_explicit(observation, self.settings))
+        for info in (safe_info(hwnd=101), safe_info(pid=201), safe_info(title="Different document"),
+                     safe_info(pid=999), safe_info(process_name="bitwarden.exe"), safe_info(title="Password"),
+                     safe_info(available=False), safe_info(idle_seconds=float("inf")), safe_info(idle_seconds=-1)):
+            with self.subTest(info=info):
+                self.metadata.return_value = info
+                self.assertFalse(self.observer.is_current_explicit(observation, self.settings))
         self.capture.assert_not_called()
 
 

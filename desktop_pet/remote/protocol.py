@@ -97,15 +97,23 @@ def decode_payload(payload: bytes) -> dict:
     return value
 
 
-async def read_frame(recv: Any, *, max_frame_bytes: int = MAX_FRAME_BYTES) -> dict:
+async def read_frame(recv: Any, *, max_frame_bytes: int = MAX_FRAME_BYTES, on_stage=None) -> dict:
     """Read a single frame; reject its length before allocating the payload."""
+    if on_stage is not None:
+        on_stage("header_wait")
     header = await recv.read_exact(4)
+    if on_stage is not None:
+        on_stage("header_read")
     if len(header) != 4:
         raise ProtocolError("invalid_frame", "Incomplete frame header.")
     size = struct.unpack(">I", header)[0]
     if size == 0 or size > min(max_frame_bytes, MAX_FRAME_BYTES):
         raise ProtocolError("frame_too_large", "Frame exceeds the permitted size.")
+    if on_stage is not None:
+        on_stage("payload_wait")
     payload = await recv.read_exact(size)
+    if on_stage is not None:
+        on_stage("payload_read")
     if len(payload) != size:
         raise ProtocolError("invalid_frame", "Incomplete frame payload.")
     return decode_payload(payload)

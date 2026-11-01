@@ -1,18 +1,169 @@
 """Conversation history, screen-event cards and synchronized chat views."""
 
 from html import escape
+import base64
+from datetime import datetime
+import json
+import math
 from pathlib import Path
 import re
 from urllib.parse import quote, unquote
 
-from PySide6.QtCore import Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QFont, QInputMethodEvent, QKeyEvent, QKeySequence, QShortcut, QTextOption
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QSize, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QFont, QImage, QImageReader, QInputMethodEvent, QKeyEvent, QKeySequence, QPainter, QPixmap, QShortcut, QTextOption
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog, QLabel,
+    QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QHBoxLayout, QInputDialog, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QMenu, QMessageBox, QPlainTextEdit,
-    QPushButton, QSizePolicy, QSpinBox, QSplitter, QTextBrowser, QToolButton,
+    QPushButton, QSizePolicy, QSplitter, QTextBrowser, QToolButton,
     QVBoxLayout, QWidget, QWidgetAction,
 )
+
+from ..api_client import ApiError
+from ..async_tasks import TaskRunner
+from ..chat_images import IMAGE_ERRORS, IMAGE_ID, MAX_CHAT_IMAGE_BYTES
+from ..agent_presentation import public_agent_metadata
+
+
+def _execution_text(value):
+    if not isinstance(value, str):
+        return ""
+    value = re.sub(r"data:[^\s,<>\"']{0,160},[^\s<>\"']*", "[已隐藏内嵌数据]", value, flags=re.I)
+    value = re.sub(r"\bsk-[A-Za-z0-9_-]{12,}", "[已隐藏密钥]", value)
+    value = re.sub(r"\bBearer\s+[A-Za-z0-9._~+/=-]+", "Bearer [已隐藏密钥]", value, flags=re.I)
+    return re.sub(r"\b(?:api[_ -]?key|access[_ -]?token|password)\s*[:=]\s*(?:\"[^\"\n]*\"|'[^'\n]*'|[^\s,;]+)", "[已隐藏凭据]", value, flags=re.I)
+
+
+def _execution_count(value):
+    if isinstance(value, int) and not isinstance(value, bool):
+        return min(max(0, value), 2 ** 53 - 1)
+    return int(value) if isinstance(value, float) and math.isfinite(value) and value >= 0 else 0
+
+
+def safe_execution(value, redactor=None):
+    """Only public execution fields reach either local renderer, never reasoning."""
+    if (not isinstance(value, dict) or type(value.get("version")) is not int or value.get("version") != 1
+            or not isinstance(value.get("state"), str) or value.get("state") not in
+            {"running", "completed", "failed", "cancelled", "needs_user", "interrupted"}):
+        return None
+    started = value.get("started_at", "")
+    try:
+        datetime.fromisoformat(started.replace("Z", "+00:00"))
+    except (TypeError, ValueError, AttributeError):
+        started = ""
+    events = []
+    for index, event in enumerate(value.get("events", []) if isinstance(value.get("events"), list) else []):
+        if (not isinstance(event, dict) or not isinstance(event.get("kind"), str)
+                or event.get("kind") not in {"progress", "tool", "computer", "summary"}
+                or not isinstance(event.get("status"), str) or event.get("status") not in {"running", "completed", "failed"}):
+            continue
+        label, detail = _execution_text(event.get("label")), _execution_text(event.get("detail"))
+        if not label or re.match(r"\s*(?:thought|analysis|reasoning(?:_content)?)\s*:", label, re.I):
+            continue
+        row = {"id": _execution_text(event.get("id")) or f"event-{index}", "elapsed_ms": _execution_count(event.get("elapsed_ms")),
+               "kind": event["kind"], "status": event["status"], "label": label}
+        if detail and not re.match(r"\s*(?:thought|analysis|reasoning(?:_content)?)\s*:", detail, re.I):
+            row["detail"] = detail
+        events.append(row)
+    result = {"version": 1, "state": value["state"], "started_at": started,
+              "duration_ms": _execution_count(value.get("duration_ms")), "events": events}
+    context = value.get("context")
+    if isinstance(context, dict):
+        counts = context.get("source_counts")
+        counts = counts if isinstance(counts, dict) else {}
+        messages = context.get("messages")
+        messages = messages if isinstance(messages, list) else []
+        result["context"] = {
+            "model": _execution_text(context.get("model")), "policy": "manual" if context.get("policy") == "manual" else "model",
+            "agent_model": _execution_text(context.get("agent_model")), "gui_model": _execution_text(context.get("gui_model")),
+            "history_messages": _execution_count(context.get("history_messages")),
+            "estimated_input_tokens": _execution_count(context.get("estimated_input_tokens")),
+            "model_context_tokens": _execution_count(context.get("model_context_tokens")) or None,
+            "output_tokens": _execution_count(context.get("output_tokens")) or None,
+            "source_counts": {key: _execution_count(count) for key, count in counts.items()
+                              if isinstance(key, str) and re.fullmatch(r"[a-z][a-z_]{0,39}", key)},
+            "messages": [{"role": message["role"], "content": _execution_text(message["content"])} for message in messages
+                         if isinstance(message, dict) and isinstance(message.get("role"), str)
+                         and message.get("role") in {"system", "developer", "user", "assistant", "tool"}
+                         and isinstance(message.get("content"), str)],
+        }
+    if callable(redactor):
+        try:
+            # One pass reads configured secret values once, rather than once
+            # per message/event on the GUI thread. The result remains JSON data.
+            result = json.loads(redactor(json.dumps(result, ensure_ascii=False)))
+        except Exception:
+            return None
+    return result
+
+
+def _duration_text(milliseconds):
+    seconds = max(0, int(milliseconds) // 1000)
+    return f"{seconds}秒" if seconds < 60 else f"{seconds // 60}分" + (f"{seconds % 60}秒" if seconds % 60 else "")
+
+
+def _read_image_preview(controller, reference, maximum):
+    """Read/decode just the clicked attachment, outside the Qt UI thread."""
+    image = controller.get_message_image(*reference)
+    return _decode_image_preview(image, maximum)
+
+
+def _decode_image_preview(image, maximum):
+    try:
+        encoded = image["data_base64"]
+        if not isinstance(encoded, str) or len(encoded) > ((MAX_CHAT_IMAGE_BYTES + 2) // 3) * 4:
+            raise ValueError("invalid preview")
+        data = base64.b64decode(encoded, validate=True)
+        if not data or len(data) > MAX_CHAT_IMAGE_BYTES:
+            raise ValueError("invalid preview")
+        buffer = QBuffer()
+        buffer.setData(QByteArray(data))
+        buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+        reader = QImageReader(buffer)
+        reader.setAutoTransform(True)
+        size = reader.size()
+        if (bytes(reader.format()).lower() not in {b"png", b"jpeg", b"webp"}
+                or not size.isValid() or size.width() * size.height() > 16_000_000 or reader.imageCount() > 1):
+            raise ValueError("invalid preview")
+        if size.width() > maximum.width() or size.height() > maximum.height():
+            reader.setScaledSize(size.scaled(maximum, Qt.AspectRatioMode.KeepAspectRatio))
+        decoded = reader.read()
+        if decoded.isNull():
+            raise ValueError("invalid preview")
+        if decoded.width() > maximum.width() or decoded.height() > maximum.height():
+            decoded = decoded.scaled(maximum, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        return decoded
+    except Exception:
+        raise ApiError("image_unavailable", IMAGE_ERRORS["image_unavailable"]) from None
+
+
+def _image_thumbnail(decoded):
+    """Fresh bounded PNG pixels only, with no original file metadata."""
+    clean = QImage(decoded.size(), QImage.Format.Format_RGBA8888)
+    clean.fill(0)
+    painter = QPainter(clean)
+    painter.drawImage(0, 0, decoded)
+    painter.end()
+    data = QByteArray()
+    buffer = QBuffer(data)
+    if not buffer.open(QIODevice.OpenModeFlag.WriteOnly) or not clean.save(buffer, "PNG") or data.size() > 2 * 1024 * 1024:
+        raise ApiError("image_unavailable", IMAGE_ERRORS["image_unavailable"])
+    return {"src": "data:image/png;base64," + base64.b64encode(bytes(data)).decode("ascii"),
+            "width": clean.width(), "height": clean.height()}
+
+
+class _ImagePreviewLabel(QLabel):
+    def set_image(self, image):
+        self._image = QPixmap.fromImage(image)
+        self._fit_image()
+
+    def _fit_image(self):
+        if hasattr(self, "_image"):
+            self.setPixmap(self._image.scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                                              Qt.TransformationMode.SmoothTransformation))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._fit_image()
 
 
 def validated_external_url(value):
@@ -83,10 +234,25 @@ class ChatPanel(QWidget):
         self.memory_panel = None
         self._sessions_supported = hasattr(chat_controller, "open_conversation")
         self._event_messages = {}
+        self._execution_messages = {}
+        self._execution_expanded = {}
+        self._execution_context_expanded = set()
+        self._image_messages = {}
+        self._image_preview_dialog = None
+        self._image_preview_reference = None
+        self._image_preview_loading = False
+        self._image_runner = TaskRunner(self)
         self._pending_focus = None
         self._displayed_conversation_id = None
         self._rendered_conversation_id = None
         self._drafts = {}
+        self._staged_images = {}
+        self._image_preparing = False
+        self._image_stage_error = ""
+        self._image_stage_serial = 0
+        self._image_stage_conversation_id = None
+        self._image_stage_runner = TaskRunner(self)
+        self._staged_preview_key = None
         self._sidebar_user_choice = None
         self._sidebar_width = 215
         self._chat_font_size = getattr(chat_controller, "reading_font_size", 16)
@@ -110,6 +276,7 @@ class ChatPanel(QWidget):
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setSizes([210, 480])
         row = QHBoxLayout()
+        self._native_header_row = row
         self.history_toggle = QPushButton("历史")
         self.history_toggle.setObjectName("toggleHistoryButton")
         self.history_toggle.setCheckable(True)
@@ -167,11 +334,6 @@ class ChatPanel(QWidget):
         self.tools_button.setMenu(self.tools_menu)
         row.addWidget(self.tools_button)
         layout.addLayout(row)
-        hint = QLabel("当前会话自动保存到本机 · 关闭窗口后可继续")
-        hint.setTextFormat(Qt.TextFormat.PlainText)
-        hint.setObjectName("hint")
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
         self.context_usage_label = QLabel(str(getattr(self.controller, "context_usage", "")), self)
         self.context_usage_label.setObjectName("contextUsage")
         self.context_usage_label.setTextFormat(Qt.TextFormat.PlainText)
@@ -217,9 +379,39 @@ class ChatPanel(QWidget):
         self.export_status_label.setWordWrap(True)
         self.export_status_label.hide()
         layout.addWidget(self.export_status_label)
+        self.image_stage_row = QWidget()
+        self.image_stage_row.setObjectName("chatStagedImage")
+        image_stage_layout = QHBoxLayout(self.image_stage_row)
+        image_stage_layout.setContentsMargins(0, 0, 0, 0)
+        self.image_stage_preview = QLabel()
+        self.image_stage_preview.setObjectName("chatStagedImagePreview")
+        image_stage_layout.addWidget(self.image_stage_preview)
+        self.image_stage_label = QLabel()
+        self.image_stage_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.image_stage_label.setWordWrap(True)
+        image_stage_layout.addWidget(self.image_stage_label, 1)
+        self.image_remove_button = QPushButton("移除图片")
+        self.image_remove_button.setObjectName("removeChatImageButton")
+        self.image_remove_button.clicked.connect(self._remove_staged_image)
+        image_stage_layout.addWidget(self.image_remove_button)
+        self.image_stage_row.hide()
+        layout.addWidget(self.image_stage_row)
+        mode_row = QHBoxLayout()
+        self.agent_mode_selector = QComboBox()
+        self.agent_mode_selector.setObjectName("chatModeSelector")
+        self.agent_mode_selector.setAccessibleName("对话模式")
+        self.agent_mode_selector.addItem("聊天", False)
+        self.agent_mode_selector.addItem("电脑 Agent", True)
+        self.agent_mode_selector.setToolTip("为当前对话选择模式；电脑 Agent 可使用已启用的电脑工具。")
+        self.agent_mode_selector.currentIndexChanged.connect(self._set_agent_mode)
+        mode_row.addWidget(self.agent_mode_selector)
+        self.agent_mode_hint = QLabel("当前对话持续使用电脑 Agent")
+        self.agent_mode_hint.setObjectName("chatModeHint")
+        mode_row.addWidget(self.agent_mode_hint, 1)
+        layout.addLayout(mode_row)
         self.input = MessageInput()
         self.input.setObjectName("chatInput")
-        self.input.setPlaceholderText("说点什么吧…  Enter 发送，Shift + Enter 换行")
+        self.input.setPlaceholderText("发消息…")
         input_font = QFont(reading_font)
         input_font.setPixelSize(15)
         self.input.setFont(input_font)
@@ -230,6 +422,11 @@ class ChatPanel(QWidget):
         self.status_label.setObjectName("chatStatus")
         self.status_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         footer.addWidget(self.status_label, 1)
+        self.image_select_button = QPushButton("添加图片")
+        self.image_select_button.setObjectName("selectChatImageButton")
+        self.image_select_button.setEnabled(callable(getattr(self.controller, "import_local_image", None)))
+        self.image_select_button.clicked.connect(self._select_image)
+        footer.addWidget(self.image_select_button)
         self.retry_button = QPushButton("重试")
         self.retry_button.setObjectName("retryChatButton")
         self.retry_button.clicked.connect(self._retry)
@@ -265,6 +462,10 @@ class ChatPanel(QWidget):
             self.controller.export_finished.connect(self._export_finished)
         if hasattr(self.controller, "context_usage_changed"):
             self.controller.context_usage_changed.connect(self._context_usage_changed)
+        if hasattr(self.controller, "execution_changed"):
+            self.controller.execution_changed.connect(self._render_messages)
+        if hasattr(self.controller, "conversation_invalidated"):
+            self.controller.conversation_invalidated.connect(self._invalidate_staged_image)
         self._context_usage_changed(str(getattr(self.controller, "context_usage", "")))
         self._install_shortcuts()
         if self._sessions_supported:
@@ -348,7 +549,7 @@ class ChatPanel(QWidget):
         # not spend another full line on them; the tooltip also exposes them.
         self.context_usage_label.setText(text)
         self.tools_button.setToolTip("长期记忆、上下文预算和当前会话操作" + ("\n" + text if text else ""))
-        self.context_budget_button.setToolTip(text or "限制每次模型请求的上下文总量")
+        self.context_budget_button.setToolTip(text or "上下文跟随当前模型；展开回复下方的“本次上下文”可查看实际携带的资料。")
 
     def _make_sidebar(self) -> QWidget:
         sidebar = QWidget()
@@ -404,7 +605,7 @@ class ChatPanel(QWidget):
         self.memory_button.setEnabled(self.memory_controller is not None or callable(self._memory_opener))
         self.memory_button.setToolTip("查看、搜索和删除 Mem0 长期记忆；独立于聊天记录。")
         self.memory_button.clicked.connect(self._open_memory)
-        self.context_budget_button = QPushButton("上下文预算")
+        self.context_budget_button = QPushButton("上下文：跟随模型")
         self.context_budget_button.setObjectName("contextBudgetButton")
         self.context_budget_button.setVisible(hasattr(self.controller, "update_context_budget"))
         self.context_budget_button.clicked.connect(self._show_context_budget)
@@ -412,41 +613,35 @@ class ChatPanel(QWidget):
 
     def _show_context_budget(self):
         budget = getattr(self.controller, "context_budget", None)
-        if budget is None:
-            return
-        dialog = QDialog(self)
-        dialog.setWindowTitle("上下文预算")
-        layout = QFormLayout(dialog)
-        hint = QLabel("限制每次请求的输入与输出总量；较早消息会让位于摘要、相关情境和当前问题。")
-        hint.setTextFormat(Qt.TextFormat.PlainText)
-        hint.setWordWrap(True)
-        layout.addRow(hint)
-        total = QSpinBox()
-        total.setObjectName("contextTotalTokens")
-        total.setRange(2048, 262144)
-        total.setSingleStep(1024)
-        total.setValue(budget.total_tokens)
-        reserve = QSpinBox()
-        reserve.setObjectName("contextOutputReserve")
-        reserve.setRange(128, 65536)
-        reserve.setSingleStep(256)
-        reserve.setValue(budget.output_reserve)
-        layout.addRow("总 Token 预算", total)
-        layout.addRow("输出预留", reserve)
-        error = QLabel()
-        error.setTextFormat(Qt.TextFormat.PlainText)
-        error.setWordWrap(True)
-        layout.addRow(error)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
-        buttons.rejected.connect(dialog.reject)
-        def save():
-            if self.controller.update_context_budget(total.value(), reserve.value()):
-                dialog.accept()
-            else:
-                error.setText(getattr(self.controller, "error", "预算无效，请保留足够的输入空间。"))
-        buttons.accepted.connect(save)
-        layout.addRow(buttons)
-        dialog.exec()
+        manual = getattr(budget, "mode", "model") == "manual"
+        QMessageBox.information(self, "本次上下文", ("当前保留手动兼容配置。\n" if manual else "上下文跟随当前模型，由模型服务管理窗口与输出长度。\n") +
+                                "每条回复下方的“本次上下文”可查看实际携带的消息和参考资料。\n" +
+                                str(getattr(self.controller, "context_usage", "")))
+
+    def _execution_html(self, message_id, execution):
+        expanded = self._execution_expanded.get(message_id, execution["state"] == "running")
+        operations = sum(event["kind"] in {"tool", "computer"} for event in execution["events"])
+        elapsed = "用时 " + _duration_text(execution["duration_ms"])
+        if operations:
+            elapsed += f" · {operations}项操作"
+        caption = {"failed": "未完成", "cancelled": "已停止", "needs_user": "需要你接手", "interrupted": "已中断", "running": "进行中"}.get(execution["state"], "")
+        href = "aura-execution:" + quote(message_id, safe="")
+        html = f'<p><a href="{escape(href, quote=True)}">{("▾" if expanded else "▸")} {escape(elapsed + (" · " + caption if caption else ""))}</a></p>'
+        if expanded:
+            html += '<p style="font-size:12px;color:#52677a">执行过程 · 公开的操作摘要</p>'
+            for event in execution["events"]:
+                html += '<p style="font-size:12px;color:#38566f">' + escape(_duration_text(event["elapsed_ms"]) + " · " + event["label"]) + '</p>'
+                if event.get("detail"):
+                    html += '<p style="font-size:12px;color:#607489">' + escape(event["detail"]).replace("\n", "<br>") + '</p>'
+        context = execution.get("context")
+        if context is not None:
+            html += '<p><a href="aura-context:' + quote(message_id, safe="") + '">本次上下文</a></p>'
+            if message_id in self._execution_context_expanded:
+                html += '<p style="font-size:12px;color:#52677a">模型：' + escape(context["model"] or "当前配置模型") + ' · ' + ("跟随模型" if context["policy"] == "model" else "手动兼容") + '<br>'
+                html += f'历史消息 {context["history_messages"]}条 · 估算输入 {context["estimated_input_tokens"]} tokens</p>'
+                for row in context["messages"]:
+                    html += '<p style="font-size:12px"><b>' + escape(row["role"]) + '</b><br>' + escape(row["content"]).replace("\n", "<br>") + '</p>'
+        return html
 
     def _render_conversations(self) -> None:
         active_id = getattr(self.controller, "current_conversation_id", "")
@@ -639,7 +834,35 @@ class ChatPanel(QWidget):
         changed_conversation = conversation_id != self._rendered_conversation_id
         cards = []
         self._event_messages = {}
-        for message in self.controller.messages:
+        self._image_messages = {}
+        self._execution_messages = {}
+        source_messages = self.controller.messages
+        execution_views = {}
+        redactor = getattr(self.controller, "_redact_known_secrets", None)
+        for message in source_messages:
+            metadata = message.get("metadata")
+            if isinstance(metadata, dict) and message.get("conversation_id", conversation_id) == conversation_id:
+                execution = safe_execution(metadata.get("execution"), redactor)
+                if execution is not None:
+                    execution_views[str(message.get("id", ""))] = execution
+        for index, message in enumerate(source_messages):
+            execution = execution_views.get(str(message.get("id", "")))
+            if message.get("role") == "user" and execution and execution["state"] in {"completed", "needs_user"}:
+                for following in source_messages[index + 1:]:
+                    if following.get("role") == "user":
+                        break
+                    if following.get("role") == "assistant" and following.get("source", "assistant") in {"", "assistant"}:
+                        execution_views.setdefault(str(following.get("id", "")), execution)
+                        break
+        owners = {}
+        for message in source_messages:
+            message_id = str(message.get("id", ""))
+            execution = execution_views.get(message_id)
+            if execution is not None:
+                key = execution["started_at"] or message_id
+                if key not in owners or message.get("role") == "assistant":
+                    owners[key] = message_id
+        for message in source_messages:
             role = message.get("role")
             if role not in ("user", "assistant"):
                 continue
@@ -648,11 +871,18 @@ class ChatPanel(QWidget):
             message_id = str(message.get("id", ""))
             anchor = f'<a name="message-{escape(message_id, quote=True)}"></a>' if message_id else ""
             badge = ""
-            status = message.get("metadata", {}).get("request_status", "")
+            metadata = message.get("metadata", {})
+            metadata = metadata if isinstance(metadata, dict) else {}
+            status = metadata.get("request_status", "")
             if is_user and status in {"failed", "cancelled", "interrupted", "pending"}:
+                agent = public_agent_metadata(message)
                 caption = {"failed": "回复失败", "cancelled": "已停止", "interrupted": "上次请求中断",
                            "pending": "等待回复"}[status]
+                if status == "failed" and agent["agent_error_code"]:
+                    caption = "任务超时" if agent["agent_error_code"] == "timeout" else "任务未完成"
                 badge = f' <span style="color:#9b3d30">{caption}</span>'
+                if agent["agent_error"]:
+                    badge += ' <span>' + escape(agent["agent_error"]) + '</span>'
                 if status != "pending" and message_id:
                     cid = str(getattr(self.controller, "current_conversation_id", ""))
                     retry_state = (self.controller.message_retry_state(cid, message_id)
@@ -660,7 +890,9 @@ class ChatPanel(QWidget):
                     if retry_state["available"]:
                         badge += f' <a href="aura-retry:{quote(cid, safe="")}:{quote(message_id, safe="")}">重试回复</a>'
                     elif retry_state.get("status"):
-                        badge += " <span>" + escape(retry_state["status"]) + "</span>"
+                        note = ("请先检查已完成的操作，再发送新消息继续。" if agent["agent_error_code"]
+                                else retry_state["status"])
+                        badge += " <span>" + escape(note) + "</span>"
             if message.get("source") in ("proactive_screen", "proactive_camera"):
                 camera = message.get("source") == "proactive_camera"
                 label, color = ("鲸鱼娘 · 来自摄像头" if camera else "鲸鱼娘 · 来自屏幕感知"), "#e8f5ef"
@@ -670,7 +902,23 @@ class ChatPanel(QWidget):
                     badge = f' <a href="{escape(href, quote=True)}">查看情境</a>'
             # All provider/user text is escaped. It cannot insert HTML, URLs or images.
             content = _message_html(str(message.get("content", "")))
-            selection = message.get("metadata", {}).get("selection_context")
+            execution = execution_views.get(message_id)
+            if execution is not None and owners.get(execution["started_at"] or message_id) == message_id:
+                self._execution_messages[message_id] = execution
+                trace_html = self._execution_html(message_id, execution)
+                content = content + trace_html if is_user else trace_html + content
+            image_id = metadata.get("image_id")
+            if is_user and "image_id" in metadata:
+                if message_id and isinstance(image_id, str) and IMAGE_ID.fullmatch(image_id):
+                    self._image_messages[message_id] = (conversation_id, message_id, image_id)
+                    href = "aura-image:" + quote(message_id, safe="")
+                    content += f'<p style="color:#52637a;font-size:13px">图片附件 · <a href="{escape(href, quote=True)}">查看图片</a></p>'
+                else:
+                    content += '<p style="color:#9b3d30;font-size:13px">图片附件不可用，请重新发送图片。</p>'
+            image_error = metadata.get("image_error_code")
+            if is_user and status == "failed" and isinstance(image_error, str) and image_error in IMAGE_ERRORS:
+                content += '<p style="color:#9b3d30;font-size:13px">' + escape(IMAGE_ERRORS[image_error]) + '</p>'
+            selection = metadata.get("selection_context")
             if is_user and isinstance(selection, dict):
                 source = escape(str(selection.get("title") or "网页选区"))
                 excerpt = escape(str(selection.get("text") or "")[:800]).replace("\n", "<br>")
@@ -683,20 +931,17 @@ class ChatPanel(QWidget):
                 f'<p style="margin-top:7px;margin-bottom:0;line-height:155%">{content}</p>'
                 '</td></tr></table><p style="font-size:6px;margin-top:0;margin-bottom:0">&nbsp;</p>'
             )
+        if self._image_preview_reference is not None:
+            reference = self._image_preview_reference
+            if self._image_messages.get(reference[1]) != reference and self._image_preview_dialog is not None:
+                self._image_preview_dialog.reject()
         if cards:
             html = "".join(cards)
         elif getattr(self.controller, "history_loading", False):
             html = ('<p style="color:#315b73;font-size:18px"><b>正在读取这段对话…</b></p>'
                     '<p style="color:#60758c">聊天记录和草稿会保留，请稍候。</p>')
         else:
-            settings_link = ('<a href="aura-settings:open">打开聊天服务设置</a>'
-                             if callable(self._settings_opener) else '在「API 设置」保存服务配置')
-            html = ('<p style="font-size:21px;color:#274b67"><b>今天想聊些什么？</b></p>'
-                    '<p style="color:#60758c;line-height:155%">还没有消息。可以问一个问题，'
-                    '也可以接着聊鲸鱼娘刚刚的屏幕评论。</p>'
-                    f'<p style="color:#60758c;line-height:155%">首次使用请{settings_link}。'
-                    '历史对话在左侧，新对话独立开始。</p>'
-                    '<p style="color:#7a8d9d;font-size:13px">Enter 发送 · Shift+Enter 换行 · Ctrl+N 新对话 · Ctrl+F 搜索</p>')
+            html = '<p style="font-size:21px;color:#202020"><b>今天想聊些什么？</b></p>'
         self.transcript.setHtml(f'<html><body style="font-size:{self._chat_font_size}px;line-height:155%">{html}</body></html>')
         self._rendered_conversation_id = conversation_id
         scroll.setValue(scroll.maximum() if near_latest or changed_conversation else min(previous_scroll, scroll.maximum()))
@@ -709,6 +954,22 @@ class ChatPanel(QWidget):
         self.close_event_button.hide()
 
     def _open_event(self, url) -> None:
+        if url.scheme() in {"aura-execution", "aura-context"}:
+            message_id = unquote(url.toString().split(":", 1)[1])
+            execution = self._execution_messages.get(message_id)
+            if execution is not None:
+                if url.scheme() == "aura-execution":
+                    self._execution_expanded[message_id] = not self._execution_expanded.get(message_id, execution["state"] == "running")
+                elif message_id in self._execution_context_expanded:
+                    self._execution_context_expanded.remove(message_id)
+                else:
+                    self._execution_context_expanded.add(message_id)
+                self._render_messages()
+            return
+        if url.scheme() == "aura-image":
+            message_id = unquote(url.toString().split(":", 1)[1])
+            self._open_image_preview(message_id)
+            return
         if url.scheme() in {"http", "https"}:
             valid = validated_external_url(url.toString())
             if valid is not None:
@@ -731,6 +992,67 @@ class ChatPanel(QWidget):
             return
         message_id = unquote(url.toString().split(":", 1)[1])
         self._show_event(message_id)
+
+    def _open_image_preview(self, message_id):
+        reference = self._image_messages.get(message_id)
+        if (reference is None or reference[0] != getattr(self.controller, "current_conversation_id", None)
+                or not callable(getattr(self.controller, "get_message_image", None))):
+            return
+        if self._image_preview_loading:
+            if self._image_preview_dialog is not None:
+                self._image_preview_dialog.raise_()
+            return
+        if self._image_preview_dialog is not None:
+            self._image_preview_dialog.reject()
+        available = self.screen().availableGeometry().size()
+        maximum = QSize(max(160, min(1000, available.width() - 96)),
+                        max(120, min(760, available.height() - 180)))
+        dialog = QDialog(self)
+        dialog.setObjectName("chatImagePreview")
+        dialog.setWindowTitle("图片附件")
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dialog.setMaximumSize(maximum.width() + 48, maximum.height() + 120)
+        dialog.resize(max(320, maximum.width()), max(240, maximum.height()))
+        layout = QVBoxLayout(dialog)
+        status = QLabel("正在读取图片…")
+        status.setObjectName("chatImagePreviewStatus")
+        status.setTextFormat(Qt.TextFormat.PlainText)
+        status.setWordWrap(True)
+        layout.addWidget(status)
+        image = _ImagePreviewLabel()
+        image.setObjectName("chatImagePreviewImage")
+        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        image.setMinimumSize(100, 100)
+        image.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        layout.addWidget(image, 1)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.button(QDialogButtonBox.StandardButton.Close).setText("关闭")
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        self._image_preview_dialog = dialog
+        self._image_preview_reference = reference
+        self._image_preview_loading = True
+
+        def closed(_result):
+            if self._image_preview_dialog is dialog:
+                self._image_preview_dialog = None
+                self._image_preview_reference = None
+        dialog.finished.connect(closed)
+
+        def loaded(result, error):
+            self._image_preview_loading = False
+            if self._image_preview_dialog is not dialog:
+                return
+            if self._image_messages.get(message_id) != reference:
+                dialog.reject()
+                return
+            if error:
+                status.setText(error if error in IMAGE_ERRORS.values() else IMAGE_ERRORS["image_unavailable"])
+                return
+            image.set_image(result)
+            status.setText("图片附件")
+        dialog.open()
+        self._image_runner.submit(lambda: _read_image_preview(self.controller, reference, maximum), loaded)
 
     def _show_event(self, message_id: str) -> None:
         message = self._event_messages.get(message_id)
@@ -775,7 +1097,21 @@ class ChatPanel(QWidget):
     def _update_buttons(self) -> None:
         busy = self.controller.busy
         loading = getattr(self.controller, "history_loading", False)
-        self.send_button.setEnabled(bool(self.input.toPlainText().strip()) and not busy and not loading)
+        mode_supported = callable(getattr(self.controller, "set_agent_mode", None))
+        agent_mode = bool(getattr(self.controller, "agent_mode", False))
+        self.agent_mode_selector.setVisible(mode_supported)
+        self.agent_mode_hint.setVisible(mode_supported and agent_mode)
+        self.agent_mode_selector.setEnabled(not busy and not loading)
+        self.agent_mode_selector.blockSignals(True)
+        self.agent_mode_selector.setCurrentIndex(1 if agent_mode else 0)
+        self.agent_mode_selector.blockSignals(False)
+        self.input.setPlaceholderText("告诉电脑 Agent 下一步…" if agent_mode else "发消息…")
+        self.stop_button.setText("停止任务" if agent_mode else "停止生成")
+        staged = self._current_staged_image()
+        self.send_button.setEnabled(bool(self.input.toPlainText().strip() or staged) and not busy and not loading and not self._image_preparing)
+        self.image_select_button.setEnabled(callable(getattr(self.controller, "import_local_image", None)) and not busy and not loading and not self._image_preparing)
+        self.image_remove_button.setEnabled(not busy and not self._image_preparing)
+        self._render_staged_image()
         self.clear_button.setEnabled(bool(self.controller.messages) and not busy and not loading)
         self.retry_button.setEnabled(not busy and not loading)
         if getattr(self.controller, "error_action", "") == "retry" and hasattr(self.controller, "message_retry_state"):
@@ -794,13 +1130,114 @@ class ChatPanel(QWidget):
             hasattr(self.controller, "export_conversation") and bool(self.controller.messages)
             and not busy and not loading and not getattr(self.controller, "export_busy", False))
 
+    def _set_agent_mode(self, index) -> None:
+        setter = getattr(self.controller, "set_agent_mode", None)
+        if callable(setter) and not self.controller.busy and not getattr(self.controller, "history_loading", False):
+            setter(bool(self.agent_mode_selector.itemData(index)))
+        self._update_buttons()
+
     def _send(self) -> None:
         text = self.input.toPlainText().strip()
-        if not text or self.controller.busy or getattr(self.controller, "history_loading", False):
+        staged = self._current_staged_image()
+        if (not text and not staged or self._image_preparing
+                or self.controller.busy or getattr(self.controller, "history_loading", False)):
             return
-        if self.controller.send(text):
+        options = {"image_id": staged["image_id"]} if staged else {}
+        if callable(getattr(self.controller, "set_agent_mode", None)):
+            options["agent_mode"] = bool(getattr(self.controller, "agent_mode", False))
+        if self.controller.send(text or "请描述这张图片。", **options):
+            self._remove_staged_image()
             self.input.clear()
             self.input.setFocus()
+
+    def _current_staged_image(self):
+        return self._staged_images.get(str(getattr(self.controller, "current_conversation_id", "")))
+
+    def _image_stage_changed(self):
+        self._update_buttons()
+        publish = getattr(self, "_queue_web_state", None)
+        if callable(publish):
+            publish()
+
+    def _render_staged_image(self):
+        staged = self._current_staged_image()
+        self.image_stage_row.setVisible(bool(staged or self._image_preparing or self._image_stage_error))
+        self.image_stage_label.setText("正在准备图片…" if self._image_preparing else
+            self._image_stage_error or (staged["filename"] if staged else ""))
+        self.image_remove_button.setVisible(bool(staged))
+        preview_key = (staged["conversationId"], staged["image_id"]) if staged else None
+        if preview_key == self._staged_preview_key:
+            return
+        self._staged_preview_key = preview_key
+        self.image_stage_preview.clear()
+        if staged and isinstance(staged.get("thumbnail"), dict):
+            data = base64.b64decode(staged["thumbnail"]["src"].split(",", 1)[1])
+            image = QPixmap()
+            if image.loadFromData(data, "PNG"):
+                self.image_stage_preview.setPixmap(image.scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                                                               Qt.TransformationMode.SmoothTransformation))
+
+    def _select_image(self):
+        if self._image_preparing or self.controller.busy or getattr(self.controller, "history_loading", False):
+            return False
+        if not callable(getattr(self.controller, "import_local_image", None)):
+            return False
+        cid = str(getattr(self.controller, "current_conversation_id", ""))
+        path, _ = QFileDialog.getOpenFileName(self, "选择聊天图片", "", "图片 (*.png *.jpg *.jpeg *.webp)")
+        if not path:
+            return False
+        return self._stage_local_image(path, cid)
+
+    def _stage_local_image(self, path, conversation_id):
+        """Only the native file picker supplies a path; never a web payload."""
+        if self._image_preparing or conversation_id != str(getattr(self.controller, "current_conversation_id", "")):
+            return False
+        self._image_stage_serial += 1
+        serial = self._image_stage_serial
+        self._image_preparing = True
+        self._image_stage_conversation_id = conversation_id
+        self._staged_images.pop(conversation_id, None)
+        self._image_stage_error = ""
+        self._image_stage_changed()
+
+        def read():
+            metadata, image = self.controller.import_local_image(path)
+            thumbnail = _image_thumbnail(_decode_image_preview(image, QSize(640, 640)))
+            return {"conversationId": conversation_id, "image_id": metadata["id"],
+                    **{key: metadata[key] for key in ("filename", "width", "height", "size")},
+                    "thumbnail": thumbnail}
+
+        def loaded(result, error):
+            if serial != self._image_stage_serial:
+                return
+            self._image_preparing = False
+            self._image_stage_conversation_id = None
+            invalid = (conversation_id in getattr(self.controller, "_deleted_conversations", set())
+                       or conversation_id in getattr(self.controller, "_invalidating_conversations", set()))
+            if not error and isinstance(result, dict) and not invalid:
+                self._staged_images[conversation_id] = result
+            elif conversation_id == str(getattr(self.controller, "current_conversation_id", "")):
+                self._image_stage_error = "无法准备图片；请选择有效的 PNG、JPEG 或 WebP 图片，最多 4 MiB、1600 万像素。"
+            self._image_stage_changed()
+
+        self._image_stage_runner.submit(read, loaded)
+        return True
+
+    def _invalidate_staged_image(self, conversation_id):
+        self._staged_images.pop(conversation_id, None)
+        if self._image_stage_conversation_id == conversation_id:
+            self._image_stage_serial += 1
+            self._image_preparing = False
+            self._image_stage_conversation_id = None
+        self._image_stage_changed()
+
+    def _remove_staged_image(self):
+        if self._image_preparing:
+            return False
+        self._staged_images.pop(str(getattr(self.controller, "current_conversation_id", "")), None)
+        self._image_stage_error = ""
+        self._image_stage_changed()
+        return True
 
     def _confirm_clear(self) -> None:
         if self.controller.busy or not self.controller.messages:

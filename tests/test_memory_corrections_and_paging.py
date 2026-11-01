@@ -36,7 +36,7 @@ class MemoryCorrectionAndPagingTests(unittest.TestCase):
             llm_credentials=CredentialStore(account="fixture-llm", backend=vault),
             embedding_credentials=CredentialStore(account="fixture-embedding", backend=vault))
         self.addCleanup(self.service.shutdown)
-        self.service.save_settings(replace(self.service.load_settings(), enabled=True, automatic=True,
+        self.service.save_settings(replace(self.service.load_settings(), enabled=True, automatic=True, embedding_provider="openai",
             embedding_base_url=self.provider.base_url, embedding_model="fixture-embedding", embedding_dimensions=8),
             embedding_key="fixture-embedding-key")
         self.user_id = self.service.load_settings().user_id

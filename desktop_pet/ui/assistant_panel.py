@@ -7,16 +7,32 @@ file dialogs and conversation actions. No API credentials enter the web page.
 from __future__ import annotations
 
 import json
+from collections import OrderedDict
+from copy import deepcopy
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import QObject, QSize, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QPushButton
 
-from .chat_panel import ChatPanel, validated_external_url
+from .chat_panel import ChatPanel, _read_image_preview, _image_thumbnail, safe_execution, validated_external_url
+from ..async_tasks import TaskRunner
+from ..chat_images import IMAGE_ERRORS, IMAGE_ID
+from ..agent_presentation import public_agent_metadata
 
 
 WEB_ROOT = Path(__file__).with_name("web_chat").resolve()
+THUMBNAIL_EDGE = 640
+THUMBNAIL_CACHE_ENTRIES = 64
+THUMBNAIL_CACHE_BYTES = 8 * 1024 * 1024
+THUMBNAIL_QUEUE_LIMIT = 64
+THUMBNAIL_WORKERS = 2
+
+
+def _read_image_thumbnail(controller, reference):
+    """Resolve an authorized message in a worker, returning fresh PNG pixels only."""
+    decoded = _read_image_preview(controller, reference, QSize(THUMBNAIL_EDGE, THUMBNAIL_EDGE))
+    return _image_thumbnail(decoded)
 ASSISTANT_STYLE = """
 QWidget#chatWindow, QWidget#chatPanel { background: #ffffff; color: #202734; }
 QLabel#assistantLoading { color: #596575; background: #ffffff; padding: 24px; }
@@ -35,6 +51,7 @@ QDialog QPushButton:hover { background: #eaf0f6; }
 
 class ChatBridge(QObject):
     stateChanged = Signal(str)
+    thumbnailReady = Signal(str)
 
     def __init__(self, panel):
         super().__init__(panel)
@@ -64,7 +81,10 @@ class AssistantChatPanel(ChatPanel):
     web_ready = Signal(bool)
 
     def __init__(self, *args, **kwargs):
+        self._settings_page_opener = kwargs.pop("settings_page_opener", None)
         super().__init__(*args, **kwargs)
+        if callable(self._settings_page_opener):
+            self._consolidate_native_settings()
         self.bridge = ChatBridge(self)
         self.web_view = None
         self._web_profile = None
@@ -74,10 +94,18 @@ class AssistantChatPanel(ChatPanel):
         self._focus_request = {"id": "", "serial": 0}
         self._web_drafts = self._drafts
         self._native_mode = False
+        self._thumbnail_runner = TaskRunner(self)
+        self._thumbnail_cache = OrderedDict()
+        self._thumbnail_cache_size = 0
+        self._thumbnail_queue = OrderedDict()
+        self._thumbnail_inflight = {}
+        self._thumbnail_conversation = str(getattr(self.controller, "current_conversation_id", ""))
+        self._thumbnail_epoch = 0
         self.input.textChanged.connect(self._native_draft_changed)
         self._web_publish_timer = QTimer(self)
         self._web_publish_timer.setSingleShot(True)
         self._web_publish_timer.timeout.connect(self._publish_web_state)
+        self._last_web_state_json = None
         self._web_timeout = QTimer(self)
         self._web_timeout.setSingleShot(True)
         self._web_timeout.setInterval(15000)
@@ -111,16 +139,39 @@ class AssistantChatPanel(ChatPanel):
         for name in ("messages_changed", "conversations_changed", "conversation_changed",
                      "history_busy_changed", "busy_changed", "error_changed",
                      "request_status_changed", "context_usage_changed", "export_busy_changed",
-                     "export_finished", "retry_availability_changed", "reading_font_changed"):
+                     "export_finished", "retry_availability_changed", "reading_font_changed", "execution_changed"):
             signal = getattr(self.controller, name, None)
             if signal is not None:
                 signal.connect(self._queue_web_state)
-        perception = getattr(self.controller, "perception_controller", None)
-        if perception is not None:
-            perception.runtime_changed.connect(self._queue_web_state)
-        camera = getattr(self.controller, "camera_controller", None)
-        if camera is not None and hasattr(camera, "runtime_changed"):
-            camera.runtime_changed.connect(self._queue_web_state)
+        # The chat surface has no observation countdown/status bar. Listening
+        # to these one-second timers needlessly republishes the whole history,
+        # including while typing. Settings panels own their live subscriptions;
+        # getState and explicit bridge actions still expose fresh visual state.
+
+    def _consolidate_native_settings(self):
+        """Keep the recovery view's navigation consistent with the web view."""
+        self.sidebar.layout().insertWidget(0, self.new_button)
+        settings_widgets = {self.settings_button, self.memory_button,
+                            self.context_budget_button, self.context_usage_label}
+        for action in self.tools_menu.actions():
+            if callable(getattr(action, "defaultWidget", None)) and action.defaultWidget() in settings_widgets:
+                action.setVisible(False)
+        self.native_settings_button = QPushButton("设置", self.sidebar)
+        self.native_settings_button.setObjectName("nativeOpenSettingsButton")
+        self.native_settings_button.clicked.connect(lambda: self._settings_page_opener("general"))
+        self.sidebar.layout().addWidget(self.native_settings_button)
+        self.tools_button.setToolTip("当前会话操作")
+
+    def _context_usage_changed(self, text):
+        super()._context_usage_changed(text)
+        if callable(self._settings_page_opener):
+            self.tools_button.setToolTip("当前会话操作")
+
+    def _show_context_budget(self):
+        if callable(self._settings_page_opener):
+            self._settings_page_opener("general")
+        else:
+            super()._show_context_budget()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -134,7 +185,119 @@ class AssistantChatPanel(ChatPanel):
             # Controller data remains authoritative. Rendering a hidden
             # QTextDocument here would block the same GUI thread that delivers
             # the WebChannel snapshot and processes keyboard/window events.
+            if self._image_preview_dialog is not None or hasattr(self, "_thumbnail_cache"):
+                self._refresh_web_image_references()
             self._update_buttons()
+
+    def _conversation_changed(self):
+        if (not getattr(self, "_native_mode", False)
+                and getattr(self.controller, "current_conversation_id", "") != self._displayed_conversation_id):
+            # Web drafts live in the shared dictionary, not the hidden editor.
+            # The native handler may restore the incoming draft, but must not
+            # replace the outgoing web draft with its stale document contents.
+            self._displayed_conversation_id = None
+        super()._conversation_changed()
+
+    def _refresh_web_image_references(self, messages=None):
+        """Keep native attachment actions current without laying out hidden HTML."""
+        cid = str(getattr(self.controller, "current_conversation_id", ""))
+        references = {}
+        for message in self.controller.messages if messages is None else messages:
+            metadata = message.get("metadata", {})
+            if not isinstance(metadata, dict):
+                continue
+            message_id, image_id = message.get("id"), metadata.get("image_id")
+            if (message.get("role") == "user" and message.get("conversation_id", cid) == cid
+                    and isinstance(message_id, str) and 0 < len(message_id) <= 200
+                    and isinstance(image_id, str) and IMAGE_ID.fullmatch(image_id)):
+                references[message_id] = (cid, message_id, image_id)
+        self._image_messages = references
+        if hasattr(self, "_thumbnail_cache"):
+            if cid != self._thumbnail_conversation:
+                self._thumbnail_conversation = cid
+                self._thumbnail_epoch += 1
+                self._thumbnail_queue.clear()
+            valid = set(references.values())
+            for reference in tuple(self._thumbnail_cache):
+                if reference[0] == cid and reference not in valid:
+                    self._drop_thumbnail(reference)
+            for reference in tuple(self._thumbnail_queue):
+                if reference not in valid:
+                    self._thumbnail_queue.pop(reference, None)
+        reference = self._image_preview_reference
+        if (reference is not None and references.get(reference[1]) != reference
+                and self._image_preview_dialog is not None):
+            self._image_preview_dialog.reject()
+
+    def _drop_thumbnail(self, reference):
+        cached = self._thumbnail_cache.pop(reference, None)
+        if cached is not None:
+            self._thumbnail_cache_size -= cached[1]
+
+    def _cache_thumbnail(self, reference, result, error):
+        self._drop_thumbnail(reference)
+        value = {"image_thumbnail_error": error} if error else {"image_thumbnail": result}
+        cost = len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+        if cost > THUMBNAIL_CACHE_BYTES:
+            value = {"image_thumbnail_error": IMAGE_ERRORS["image_unavailable"]}
+            cost = len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+        while self._thumbnail_cache and (len(self._thumbnail_cache) >= THUMBNAIL_CACHE_ENTRIES
+                or self._thumbnail_cache_size + cost > THUMBNAIL_CACHE_BYTES):
+            self._drop_thumbnail(next(iter(self._thumbnail_cache)))
+        self._thumbnail_cache[reference] = (value, cost)
+        self._thumbnail_cache_size += cost
+        return value
+
+    def _emit_thumbnail_ready(self, reference, value):
+        # A dedicated result event cannot be lost when React batches snapshots
+        # and the bounded cache has already evicted an earlier completion.
+        if (reference[0] != str(getattr(self.controller, "current_conversation_id", ""))
+                or self._image_messages.get(reference[1]) != reference):
+            return
+        payload = {"conversationId": reference[0], "messageId": reference[1], "imageId": reference[2]}
+        if "image_thumbnail" in value:
+            payload["thumbnail"] = value["image_thumbnail"]
+        else:
+            payload["error"] = value["image_thumbnail_error"]
+        self.bridge.thumbnailReady.emit(json.dumps(payload, ensure_ascii=False))
+
+    def _request_thumbnail(self, reference):
+        if reference in self._thumbnail_cache:
+            self._thumbnail_cache.move_to_end(reference)
+            self._emit_thumbnail_ready(reference, self._thumbnail_cache[reference][0])
+            return True
+        epoch = self._thumbnail_epoch
+        if self._thumbnail_inflight.get(reference) == epoch or self._thumbnail_queue.get(reference) == epoch:
+            return True
+        if len(self._thumbnail_queue) >= THUMBNAIL_QUEUE_LIMIT:
+            return False
+        self._thumbnail_queue[reference] = epoch
+        self._pump_thumbnails()
+        return True
+
+    def _pump_thumbnails(self):
+        for reference, epoch in tuple(self._thumbnail_queue.items()):
+            if len(self._thumbnail_inflight) >= THUMBNAIL_WORKERS:
+                break
+            if reference in self._thumbnail_inflight:
+                continue
+            self._thumbnail_queue.pop(reference, None)
+            if epoch != self._thumbnail_epoch or self._image_messages.get(reference[1]) != reference:
+                continue
+            self._thumbnail_inflight[reference] = epoch
+
+            def loaded(result, error, reference=reference, epoch=epoch):
+                if self._thumbnail_inflight.get(reference) == epoch:
+                    self._thumbnail_inflight.pop(reference, None)
+                self._refresh_web_image_references()
+                if epoch == self._thumbnail_epoch and self._image_messages.get(reference[1]) == reference:
+                    safe_error = error if error in (IMAGE_ERRORS["image_missing"], IMAGE_ERRORS["image_unavailable"]) else IMAGE_ERRORS["image_unavailable"]
+                    value = self._cache_thumbnail(reference, result, safe_error if error or not isinstance(result, dict) else "")
+                    self._emit_thumbnail_ready(reference, value)
+                    self._queue_web_state()
+                self._pump_thumbnails()
+
+            self._thumbnail_runner.submit(lambda reference=reference: _read_image_thumbnail(self.controller, reference), loaded)
 
     def _ensure_web(self):
         try:
@@ -222,6 +385,10 @@ class AssistantChatPanel(ChatPanel):
 
     def _reload_web(self):
         self._native_draft_changed()
+        # A new document needs a fresh initial snapshot even when controller
+        # data is identical to the page that is being replaced.
+        self._web_publish_timer.stop()
+        self._last_web_state_json = None
         self._native_mode = False
         self.splitter.hide()
         for shortcut in self._shortcuts:
@@ -288,19 +455,49 @@ class AssistantChatPanel(ChatPanel):
             self._web_publish_timer.start(0)
 
     def _publish_web_state(self):
-        self.bridge.stateChanged.emit(self.bridge.getState())
+        payload = self.bridge.getState()
+        if payload != self._last_web_state_json:
+            self._last_web_state_json = payload
+            self.bridge.stateChanged.emit(payload)
 
     def web_state(self):
         chat = self.controller
         cid = str(getattr(chat, "current_conversation_id", ""))
+        source_messages = chat.messages
+        self._refresh_web_image_references(source_messages)
         messages = []
-        for index, message in enumerate(chat.messages):
+        for index, message in enumerate(source_messages):
             if message.get("role") not in ("user", "assistant"):
                 continue
             row = {key: str(message.get(key) or "") for key in ("role", "content", "source")}
             row["id"] = str(message.get("id") or f"{cid}-message-{index}")
-            row["metadata"] = {"request_status": str(message.get("metadata", {}).get("request_status", ""))}
-            selection = message.get("metadata", {}).get("selection_context")
+            metadata = message.get("metadata", {})
+            metadata = metadata if isinstance(metadata, dict) else {}
+            row["metadata"] = {"request_status": str(metadata.get("request_status", ""))}
+            # Persisted host error codes remain useful after the global error
+            # banner has gone away. Never forward provider exception text.
+            agent = public_agent_metadata(message)
+            for name in ("agent_error_code", "agent_error"):
+                if agent[name] is not None:
+                    row["metadata"][name] = agent[name]
+            if message.get("conversation_id", cid) == cid:
+                execution = safe_execution(metadata.get("execution"), getattr(chat, "_redact_known_secrets", None))
+                if execution is not None:
+                    row["metadata"]["execution"] = execution
+            if row["role"] == "user":
+                reference = self._image_messages.get(row["id"])
+                if reference is not None:
+                    row["metadata"]["image_id"] = reference[2]
+                    cached = self._thumbnail_cache.get(reference)
+                    if cached is not None:
+                        row["metadata"].update(cached[0])
+                elif "image_id" in metadata:
+                    row["metadata"]["image_unavailable"] = True
+                image_error = metadata.get("image_error_code")
+                if (row["metadata"]["request_status"] == "failed" and isinstance(image_error, str)
+                        and image_error in IMAGE_ERRORS):
+                    row["metadata"]["image_error"] = image_error
+            selection = metadata.get("selection_context")
             if isinstance(selection, dict):
                 # The archive retains the finite snapshot. UI snapshots only
                 # carry a short source preview, rather than resending its page.
@@ -353,16 +550,23 @@ class AssistantChatPanel(ChatPanel):
             "errorRetryStatus": error_retry.get("status", ""),
             "requestConversationId": str(getattr(chat, "request_conversation_id", owner) or ""),
             "canStop": bool(getattr(chat, "can_stop", False)),
+            "canAgentMode": callable(getattr(chat, "set_agent_mode", None)),
+            "agentMode": bool(getattr(chat, "agent_mode", False)),
             "status": self.status_label.text(),
             "contextUsage": str(getattr(chat, "context_usage", "")),
+            "contextPolicy": "manual" if getattr(getattr(chat, "context_budget", None), "mode", "model") == "manual" else "model",
             "exportBusy": bool(getattr(chat, "export_busy", False)),
             "exportStatus": self.export_status_label.text(),
             "canSettings": callable(self._settings_opener),
+            "windowChrome": bool(self.window().property("auraCustomChrome")),
             "canMemory": self.memory_controller is not None or callable(self._memory_opener),
             "canExport": hasattr(chat, "export_conversation"),
             "canBudget": hasattr(chat, "update_context_budget"),
             "focusRequest": dict(self._focus_request),
             "drafts": dict(self._web_drafts),
+            "stagedImage": deepcopy(self._current_staged_image()),
+            "imagePreparing": self._image_preparing,
+            "imageError": self._image_stage_error,
             "perception": perception.runtime_snapshot() if perception is not None else None,
         }
 
@@ -370,6 +574,37 @@ class AssistantChatPanel(ChatPanel):
         chat = self.controller
         cid = str(getattr(chat, "current_conversation_id", ""))
         loading = bool(getattr(chat, "history_loading", False))
+        if action in {"selectImage", "removeStagedImage"}:
+            if set(data) != {"conversationId"} or data.get("conversationId") != cid or loading or chat.busy:
+                return False
+            return self._select_image() if action == "selectImage" else self._remove_staged_image()
+        if action in {"windowMove", "windowToggleMaximize"}:
+            chrome = getattr(self.window(), "chrome", None)
+            if chrome is None:
+                return False
+            if action == "windowMove":
+                return chrome.start_move()
+            chrome.toggle_maximized()
+            return True
+        if action == "openSettings":
+            opener = self._settings_page_opener or self._settings_opener
+            if callable(opener):
+                opener()
+                return True
+            return False
+        if action in {"openImage", "loadImageThumbnail"}:
+            message_id = data.get("messageId")
+            self._refresh_web_image_references()
+            if (loading or data.get("conversationId") != cid
+                    or not isinstance(message_id, str) or message_id not in self._image_messages
+                    or not callable(getattr(chat, "get_message_image", None))):
+                return False
+            if action == "loadImageThumbnail":
+                if set(data) != {"conversationId", "messageId"}:
+                    return False
+                return self._request_thumbnail(self._image_messages[message_id])
+            self._open_image_preview(message_id)
+            return True
         if action in {"cameraSettings", "openCameraSettings"}:
             camera = getattr(chat, "camera_controller", None)
             if camera is None:
@@ -393,6 +628,10 @@ class AssistantChatPanel(ChatPanel):
         if action == "ready":
             if self._native_mode:
                 return False
+            # A queued update could have been published before this document
+            # attached its WebChannel listener. The ready acknowledgement must
+            # not be suppressed by deduplication of that earlier update.
+            self._last_web_state_json = None
             self._frontend_ready = True
             self._web_timeout.stop()
             self.loading_label.hide()
@@ -402,12 +641,28 @@ class AssistantChatPanel(ChatPanel):
                 self.web_view.show()
             self.web_ready.emit(True)
             return True
+        if action == "setAgentMode":
+            setter = getattr(chat, "set_agent_mode", None)
+            if (not callable(setter) or chat.busy or loading
+                    or set(data) != {"conversationId", "enabled"}
+                    or data.get("conversationId") != cid or not isinstance(data.get("enabled"), bool)):
+                return False
+            return bool(setter(data["enabled"]))
         if action == "send":
             text = str(data.get("text") or "").strip()
-            if (not text or chat.busy or loading
+            staged = self._current_staged_image()
+            if (not text and not staged or chat.busy or loading or self._image_preparing
                     or str(data.get("conversationId", "")) != cid):
                 return False
-            accepted = bool(chat.send(text))
+            options = {"image_id": staged["image_id"]} if staged else {}
+            if callable(getattr(chat, "set_agent_mode", None)):
+                selected_mode = bool(getattr(chat, "agent_mode", False))
+                if "agentMode" in data and (not isinstance(data["agentMode"], bool) or data["agentMode"] != selected_mode):
+                    return False
+                options["agent_mode"] = selected_mode
+            accepted = bool(chat.send(text or "请描述这张图片。", **options))
+            if accepted:
+                self._remove_staged_image()
             if accepted and self._web_drafts.get(cid, "").strip() == text:
                 self._web_drafts.pop(cid, None)
                 self.input.clear()
@@ -415,7 +670,11 @@ class AssistantChatPanel(ChatPanel):
         if action == "draft":
             target = str(data.get("conversationId") or "")
             self._web_drafts[target] = str(data.get("text") or "")
-            if target == cid:
+            # The native document is hidden in web mode. Rebuilding it for each
+            # keypress needlessly invalidates Qt layout/paint work. Switching to
+            # native mode already restores the authoritative draft dictionary.
+            if (self._native_mode and target == cid
+                    and self.input.toPlainText() != self._web_drafts[target]):
                 self.input.setPlainText(self._web_drafts[target])
             return True
         if action in {"openExternal", "copyLink"}:
@@ -433,7 +692,13 @@ class AssistantChatPanel(ChatPanel):
             chat.search_conversations(str(data.get("query") or "").strip())
             return True
         if action == "open" and self._sessions_supported and not loading:
-            return bool(chat.open_conversation(str(data.get("id") or "")))
+            accepted = bool(chat.open_conversation(str(data.get("id") or "")))
+            if accepted:
+                # Navigation can briefly load another conversation and restore
+                # the origin in one event turn. React still needs the final
+                # acknowledgement to cancel any deferred per-conversation work.
+                self._last_web_state_json = None
+            return accepted
         if action == "new" and self._sessions_supported and not loading:
             return bool(chat.new_conversation())
         if action == "rename" and self._sessions_supported and not loading:

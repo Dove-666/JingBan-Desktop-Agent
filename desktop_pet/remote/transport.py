@@ -11,11 +11,14 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import importlib
 import math
+import os
 import secrets
+import sys
 import threading
 import time
 from typing import Callable
 
+from .addresses import physical_interface_ips, usable_direct_addresses
 from .protocol import (ALPN, MAX_CONCURRENT_REQUESTS, MAX_FRAME_BYTES, REQUEST_TIMEOUT,
                        UNPAIRED_MAX_FRAME_BYTES,
                        ProtocolError, error_response, read_frame,
@@ -25,13 +28,28 @@ from .protocol import (ALPN, MAX_CONCURRENT_REQUESTS, MAX_FRAME_BYTES, REQUEST_T
 class TransportError(RuntimeError):
     """A static, user-safe transport failure."""
 
+    def __init__(self, message, code='transport_failed'):
+        super().__init__(message)
+        self.code = code
+
+
+DEFAULT_LISTEN_PORT = 43123
+
+
+_TRACE_STAGES = frozenset(("stream_open", "header_wait", "header_read", "payload_wait", "payload_read",
+    "json_valid", "fin_wait", "fin_read", "worker_queued", "dispatch", "dispatch_return",
+    "response_wait", "response_written", "protocol_error", "timeout", "stream_error", "stream_done"))
+_TRACE_METHODS = frozenset(("pair", "status", "pet.command", "chat.send", "chat.config", "chat.import", "sync.snapshot", "sync.pull",
+                           "operation.get", "image.upload", "image.list", "image.get", "image.delete"))
+
 
 def _load_iroh():
     try:
         return importlib.import_module("iroh")
     except (ImportError, OSError):
         raise TransportError(
-            "Encrypted remote support is unavailable. Install requirements-remote.txt."
+            "Encrypted remote support is unavailable. Install requirements-remote.txt.",
+            'dependency_unavailable',
         ) from None
 
 
@@ -46,7 +64,7 @@ def _secret_bytes(secret_hex: str | None) -> bytes:
             raise ValueError
         return value
     except ValueError:
-        raise TransportError("Invalid encrypted device identity.") from None
+        raise TransportError("Invalid encrypted device identity.", 'invalid_identity') from None
 
 
 def connection_type(connection) -> str:
@@ -62,11 +80,13 @@ def connection_type(connection) -> str:
     return "unknown"
 
 
-async def _bind_endpoint(iroh, secret: bytes):
+async def _bind_endpoint(iroh, secret: bytes, listen_port: int = 0):
     builder = iroh.EndpointBuilder()
     builder.apply_n0()
     builder.secret_key(secret)
     builder.alpns([ALPN])
+    if listen_port:
+        builder.bind_addr(f'0.0.0.0:{listen_port}')
     return await asyncio.wait_for(builder.bind(), REQUEST_TIMEOUT)
 
 
@@ -81,7 +101,11 @@ class IrohTransport:
     def __init__(self, secret_hex: str,
                  on_request: Callable[[str, dict], dict],
                  on_status: Callable[[dict], None], *,
-                 is_authorized: Callable[[str], bool] | None = None):
+                 is_authorized: Callable[[str], bool] | None = None,
+                 listen_port: int = DEFAULT_LISTEN_PORT):
+        if type(listen_port) is not int or not 0 <= listen_port <= 65535:
+            raise TransportError('Invalid encrypted listen port.', 'bind_failed')
+        self._listen_port = listen_port
         self._secret_hex = secret_hex
         self._on_request = on_request
         self._on_status = on_status
@@ -102,6 +126,20 @@ class IrohTransport:
         self._endpoint_id = ""
         self._ticket = ""
         self._path = "unknown"
+        self._relay_ready = False
+        self._local_available = False
+        self._trace_enabled = os.environ.get("AURA_REMOTE_TRACE") == "1"
+        self._trace_counter = 0
+
+    def _trace(self, number, stage, method=None):
+        """Opt-in static stages only; never log request ids, peers or payloads."""
+        if not self._trace_enabled or stage not in _TRACE_STAGES:
+            return
+        suffix = "" if method is None else " method=" + (method if method in _TRACE_METHODS else "other")
+        try:
+            print(f"AURA_REMOTE_TRACE n={int(number)} stage={stage}{suffix}", file=sys.stderr, flush=True)
+        except Exception:
+            pass
 
     def start(self) -> None:
         with self._lock:
@@ -110,6 +148,8 @@ class IrohTransport:
             self._stop_requested.clear()
             self._endpoint_id = self._ticket = ""
             self._path = "unknown"
+            self._relay_ready = False
+            self._local_available = False
             self._thread = threading.Thread(target=self._run, name="aura-remote-iroh",
                                             daemon=True)
             self._thread.start()
@@ -135,10 +175,11 @@ class IrohTransport:
         thread.join(timeout)
         return not thread.is_alive()
 
-    def _publish(self, state: str, error: str = "") -> None:
+    def _publish(self, state: str, error: str = "", error_code: str = "") -> None:
         status = {"state": state, "endpoint_id": self._endpoint_id,
                   "ticket": self._ticket, "error": error,
-                  "connection_type": self._path}
+                  "connection_type": self._path, 'error_code': error_code,
+                  'local_available': self._local_available, 'relay_available': self._relay_ready}
         try:
             self._on_status(status)
         except Exception:
@@ -150,9 +191,9 @@ class IrohTransport:
         try:
             asyncio.run(self._serve())
         except TransportError as exc:
-            self._publish("error", str(exc))
+            self._publish("error", str(exc), exc.code)
         except Exception:
-            self._publish("error", "Encrypted remote connection could not start.")
+            self._publish("error", "Encrypted remote connection could not start.", 'transport_failed')
         else:
             self._publish("stopped")
         finally:
@@ -163,7 +204,7 @@ class IrohTransport:
     async def _serve(self) -> None:
         self._iroh = _load_iroh()
         if not isinstance(self._secret_hex, str):
-            raise TransportError("Invalid encrypted device identity.")
+                raise TransportError("Invalid encrypted device identity.", 'invalid_identity')
         secret = _secret_bytes(self._secret_hex)
         with self._lock:
             self._loop = asyncio.get_running_loop()
@@ -175,25 +216,26 @@ class IrohTransport:
         tasks: list[asyncio.Task] = []
         try:
             stopping = asyncio.create_task(self._stop_event.wait())
-            binding = asyncio.create_task(_bind_endpoint(self._iroh, secret))
+            binding = asyncio.create_task(_bind_endpoint(self._iroh, secret, self._listen_port))
             tasks.extend([binding, stopping])
             done, _ = await asyncio.wait([binding, stopping],
                                          return_when=asyncio.FIRST_COMPLETED)
             if binding in done:
-                self._endpoint = await binding
+                try:
+                    self._endpoint = await binding
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    raise TransportError('The local encrypted socket could not bind.', 'bind_failed') from None
             if stopping in done:
                 return
             self._endpoint_id = str(self._endpoint.id())
-            online = asyncio.create_task(self._endpoint.online())
+            online = asyncio.create_task(self._wait_for_relay())
             tasks.append(online)
-            done, _ = await asyncio.wait([online, stopping], timeout=REQUEST_TIMEOUT,
-                                         return_when=asyncio.FIRST_COMPLETED)
-            if stopping in done:
+            # online() waits for a home relay, not for a usable LAN socket.
+            # Holding local startup behind it breaks same-Wi-Fi/offline use.
+            if not await self._wait_for_address():
                 return
-            if online not in done:
-                raise TransportError("Encrypted relay discovery timed out. Check the network.")
-            await online
-            self._refresh_ticket()
             self._publish("listening")
             accepting = asyncio.create_task(self._accept_loop())
             addresses = asyncio.create_task(self._address_loop())
@@ -228,10 +270,39 @@ class IrohTransport:
                 self._executor = None
                 self._workers.difference_update([worker for worker in self._workers if worker.done()])
                 if not settled:
-                    raise TransportError("A remote task is still finishing after shutdown.")
+                    raise TransportError("A remote task is still finishing after shutdown.", 'shutdown_pending')
+
+    async def _wait_for_relay(self) -> None:
+        try:
+            await self._endpoint.online()
+            self._relay_ready = True
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Local authenticated RPC remains available when WAN relays fail.
+            self._relay_ready = False
+
+    async def _wait_for_address(self) -> bool:
+        deadline = time.monotonic() + REQUEST_TIMEOUT
+        while not self._stop_event.is_set():
+            self._refresh_ticket()
+            if self._ticket:
+                return True
+            if time.monotonic() >= deadline:
+                raise TransportError('No usable direct address or relay is available.', 'no_usable_address')
+            try:
+                await asyncio.wait_for(self._stop_event.wait(), .2)
+            except asyncio.TimeoutError:
+                pass
+        return False
 
     def _refresh_ticket(self) -> bool:
-        ticket = str(self._iroh.EndpointTicket.from_addr(self._endpoint.addr()))
+        addr = self._endpoint.addr()
+        addresses = usable_direct_addresses(addr.direct_addresses(), physical_interface_ips())
+        self._local_available = bool(addresses)
+        relay = addr.relay_url() if self._relay_ready else None
+        safe_addr = self._iroh.EndpointAddr(addr.id(), relay, addresses)
+        ticket = str(self._iroh.EndpointTicket.from_addr(safe_addr)) if addresses or relay else ''
         changed = ticket != self._ticket
         self._ticket = ticket
         return changed
@@ -240,6 +311,8 @@ class IrohTransport:
         while True:
             await asyncio.sleep(5)
             if self._refresh_ticket():
+                if not self._ticket:
+                    raise TransportError('The local network is no longer available.', 'no_usable_address')
                 self._publish("listening")
 
     async def _accept_loop(self) -> None:
@@ -298,18 +371,27 @@ class IrohTransport:
             return False
 
     async def _handle_stream(self, peer_id: str, stream, connection) -> None:
+        self._trace_counter += 1
+        trace_number = self._trace_counter
+        method = None
+        self._trace(trace_number, "stream_open")
         request_id = None
         send, recv = stream.send(), stream.recv()
         replied = False
         try:
             async def dispatch():
-                nonlocal request_id, replied
+                nonlocal request_id, replied, method
                 limit = MAX_FRAME_BYTES if self._authorized(peer_id) else UNPAIRED_MAX_FRAME_BYTES
-                request = validate_request(await read_frame(recv, max_frame_bytes=limit))
+                trace_read = (lambda stage: self._trace(trace_number, stage)) if self._trace_enabled else None
+                request = validate_request(await read_frame(recv, max_frame_bytes=limit, on_stage=trace_read))
                 request_id = request["id"]
+                method = request["method"]
+                self._trace(trace_number, "json_valid", method)
                 # Exactly one request per stream. The sender must finish its half.
+                self._trace(trace_number, "fin_wait", method)
                 if await recv.read(1):
                     raise ProtocolError("invalid_frame", "One request is permitted per stream.")
+                self._trace(trace_number, "fin_read", method)
                 # A timed-out application callback can still be running. Keep
                 # its slot occupied until it really finishes; do not queue an
                 # unbounded number of callbacks behind stalled workers.
@@ -319,7 +401,14 @@ class IrohTransport:
                 if len(self._workers) >= MAX_CONCURRENT_REQUESTS:
                     raise ProtocolError("busy", "Remote request capacity is busy.")
                 loop = asyncio.get_running_loop()
-                worker = self._executor.submit(self._on_request, peer_id, request)
+                def run_request():
+                    self._trace(trace_number, "dispatch", method)
+                    try:
+                        return self._on_request(peer_id, request)
+                    finally:
+                        self._trace(trace_number, "dispatch_return", method)
+                self._trace(trace_number, "worker_queued", method)
+                worker = self._executor.submit(run_request)
                 self._workers.add(worker)
                 def completed(future):
                     try:
@@ -331,21 +420,27 @@ class IrohTransport:
                 if (not isinstance(response, dict) or response.get("id") != request_id
                         or type(response.get("ok")) is not bool):
                     raise ProtocolError("internal_error", "Request could not be completed.")
+                self._trace(trace_number, "response_wait", method)
                 await write_frame(send, response)
+                self._trace(trace_number, "response_written", method)
                 replied = True
             await asyncio.wait_for(dispatch(), REQUEST_TIMEOUT)
         except asyncio.CancelledError:
             raise
         except ProtocolError as exc:
+            self._trace(trace_number, "protocol_error", method)
             await self._send_error(send, request_id, exc.code, exc.message)
             replied = True
         except asyncio.TimeoutError:
+            self._trace(trace_number, "timeout", method)
             await self._send_error(send, request_id, "timeout", "Request timed out.")
             replied = True
         except Exception:
+            self._trace(trace_number, "stream_error", method)
             await self._send_error(send, request_id, "internal_error", "Request could not be completed.")
             replied = True
         finally:
+            self._trace(trace_number, "stream_done", method)
             try:
                 await asyncio.wait_for(recv.stop(0), 1)
                 if not replied:

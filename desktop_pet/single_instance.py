@@ -2,7 +2,7 @@
 
 The lock protects the entire application lifetime.  Qt checks dead processes;
 we never delete a lock based on its age or forcibly remove a live owner's lock.
-Only the two fixed activation commands cross the current-user local socket.
+Only fixed activation commands cross the current-user local socket.
 """
 
 from __future__ import annotations
@@ -42,7 +42,8 @@ class SingleInstance(QObject):
     """
 
     activation_requested = Signal(str)
-    COMMANDS = {"chat": b"AURA/1 chat\n", "debug": b"AURA/1 debug\n"}
+    COMMANDS = {"chat": b"AURA/1 chat\n", "debug": b"AURA/1 debug\n",
+                "silent": b"AURA/1 silent\n"}
     ACK = b"AURA/1 OK\n"
     MAX_FRAME_BYTES = 32
     MAX_CLIENTS = 8
@@ -158,7 +159,8 @@ class SingleInstance(QObject):
         # Mark it before dispatch: one activation per client.  Keep the socket
         # until disconnect so pending ACK bytes cannot be destroyed too early.
         socket.setProperty("aura_command_handled", True)
-        self.activation_requested.emit(command)
+        if command != "silent":
+            self.activation_requested.emit(command)
         socket.write(self.ACK)
         socket.flush()
         socket.disconnectFromServer()

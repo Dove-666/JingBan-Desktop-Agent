@@ -288,6 +288,25 @@ def execute(payload: dict) -> object:
         except local_module.LocalModelUnavailable:
             raise _LocalModelUnavailable("Local embedding model is not ready") from None
 
+    if operation == "inspect_empty":
+        # A one-time, credential-free migration probe for pre-managed defaults.
+        # Count every collection, including other users/namespaces. This path
+        # neither creates a Mem0 instance nor deletes/rewrites any collection.
+        from pathlib import Path
+        from qdrant_client import QdrantClient
+        path = config["vector_store"]["config"]["path"]
+        if not Path(path).exists():
+            return {"empty": True}
+        local = QdrantClient(path=path)
+        try:
+            for collection in local.get_collections().collections:
+                count = local.count(collection.name, exact=True).count
+                if type(count) is not int or count != 0:
+                    return {"empty": False}
+            return {"empty": True}
+        finally:
+            local.close()
+
     from mem0 import Memory
     from mem0.utils.factory import EmbedderFactory, VectorStoreFactory
     from openai import OpenAI

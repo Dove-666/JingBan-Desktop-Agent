@@ -164,7 +164,7 @@ class MemoryServiceTests(unittest.TestCase):
         self.settings.save_api_settings(ApiSettings(provider.base_url, "fixture-chat"))
         self.settings.save_api_key("fixture-chat-key")
         settings = replace(
-            self.service.load_settings(), enabled=True, automatic=automatic,
+            self.service.load_settings(), enabled=True, automatic=automatic, embedding_provider="openai",
             embedding_base_url=provider.base_url, embedding_model="fixture-embedding", embedding_dimensions=8,
         )
         self.service.save_settings(settings, embedding_key="fixture-embedding-key")
@@ -316,6 +316,7 @@ class MemoryServiceTests(unittest.TestCase):
         self.assertIsNone(self.vault.get_password("AURA Desktop Agent", "mem0-embedding-key"))
 
     def test_credential_status_distinguishes_available_vault_from_missing_keys(self):
+        self.service.save_settings(replace(self.service.load_settings(), embedding_provider="openai"))
         self.assertTrue(self.service._embedding_credentials.available)
         text = self.service.credential_status()
         self.assertIn("提炼模型复用的聊天密钥：未保存", text)
@@ -323,6 +324,7 @@ class MemoryServiceTests(unittest.TestCase):
         self.assertNotIn("已保存", text)
 
     def test_credential_status_uses_chat_key_when_extractor_reuses_chat(self):
+        self.service.save_settings(replace(self.service.load_settings(), embedding_provider="openai"))
         self.settings.save_api_key("fixture-chat-key")
         self.service.set_embedding_key("fixture-embedding-key")
         text = self.service.credential_status()
@@ -343,6 +345,7 @@ class MemoryServiceTests(unittest.TestCase):
         self.assertNotIn("fixture-llm-key", text)
 
     def test_credential_status_reports_unreadable_vault_without_secret_details(self):
+        self.service.save_settings(replace(self.service.load_settings(), embedding_provider="openai"))
         with patch.object(self.service._embedding_credentials, "get_api_key", side_effect=CredentialsError(
                 "DO-NOT-ECHO-THIS-UNTRUSTED-BACKEND-DETAIL")):
             text = self.service.credential_status()

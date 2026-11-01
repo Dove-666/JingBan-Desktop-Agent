@@ -1,0 +1,316 @@
+{
+  "status": "passed",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "frame_count": 30,
+  "first_last_exact_neutral": true,
+  "hold_exact_source_pose": true,
+  "outer_edges_transparent": true,
+  "frames": [
+    {
+      "index": 1,
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "phase": "fade_in"
+    },
+    {
+      "index": 2,
+      "alpha_bounds": [
+        211,
+        291,
+        813,
+        960
+      ],
+      "phase": "fade_in"
+    },
+    {
+      "index": 3,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "fade_in"
+    },
+    {
+      "index": 4,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 5,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 6,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 7,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 8,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 9,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 10,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 11,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 12,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 13,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 14,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 15,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 16,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 17,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 18,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 19,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 20,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 21,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 22,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 23,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 24,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 25,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 26,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 27,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "hold"
+    },
+    {
+      "index": 28,
+      "alpha_bounds": [
+        211,
+        291,
+        814,
+        960
+      ],
+      "phase": "fade_out"
+    },
+    {
+      "index": 29,
+      "alpha_bounds": [
+        211,
+        291,
+        813,
+        960
+      ],
+      "phase": "fade_out"
+    },
+    {
+      "index": 30,
+      "alpha_bounds": [
+        214,
+        294,
+        810,
+        960
+      ],
+      "phase": "fade_out"
+    }
+  ],
+  "existing_regression_tests_passed": 54,
+  "tsundere_tests_passed": 7,
+  "native_verification": "artifacts/tsundere_idle_20261101/native_tsundere_verification.json"
+}

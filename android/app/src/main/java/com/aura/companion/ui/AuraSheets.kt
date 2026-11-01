@@ -71,27 +71,31 @@ internal fun PairingDialog(state: UiState, actions: UiActions, initialPayload: S
         },
         dismissButton = { TextButton(onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(if (state.pairing) "在后台连接" else "暂时跳过") } },
-        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(30.dp),
+        tonalElevation = 0.dp,
+        containerColor = glassSheetColor(),
     )
 }
 
 @Composable
 internal fun ConnectionSheet(state: UiState, actions: UiActions, onDismiss: () -> Unit,
-                             onQueue: () -> Unit, onPair: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+                             onQueue: () -> Unit, onPair: () -> Unit, onConfigureApi: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = glassSheetColor(),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), tonalElevation = 0.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-            .padding(start = 24.dp, end = 24.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            SheetHeading("连接与外观", "你的对话，留在自己的设备。")
+            .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("连接与外观", style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.semantics { heading() })
             state.notice?.let { InlineNotice(it) }
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LiquidSurface(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(Icons.Default.Home, null, Modifier.size(22.dp))
-                        Text(if (state.paired) state.desktopName else "还没有连接电脑",
+                        Icon(DesktopMonitorIcon, null, Modifier.size(22.dp))
+                        Text(if (state.paired) state.desktopName.ifBlank { "我的电脑" } else "还没有连接电脑",
                             style = MaterialTheme.typography.titleMedium)
                     }
                     Text(when (state.connection) {
@@ -99,34 +103,59 @@ internal fun ConnectionSheet(state: UiState, actions: UiActions, onDismiss: () -
                             SyncState.SYNCING -> "正在同步对话"
                             SyncState.READY -> "对话已同步"
                             SyncState.ERROR -> "同步需要重试"
-                            else -> "可以开始聊天"
+                            else -> "等待同步"
                         }
                         ConnectionState.CONNECTING -> "正在连接电脑…"
                         ConnectionState.UNAUTHORIZED -> "配对已失效，请在电脑端重新生成配对信息。"
-                        else -> if (state.paired) "当前离线，历史记录仍可查看。" else "完成一次配对，以后打开即可继续。"
+                        ConnectionState.ERROR -> "连接失败"
+                        else -> if (state.paired) "离线" else "尚未配对"
                     }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (state.connectionDetail.isNotBlank()) Text(state.connectionDetail,
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (state.queuedCount > 0) Text("${state.queuedCount} 条消息待发送",
+                    if (state.connection == ConnectionState.CONNECTED) {
+                        Text(when {
+                            state.desktopTaskRunning -> "电脑 Agent · 正在执行"
+                            state.desktopTaskBusy -> "电脑 Agent · 忙碌"
+                            state.desktopTaskAvailable -> "电脑 Agent · 可用"
+                            else -> "电脑 Agent · 未就绪"
+                        }, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (!state.desktopTaskAvailable && state.desktopTaskMessage.isNotBlank())
+                            Text(state.desktopTaskMessage, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error)
+                    }
+                    if (state.queueSummary.isNotBlank()) Text(state.queueSummary,
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    if (state.historyPendingCount > 0) Text("${state.historyPendingCount} 条手机记录待同步到电脑",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        when {
+                            !state.paired || state.connection == ConnectionState.UNAUTHORIZED ->
+                                Button(onPair, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(if (state.paired) "重新配对" else "连接电脑")
+                                }
+                            state.connection == ConnectionState.CONNECTED ->
+                                OutlinedButton(actions::syncNow, enabled = state.sync != SyncState.SYNCING,
+                                    modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(if (state.sync == SyncState.SYNCING) "正在同步记录" else "同步记录")
+                                }
+                            state.connection != ConnectionState.CONNECTING ->
+                                Button(actions::reconnect, modifier = Modifier.heightIn(min = 48.dp)) { Text("重新连接") }
+                        }
+                        if (state.paired && state.connection in setOf(ConnectionState.CONNECTED, ConnectionState.CONNECTING)) {
+                            TextButton(actions::disconnect, modifier = Modifier.heightIn(min = 48.dp)) { Text("暂时断开") }
+                        }
+                        if (state.paired && state.connection != ConnectionState.UNAUTHORIZED) {
+                            TextButton(onPair, modifier = Modifier.heightIn(min = 48.dp)) { Text("更换配对") }
+                        }
+                    }
                 }
             }
             if (state.queue.isNotEmpty()) TextButton(onQueue, Modifier.heightIn(min = 48.dp)) {
                 Text("查看待处理内容 (${state.queue.size})")
             }
-            if (state.paired) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(actions::reconnect, enabled = state.connection != ConnectionState.CONNECTING,
-                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("重新连接") }
-                    OutlinedButton(actions::disconnect, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                        Text("暂时断开")
-                    }
-                }
-            }
-            TextButton(onPair, modifier = Modifier.heightIn(min = 48.dp)) {
-                Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                Text(if (state.paired) "使用新的配对信息" else "连接我的电脑")
-            }
+            ApiSettingsCard(state.directApi, onConfigureApi)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Text("外观", style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,8 +166,6 @@ internal fun ConnectionSheet(state: UiState, actions: UiActions, onDismiss: () -
                             label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp))
                     }
             }
-            Text("电脑需保持开机联网。离线消息保存在手机，重新连接后补发；不确定是否送达的消息会先核对结果。",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -148,7 +175,9 @@ internal fun PetSheet(state: UiState, actions: UiActions, onDismiss: () -> Unit)
     val connected = state.connection == ConnectionState.CONNECTED
     var scale by remember(state.petScale) { mutableFloatStateOf(state.petScale.toFloat()) }
     var say by rememberSaveable { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = glassSheetColor(),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), tonalElevation = 0.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
             .padding(start = 24.dp, end = 24.dp, bottom = 28.dp),
@@ -200,30 +229,33 @@ internal fun PetSheet(state: UiState, actions: UiActions, onDismiss: () -> Unit)
 }
 
 @Composable
-internal fun ImagesSheet(images: List<UiImage>, actions: UiActions, notice: String? = null, onDismiss: () -> Unit) {
+internal fun ImagesSheet(images: List<UiImage>, actions: UiActions, notice: String? = null,
+                         onPick: () -> Unit = actions::pickImage, onDismiss: () -> Unit) {
     var deleting by remember { mutableStateOf<UiImage?>(null) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface,
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = glassSheetColor(),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), tonalElevation = 0.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 720.dp)
             .padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { SheetHeading("图片收件箱", "传递一张图片，分享眼前的一刻。") }
+                Column(Modifier.weight(1f)) { SheetHeading("图片收件箱", "已保存的图片文件，可查看或删除。") }
                 IconButton(actions::refreshImages, Modifier.size(48.dp)) {
                     Icon(Icons.Default.Refresh, contentDescription = "刷新图片列表")
                 }
             }
             notice?.let { Spacer(Modifier.height(12.dp)); InlineNotice(it) }
-            OutlinedButton(actions::pickImage, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+            OutlinedButton(onPick, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
                 .heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) {
-                Icon(Icons.Default.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("从手机选择图片")
+                Icon(Icons.Default.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("选图并返回聊天")
             }
-            if (images.isEmpty()) Text("你发送的图片会出现在这里。\n目前还没有图片。",
+            if (images.isEmpty()) Text("还没有保存的图片。\n选张图片，回到聊天中提问吧。",
                 style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 28.dp))
             LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                 items(images, key = { it.id }) { image ->
-                    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    LiquidSurface(shape = RoundedCornerShape(24.dp),
                         modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp)) {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -249,12 +281,13 @@ internal fun ImagesSheet(images: List<UiImage>, actions: UiActions, notice: Stri
                     }
                 }
             }
-            Text("单张不超过 4 MiB。接收图片不会自动识图。", style = MaterialTheme.typography.bodySmall,
+            Text("单张不超过 4 MiB。识图请在聊天中附图后点击发送。", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     deleting?.let { image ->
         AlertDialog(onDismissRequest = { deleting = null }, title = { Text("删除这张图片？") },
+            shape = RoundedCornerShape(30.dp), containerColor = glassSheetColor(), tonalElevation = 0.dp,
             text = { Text("${image.filename}\n删除后将从图片收件箱移除。") },
             confirmButton = { TextButton({ actions.deleteImage(image.id); deleting = null },
                 Modifier.heightIn(min = 48.dp)) { Text("删除图片", color = MaterialTheme.colorScheme.error) } },
@@ -272,7 +305,7 @@ private fun SheetHeading(title: String, subtitle: String) {
 
 @Composable
 private fun InlineNotice(text: String) {
-    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp),
+    LiquidSurface(tint = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
             modifier = Modifier.padding(14.dp))
@@ -281,7 +314,8 @@ private fun InlineNotice(text: String) {
 
 /** Decode local thumbnails off the UI thread, bounded to 512 px per side. */
 @Composable
-internal fun LocalImage(uri: String, modifier: Modifier, description: String) {
+internal fun LocalImage(uri: String, modifier: Modifier, description: String,
+                        expandToAvailableWidth: Boolean = false) {
     val context = LocalContext.current
     val bitmap by produceState<ImageBitmap?>(initialValue = null, uri) {
         value = withContext(Dispatchers.IO) {
@@ -298,8 +332,23 @@ internal fun LocalImage(uri: String, modifier: Modifier, description: String) {
             }.getOrNull()
         }
     }
-    Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-        if (bitmap != null) Image(requireNotNull(bitmap), description, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-        else Text("图片", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (expandToAvailableWidth) {
+        BoxWithConstraints(modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center) {
+            bitmap?.let { image ->
+                // The sampled bitmap's intrinsic height is expressed in px.
+                // Size the message frame in dp from its real aspect ratio,
+                // then Fit the entire image into it without cropping/stretching.
+                val ratio = image.width.toFloat() / image.height.toFloat()
+                val frameHeight = (maxWidth / ratio).coerceIn(120.dp, 360.dp)
+                Image(image, description, Modifier.fillMaxWidth().height(frameHeight), contentScale = ContentScale.Fit)
+            } ?: Text("图片", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else {
+        Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+            if (bitmap != null) Image(requireNotNull(bitmap), description, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            else Text("图片", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

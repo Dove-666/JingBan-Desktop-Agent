@@ -1,5 +1,6 @@
 """Source links use the shared archive, never a new unrelated conversation."""
 from pathlib import Path
+from dataclasses import replace
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -43,15 +44,17 @@ class MemorySourceNavigationTests(unittest.TestCase):
         self.app.processEvents()
         self.directory.cleanup()
 
-    def test_source_signal_opens_exact_archive_without_losing_memory_window(self):
+    def test_source_signal_returns_to_chat_and_preserves_embedded_memory_page(self):
         panel = self.session.memory_panel
         panel.conversation_requested.emit(self.source_id)
         spin_until(lambda: not self.session.chat.history_loading)
         self.assertEqual(self.session.chat.current_conversation_id, self.source_id)
         self.assertEqual(self.session.chat.messages[0]["content"], "我希望回复简洁。")
         self.assertIs(self.session.memory_panel, panel)
-        self.assertTrue(panel.isVisible())
+        self.assertIs(self.session.chat_window.settings_page.memory_panel, panel)
+        self.assertFalse(panel.isVisible())
         self.assertTrue(self.session.chat_window.isVisible())
+        self.assertIs(self.session.chat_window.pages.currentWidget(), self.session.chat_window.chat_panel)
 
     def test_deleted_source_reports_error_and_keeps_current_conversation(self):
         self.session.chat.store.delete_conversation(self.source_id)
@@ -61,6 +64,24 @@ class MemorySourceNavigationTests(unittest.TestCase):
         self.assertEqual(self.session.chat.current_conversation_id, current)
         self.assertTrue(self.session.chat.error)
         self.assertIsNone(self.session.chat.store.get_conversation(self.source_id))
+
+    def test_chat_memory_failure_remains_recoverable_after_opening_and_refreshing_settings(self):
+        memory = self.session.memory
+        panel = self.session.memory_panel
+        memory.settings = replace(memory.settings, enabled=True, automatic=True)
+        memory.settings_changed.emit(memory.settings)
+        self.session.chat.memory_status_changed.emit(
+            "长期记忆提炼未完成；聊天消息已经保存在本机。 本地 Embedding 模型尚未准备好。"
+        )
+        self.assertEqual(memory.setup_state, "failed")
+        self.assertFalse(panel.error_label.isHidden())
+        self.assertFalse(panel.retry_button.isHidden())
+        self.assertNotIn("Embedding", panel.error_label.text())
+        self.assertTrue(memory.refresh())
+        spin_until(lambda: not memory.busy)
+        self.assertFalse(panel.error_label.isHidden())
+        self.assertFalse(panel.retry_button.isHidden())
+        self.assertFalse(self.session.chat.error)
 
 
 if __name__ == "__main__":

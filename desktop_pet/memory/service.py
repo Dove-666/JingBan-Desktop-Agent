@@ -7,7 +7,7 @@ Only non-secret preferences are saved here; keys travel over an anonymous pipe.
 
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import json
 import os
 from pathlib import Path
@@ -32,6 +32,7 @@ class MemoryUnavailable(RuntimeError):
 
 class MemoryServiceProtocol(Protocol):
     def set_automatic_paused(self, paused: bool) -> None: ...
+    def set_automatic_enabled(self, enabled: bool, *, cancelled: threading.Event | None = None) -> dict: ...
     def search(self, query: str, limit: int = 4) -> list[dict[str, Any]]: ...
     def extract(self, messages: list[dict], *, conversation_id: str, trigger: str = "explicit") -> list[dict]: ...
     def list_memories(self, query: str = "") -> list[dict]: ...
@@ -117,7 +118,7 @@ class MemoryService:
             self.data_dir.mkdir(parents=True, exist_ok=True)
             with self._lock:
                 if not self.config_path.exists():
-                    self._write_settings(MemorySettings(user_id=str(uuid4())))
+                    self._write_settings(MemorySettings(user_id=str(uuid4()), embedding_provider="fastembed"))
         except OSError:
             raise MemoryUnavailable("无法创建本地记忆配置目录；聊天仍可正常使用。") from None
 
@@ -208,6 +209,88 @@ class MemoryService:
                 "embedding_configured": embedding, "embedding_provider": settings.embedding_provider,
                 "uses_chat_model": settings.use_chat_model}
 
+    def _managed_settings(self, current: MemorySettings) -> MemorySettings:
+        """Choose defaults only for an unused, unconfigured vector space.
+
+        A saved vector identity, legacy vector files, custom remote parameters
+        or a remote credential belong to the user. A simpler UI must never
+        rewrite them or mix embedding spaces.
+        """
+        identity = self.data_dir / "embedding_identity.json"
+        vectors = self.data_dir / "qdrant"
+        if identity.exists():
+            return current
+        defaults = MemorySettings()
+        remote_defaults = (current.embedding_base_url.rstrip("/"), current.embedding_model,
+                           current.embedding_dimensions) == (
+            defaults.embedding_base_url.rstrip("/"), defaults.embedding_model,
+            defaults.embedding_dimensions,
+        )
+        if current.embedding_provider != "openai" or not remote_defaults:
+            return current
+        try:
+            if self._embedding_credentials.get_api_key():
+                return current
+        except CredentialsError:
+            # An unreadable vault is not evidence that a credential is absent.
+            return current
+        if vectors.is_dir() and any(vectors.iterdir()):
+            # Earlier management-only reads may have initialized an empty
+            # default collection. Inspect every namespace through the native
+            # client; never infer emptiness from files or the current user.
+            try:
+                inventory = self._operation("inspect_empty")
+            except MemoryUnavailable:
+                return current
+            if inventory != {"empty": True}:
+                return current
+        return replace(current, embedding_provider="fastembed")
+
+    def set_automatic_enabled(self, enabled: bool, *, cancelled: threading.Event | None = None) -> dict:
+        """Persist the single user-facing switch; call from a worker thread.
+
+        Preparation never activates collection until it succeeds. Disabling
+        leaves retrieval enabled and the privacy gate closed even if saving
+        fails. The caller owns reopening the gate after a still-current enable.
+        """
+        if type(enabled) is not bool:
+            raise SettingsError("自动记忆开关必须为布尔值。")
+        if enabled and self._closed.is_set():
+            raise MemoryUnavailable("长期记忆已停止。")
+        self.set_automatic_paused(True)
+        with self._lock:
+            current = self.load_settings()
+            if not enabled:
+                self.save_settings(replace(current, automatic=False))
+                return {"prepared": False, "automatic": False}
+            candidate = self._managed_settings(current)
+            overview = self.configuration_status()
+            if overview.get("extraction_configured") is not True:
+                raise MemoryUnavailable("请先在“模型与 API”中配置聊天服务，再开启自动记忆。")
+            try:
+                self._configuration(candidate, needs_llm=True, needs_embedding=True)
+            except (MemoryUnavailable, CredentialsError, SettingsError):
+                raise MemoryUnavailable("已有记忆服务暂时无法连接，原数据已保留；请恢复原服务后重试。") from None
+            # The local helper consumes saved technical settings. Preserve
+            # both collection flags until preparation has succeeded.
+            if candidate != current:
+                self.save_settings(candidate)
+        def check_cancelled():
+            if self._closed.is_set() or (cancelled is not None and cancelled.is_set()):
+                raise MemoryUnavailable("已取消开启自动记忆。")
+        check_cancelled()
+        prepared = candidate.embedding_provider == "fastembed"
+        if prepared:
+            self.prepare_local_model()
+        check_cancelled()
+        with self._lock:
+            latest = self.load_settings()
+            if self._embedding_identity(latest) != self._embedding_identity(candidate):
+                raise MemoryUnavailable("记忆服务在准备期间发生变化，请重试；原记忆已保留。")
+            check_cancelled()
+            self.save_settings(replace(latest, enabled=True, automatic=True))
+        return {"prepared": prepared, "automatic": True}
+
     def set_llm_key(self, value: str) -> None:
         self._check_key(value)
         self._llm_credentials.save_api_key(value)
@@ -237,6 +320,16 @@ class MemoryService:
             try:
                 keys.append(getter())
             except CredentialsError:
+                pass
+        getter = getattr(self._chat_store, "get_known_api_keys", None)
+        if callable(getter):
+            try:
+                values = getter()
+                if isinstance(values, (tuple, list)):
+                    keys.extend(value for value in values if isinstance(value, str) and value and value not in keys)
+            except Exception:
+                # Keep legacy/readable memory credentials without exposing a
+                # vault driver's private exception details.
                 pass
         return tuple(keys)
 

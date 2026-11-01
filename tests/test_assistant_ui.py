@@ -7,6 +7,7 @@ open the user's conversation archive, credential store, or a model connection.
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 import time
 import unittest
@@ -14,7 +15,7 @@ from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from tests.test_session_ui import SessionChat
 
@@ -80,6 +81,23 @@ def bridge_action(panel, action: str, **payload):
     return json.loads(panel.bridge.dispatch(action, json.dumps(payload)))
 
 
+def open_row_menu(panel, conversation_id):
+    selector = "[data-conversation-id=" + json.dumps(conversation_id) + "] .row-actions button"
+    click_dom(panel, selector)
+    wait_js(panel, "Boolean(document.querySelector('.row-popover'))")
+
+
+def click_row_action(panel, conversation_id, keyword):
+    open_row_menu(panel, conversation_id)
+    eval_js(panel, """(() => {
+        const button=Array.from(document.querySelectorAll('.row-popover button'))
+            .find(node=>node.textContent.includes(KEYWORD));
+        if (!button) throw new Error('Missing conversation action');
+        if (button.disabled) throw new Error('Conversation action is disabled');
+        button.click(); return true;
+    })()""".replace("KEYWORD", json.dumps(keyword)))
+
+
 def layout_metrics(panel):
     return eval_js(panel, """(() => {
       const composer=document.querySelector('.composer').getBoundingClientRect();
@@ -135,6 +153,10 @@ class AssistantUiChat(SessionChat):
         self.export_busy_changed.emit(True)
         return True
 
+    def clear(self):
+        self.calls.append(("clear", self.current_conversation_id))
+        super().clear()
+
     def retry(self, conversation_id=None, message_id=None):
         self.calls.append(("retry", conversation_id, message_id))
         return (not self.busy and not self.history_loading
@@ -152,6 +174,69 @@ class AssistantUiChat(SessionChat):
     def reload_history(self, conversation_id):
         self.calls.append(("reloadHistory", conversation_id))
         return bool(conversation_id)
+
+
+class DeferredHistoryChat(AssistantUiChat):
+    """Match real history placeholders; finish/fail only when a test releases it."""
+
+    def __init__(self):
+        super().__init__()
+        self.pending_target = None
+        self._restore_view = None
+        self.histories = {
+            "current": deepcopy(self.messages),
+            "old": [{"id": "old-source", "role": "assistant", "content": "只属于旧会话的内容"}],
+        }
+
+    def open_conversation(self, conversation_id, focus_message_id=None):
+        self.calls.append(("open", conversation_id))
+        if conversation_id not in self.histories:
+            return False
+        if not self.history_loading:
+            self._restore_view = (self.current_conversation_id, self.current_title, deepcopy(self.messages))
+        self.pending_target = conversation_id
+        self.current_conversation_id = conversation_id
+        self.current_title = "正在加载会话…"
+        self.messages = []
+        self.history_loading = True
+        self.error = ""
+        self.history_busy_changed.emit(True)
+        self.error_changed.emit("")
+        self.conversation_changed.emit()
+        self.messages_changed.emit()
+        return True
+
+    def finish_open(self, error=""):
+        if self.pending_target is None:
+            return
+        target, self.pending_target = self.pending_target, None
+        self.history_loading = False
+        if error:
+            self.current_conversation_id, self.current_title, self.messages = self._restore_view
+            self.error = "历史会话加载失败：" + error
+            self.error_action = "history"
+            self.error_conversation_id = target
+        else:
+            self.current_title = next(item["title"] for item in self.conversations if item["id"] == target)
+            self.messages = deepcopy(self.histories[target])
+            self.error = ""
+            self.error_action = ""
+        self._restore_view = None
+        self.history_busy_changed.emit(False)
+        self.error_changed.emit(self.error)
+        self.conversation_changed.emit()
+        self.messages_changed.emit()
+
+    def new_conversation(self):
+        self.pending_target = None
+        self._restore_view = None
+        self.history_loading = False
+        self.history_busy_changed.emit(False)
+        return super().new_conversation()
+
+    def clear(self):
+        self.histories[self.current_conversation_id] = []
+        super().clear()
 
 
 class AssistantUiPerception(QObject):
@@ -218,6 +303,12 @@ class AssistantUiTests(unittest.TestCase):
         self.assertEqual(eval_js(self.panel, "document.querySelectorAll('[data-message-id]').length"), 2)
         self.assertEqual(eval_js(self.panel, "document.querySelector('#message-input').tagName"), "TEXTAREA")
         self.assertTrue(eval_js(self.panel, "document.querySelector('.send-button').disabled"))
+        self.assertEqual(eval_js(self.panel,
+                                 "document.querySelectorAll('.local-note, .keyboard-hint, .composer-footnote, "
+                                 ".perception-status, .camera-runtime').length"), 0)
+        self.assertEqual(eval_js(self.panel,
+                                 "document.querySelectorAll('[data-testid=tools-button], .header-actions button, "
+                                 ".chat-header button[aria-label^=新对话]').length"), 0)
         self.assertTrue(self.panel.web_view.url().isLocalFile())
 
     def test_actual_dom_send_reaches_controller_and_second_view(self):
@@ -282,12 +373,15 @@ class AssistantUiTests(unittest.TestCase):
         wait_js(self.panel, "document.querySelector('#message-input').value === '当前会话草稿'")
 
     def test_actual_history_search_is_debounced(self):
+        # The initial history refresh finishes before the frontend is ready.
+        # Only edits made by the user belong to this debounce assertion.
+        before = len(self.chat.calls)
         click_dom(self.panel, "button[aria-label='搜索会话 · Ctrl+F']")
         wait_js(self.panel, "Boolean(document.querySelector('.search-field input'))")
         set_dom_text(self.panel, ".search-field input", "桌")
         set_dom_text(self.panel, ".search-field input", "桌宠 API")
         wait_until(lambda: any(call == ("search", "桌宠 API") for call in self.chat.calls))
-        self.assertEqual([call for call in self.chat.calls if call[0] == "search"], [("search", "桌宠 API")])
+        self.assertEqual([call for call in self.chat.calls[before:] if call[0] == "search"], [("search", "桌宠 API")])
 
     def test_long_markdown_stays_within_window_at_three_widths(self):
         self.chat.messages = [
@@ -499,21 +593,21 @@ class AssistantUiTests(unittest.TestCase):
         wait_js(other, "document.querySelector('#message-input')?.value === '恢复渲染器后保留的草稿'")
         self.assertFalse(other._native_mode)
 
-    def test_optional_perception_status_controls_use_memory_only_controller(self):
+    def test_enabled_perception_does_not_add_settings_or_pause_controls_to_row_menu(self):
         self.assertFalse(eval_js(self.panel, "Boolean(document.querySelector('.perception-status'))"))
         perception = AssistantUiPerception()
         self.chat.perception_controller = perception
         other = make_panel(self.chat)
         self.extra_panels.append(other)
-        wait_js(other, "document.querySelector('.perception-status')?.textContent.includes('仅本地观察')")
-        self.assertIn("42", eval_js(other, "document.querySelector('.perception-status').textContent"))
-        click_dom(other, ".perception-status button:last-child")
-        wait_until(lambda: perception.calls == [("pause", True)])
-        wait_js(other, "document.querySelector('.perception-status')?.textContent.includes('感知已暂停')")
-        opened = []
-        perception.settings_requested.connect(lambda: opened.append("settings"))
-        click_dom(other, ".perception-status button:first-child")
-        wait_until(lambda: opened == ["settings"])
+        self.assertEqual(eval_js(other,
+                                 "document.querySelectorAll('.perception-status, .camera-runtime').length"), 0)
+        open_row_menu(other, "current")
+        self.assertEqual(eval_js(other, "document.querySelectorAll('.row-popover button').length"), 5)
+        self.assertEqual(eval_js(other, "document.querySelectorAll('[data-testid=screen-pause-button], "
+                                 "[data-testid=camera-pause-button], [data-testid=visual-pause-button]').length"), 0)
+        self.assertFalse(eval_js(other, "document.querySelector('.row-popover').innerText.includes('屏幕感知')"))
+        self.assertEqual(perception.calls, [])
+        self.assertFalse(perception.paused)
 
     def test_screen_message_focus_reveals_context(self):
         self.chat.messages.append({"id": "qa-screen", "role": "assistant", "source": "proactive_screen",
@@ -535,14 +629,195 @@ class AssistantUiTests(unittest.TestCase):
         self.assertTrue(eval_js(self.panel, "document.querySelector('[data-message-id=qa-screen]').classList.contains('message-highlight')"),
                         "An ordinary host snapshot must not prematurely remove the focus indication")
 
-    def test_tools_menu_uses_shared_host_openers(self):
-        for label, expected in (("长期记忆", "memory"), ("聊天服务设置", "settings")):
-            click_dom(self.panel, "button[aria-label='对话工具']")
-            wait_js(self.panel, "Boolean(document.querySelector('.tools-popover'))")
-            eval_js(self.panel, "(() => {const button=[...document.querySelectorAll('.tools-popover button')].find(node=>node.innerText.includes(" +
-                    json.dumps(label) + ")); if(!button) throw new Error('Missing tool'); button.click(); return true;})()")
-            wait_until(lambda: expected in self.opened)
-        self.assertEqual(self.opened, ["memory", "settings"])
+    def test_row_menu_contains_five_conversation_actions_and_settings_remain_in_sidebar(self):
+        open_row_menu(self.panel, "current")
+        labels = eval_js(self.panel, """Array.from(document.querySelectorAll('.row-popover button')).map(node => {
+            const copy=node.cloneNode(true); copy.querySelectorAll('kbd').forEach(key=>key.remove());
+            return copy.textContent.trim();
+        })""")
+        self.assertEqual(len(labels), 5)
+        for keyword in ("查找", "导出", "清空", "重命名", "删除"):
+            self.assertEqual(sum(keyword in label for label in labels), 1, labels)
+        self.assertEqual(eval_js(self.panel,
+                                 "document.querySelectorAll('.row-popover .reading-controls, "
+                                 ".row-popover .context-note, .row-popover .observation-notice').length"), 0)
+        self.assertNotIn(self.chat.context_usage, eval_js(self.panel, "document.querySelector('.row-popover').innerText"))
+        eval_js(self.panel, "window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))")
+        wait_js(self.panel, "!document.querySelector('.row-popover')")
+        click_dom(self.panel, ".sidebar-setting")
+        wait_until(lambda: self.opened == ["settings"])
+        self.assertEqual(self.chat.current_conversation_id, "current")
+
+    def test_sidebar_and_ctrl_n_create_conversations_without_duplicate_header_button(self):
+        self.assertEqual(eval_js(self.panel, "document.querySelectorAll('.header-actions > button').length"), 0)
+        self.assertEqual(eval_js(self.panel, "document.querySelectorAll('.chat-header button[aria-label^=新对话]').length"), 0)
+        self.assertEqual(eval_js(self.panel, "document.querySelectorAll('.sidebar .new-conversation').length"), 1)
+        set_dom_text(self.panel, "#message-input", "切换会话前保留的草稿")
+        wait_until(lambda: self.panel._web_drafts.get("current") == "切换会话前保留的草稿")
+        click_dom(self.panel, ".sidebar .new-conversation")
+        wait_until(lambda: self.chat.calls.count(("new",)) == 1)
+        wait_js(self.panel, "document.querySelector('.header-title')?.textContent === '新对话'")
+        self.panel.web_view.setFocus()
+        eval_js(self.panel, "document.querySelector('#message-input').focus()")
+        keyboard_target = self.panel.web_view.focusProxy() or self.panel.web_view
+        QTest.keyClick(keyboard_target, Qt.Key.Key_N, Qt.KeyboardModifier.ControlModifier)
+        wait_until(lambda: self.chat.calls.count(("new",)) == 2)
+        self.assertEqual(self.chat.current_conversation_id, "new-session")
+        self.assertEqual(self.panel._web_drafts["current"], "切换会话前保留的草稿")
+        self.assertEqual(self.chat.sent, [])
+
+    def test_row_find_opens_its_conversation_and_keeps_the_previous_draft(self):
+        set_dom_text(self.panel, "#message-input", "当前会话尚未发出的草稿")
+        wait_until(lambda: self.panel._web_drafts.get("current") == "当前会话尚未发出的草稿")
+        click_row_action(self.panel, "old", "查找")
+        wait_js(self.panel, "Boolean(document.querySelector('[data-testid=message-search]'))")
+        self.assertEqual(self.chat.current_conversation_id, "old")
+        self.assertIn(("open", "old"), self.chat.calls)
+        set_dom_text(self.panel, "[data-testid=message-search]", "历史记录")
+        wait_js(self.panel, "document.querySelector('.message-find-count').textContent.includes('1 / 1')")
+        self.chat.open_conversation("current")
+        wait_js(self.panel, "document.querySelector('#message-input').value === '当前会话尚未发出的草稿'")
+        self.panel.web_view.setFocus()
+        eval_js(self.panel, "document.querySelector('#message-input').focus()")
+        QTest.keyClick(self.panel.web_view.focusProxy() or self.panel.web_view, Qt.Key.Key_F,
+                       Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier)
+        wait_js(self.panel, "Boolean(document.querySelector('[data-testid=message-search]'))")
+        self.assertEqual(self.chat.current_conversation_id, "current")
+
+    def test_row_export_uses_the_selected_old_conversation_instead_of_the_current_one(self):
+        set_dom_text(self.panel, "#message-input", "导出旧会话也不能丢失这段草稿")
+        wait_until(lambda: self.panel._web_drafts.get("current") == "导出旧会话也不能丢失这段草稿")
+        with patch.object(QFileDialog, "getSaveFileName", return_value=("qa-row-export-not-written", "JSON 对话 (*.json)")):
+            click_row_action(self.panel, "old", "导出")
+            wait_until(lambda: any(call[0] == "export" for call in self.chat.calls))
+        exports = [call for call in self.chat.calls if call[0] == "export"]
+        self.assertEqual(exports, [("export", "old", "qa-row-export-not-written.json", "json")])
+        self.assertEqual(self.chat.current_conversation_id, "old")
+        self.assertEqual(self.panel._web_drafts["current"], "导出旧会话也不能丢失这段草稿")
+
+    def test_row_clear_waits_for_selected_history_then_only_clears_that_history(self):
+        chat = DeferredHistoryChat()
+        other = make_panel(chat)
+        self.extra_panels.append(other)
+        current_history = deepcopy(chat.histories["current"])
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes) as confirm:
+            click_row_action(other, "old", "清空")
+            wait_until(lambda: chat.history_loading)
+            confirm.assert_not_called()
+            self.assertNotIn(("clear", "current"), chat.calls)
+            chat.finish_open()
+            wait_until(lambda: ("clear", "old") in chat.calls)
+        self.assertEqual(chat.histories["old"], [])
+        self.assertEqual(chat.histories["current"], current_history)
+        self.assertEqual([call for call in chat.calls if call[0] == "clear"], [("clear", "old")])
+
+    def test_row_export_waits_until_history_has_loaded_before_showing_native_picker(self):
+        chat = DeferredHistoryChat()
+        other = make_panel(chat)
+        self.extra_panels.append(other)
+        with patch.object(QFileDialog, "getSaveFileName", return_value=("qa-delayed-not-written", "JSON 对话 (*.json)")) as picker:
+            click_row_action(other, "old", "导出")
+            wait_until(lambda: chat.history_loading)
+            picker.assert_not_called()
+            self.assertFalse(any(call[0] == "export" for call in chat.calls))
+            chat.finish_open()
+            wait_until(lambda: any(call[0] == "export" for call in chat.calls))
+            picker.assert_called_once()
+        self.assertEqual([call[1] for call in chat.calls if call[0] == "export"], ["old"])
+
+    def test_failed_row_history_load_never_executes_or_replays_queued_actions(self):
+        for keyword in ("查找", "导出", "清空"):
+            with self.subTest(action=keyword):
+                chat = DeferredHistoryChat()
+                other = make_panel(chat)
+                self.extra_panels.append(other)
+                with patch.object(QFileDialog, "getSaveFileName", return_value=("", "")) as picker, \
+                        patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No) as confirm:
+                    click_row_action(other, "old", keyword)
+                    wait_until(lambda: chat.history_loading)
+                    chat.finish_open(error="合成档案读取错误")
+                    wait_js(other, "Boolean(document.querySelector('.error-banner'))")
+                    self.assertEqual(chat.current_conversation_id, "current")
+                    self.assertFalse(eval_js(other, "Boolean(document.querySelector('[data-testid=message-search]'))"))
+                    picker.assert_not_called()
+                    confirm.assert_not_called()
+                    chat.open_conversation("old")
+                    chat.finish_open()
+                    wait_js(other, "document.querySelector('.header-title')?.textContent === '旧会话'")
+                    QTest.qWait(80)
+                    picker.assert_not_called()
+                    confirm.assert_not_called()
+                    self.assertFalse(eval_js(other, "Boolean(document.querySelector('[data-testid=message-search]'))"))
+                    self.assertFalse(any(call[0] in {"clear", "export"} for call in chat.calls))
+
+    def test_switching_or_creating_conversation_cancels_pending_row_action(self):
+        for navigation in ("switch", "new"):
+            with self.subTest(navigation=navigation):
+                chat = DeferredHistoryChat()
+                other = make_panel(chat)
+                self.extra_panels.append(other)
+                with patch.object(QFileDialog, "getSaveFileName", return_value=("", "")) as picker:
+                    click_row_action(other, "old", "导出")
+                    wait_until(lambda: chat.history_loading)
+                    if navigation == "new":
+                        chat.new_conversation()
+                    else:
+                        chat.open_conversation("current")
+                        chat.finish_open()
+                    wait_js(other, "document.querySelector('.header-title')?.textContent === " +
+                            json.dumps("新对话" if navigation == "new" else "开发桌宠"))
+                    picker.assert_not_called()
+                    chat.open_conversation("old")
+                    chat.finish_open()
+                    wait_js(other, "document.querySelector('.header-title')?.textContent === '旧会话'")
+                    QTest.qWait(80)
+                    picker.assert_not_called()
+                    self.assertFalse(any(call[0] == "export" for call in chat.calls))
+
+    def test_coalesced_external_return_to_origin_cancels_queued_row_export(self):
+        chat = DeferredHistoryChat()
+        other = make_panel(chat)
+        self.extra_panels.append(other)
+        snapshots = []
+        other.bridge.stateChanged.connect(lambda payload: snapshots.append(json.loads(payload)))
+        original_open = chat.open_conversation
+
+        def open_then_immediately_restore_origin(conversation_id, focus_message_id=None):
+            # These signals share one Qt/WebChannel callback. The publish timer
+            # sees only the final current-session snapshot, never old/loading.
+            accepted = original_open(conversation_id, focus_message_id)
+            if accepted:
+                original_open("current")
+                chat.finish_open()
+            return accepted
+
+        with patch.object(QFileDialog, "getSaveFileName", return_value=("", "")) as picker:
+            with patch.object(chat, "open_conversation", side_effect=open_then_immediately_restore_origin):
+                click_row_action(other, "old", "导出")
+                wait_until(lambda: ("open", "old") in chat.calls and ("open", "current") in chat.calls)
+                wait_until(lambda: any(item["conversationId"] == "current" and not item["historyLoading"]
+                                       for item in snapshots))
+                QTest.qWait(80)
+                self.assertEqual(chat.current_conversation_id, "current")
+                self.assertFalse(any(item["conversationId"] == "old" for item in snapshots), snapshots)
+                picker.assert_not_called()
+            # Opening the target normally later must not replay the old intent.
+            chat.open_conversation("old")
+            chat.finish_open()
+            wait_js(other, "document.querySelector('.header-title')?.textContent === '旧会话'")
+            QTest.qWait(80)
+            picker.assert_not_called()
+            self.assertFalse(any(call[0] == "export" for call in chat.calls))
+
+    def test_rejected_row_open_does_not_export_the_still_active_conversation(self):
+        with patch.object(self.chat, "open_conversation", return_value=False), \
+                patch.object(QFileDialog, "getSaveFileName", return_value=("", "")) as picker:
+            click_row_action(self.panel, "old", "导出")
+            wait_js(self.panel, "!document.querySelector('.row-popover')")
+            QTest.qWait(80)
+            self.assertEqual(self.chat.current_conversation_id, "current")
+            picker.assert_not_called()
+            self.assertFalse(any(call[0] == "export" for call in self.chat.calls))
 
     def test_narrow_history_overlay_closes_and_returns_keyboard_focus(self):
         self.panel.resize(640, 720)
@@ -557,6 +832,7 @@ class AssistantUiTests(unittest.TestCase):
         wait_js(self.panel, "document.querySelectorAll('.conversation-row').length === 30")
         eval_js(self.panel, "(() => {const rows=document.querySelectorAll('.conversation-row'); rows[rows.length-1].scrollIntoView({block:'end'}); rows[rows.length-1].querySelector('.row-actions button').click(); return true;})()")
         wait_js(self.panel, "Boolean(document.querySelector('.row-popover'))")
+        self.assertEqual(eval_js(self.panel, "document.querySelectorAll('.row-popover button').length"), 5)
         self.assertTrue(eval_js(self.panel, """(() => {
           const menu=document.querySelector('.row-popover'), rect=menu.getBoundingClientRect();
           const hit=document.elementFromPoint(rect.left+10,rect.top+10);

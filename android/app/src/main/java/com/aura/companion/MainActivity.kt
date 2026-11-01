@@ -19,10 +19,10 @@ import com.aura.companion.ui.ThemeMode
 class MainActivity : ComponentActivity() {
     private val model by viewModels<AuraViewModel>()
     private val picker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) model.attachImage(uri)
+        model.attachImage(uri)
     }
     private val actions by lazy { object : UiActions by model {
-        override fun pickImage() { picker.launch("image/*") }
+        override fun pickImage() { model.beginImageSelection { picker.launch("image/*") } }
     } }
 
     override fun onCreate(savedInstanceState: Bundle?) {

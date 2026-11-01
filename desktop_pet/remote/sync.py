@@ -3,7 +3,8 @@
 Snapshots replace a phone cache and then catch up using ``pull(watermark)``.
 Finish every snapshot page before applying subsequent changes. Both snapshot
 pages and journal pages may be retried; apply them by entity ID and sequence.
-This module deliberately offers no remote row-import or automatic AI replay.
+Direct-chat imports accept only complete, validated exchanges; no import can
+execute or automatically replay an AI request.
 """
 
 from __future__ import annotations
@@ -14,6 +15,11 @@ import math
 import sqlite3
 import time
 from uuid import UUID, uuid4
+from ..chat_images import IMAGE_ERRORS, IMAGE_ID
+from ..agent_presentation import public_agent_metadata
+from ..conversations.chronology import timestamp_key
+from .chat_transfer import normalize_import
+from .errors import RemoteError
 
 from ..conversations.store import (
     ConversationStore, StoreError, _identifier, maintain_remote_sync, remote_sync_projection,
@@ -58,6 +64,13 @@ def sanitize_message(message: dict) -> dict:
     except (ValueError, TypeError, AttributeError):
         valid_reply = None
     result["reply_to"] = valid_reply
+    image_id = message.get("image_id", metadata.get("image_id"))
+    result["image_id"] = (image_id if message.get("role") == "user" and isinstance(image_id, str)
+                          and IMAGE_ID.fullmatch(image_id) else None)
+    image_error = message.get("image_error", metadata.get("image_error_code"))
+    result["image_error"] = (image_error if message.get("role") == "user" and status == "failed"
+                             and isinstance(image_error, str) and image_error in IMAGE_ERRORS else None)
+    result.update(public_agent_metadata(message))
     return result
 
 
@@ -88,6 +101,9 @@ class RemoteSyncStore:
     is never admitted for execution again. The caller must reconcile its stable
     message ID against the chat store, then complete the operation. A lost
     completion acknowledgement is safe to retry with the same result.
+
+    import_exchange is the narrower exception: it atomically saves only SQLite
+    messages and a completed receipt, without any GUI/AI side effects.
     """
 
     SNAPSHOT_TTL_SECONDS = 900
@@ -97,6 +113,90 @@ class RemoteSyncStore:
 
     def __init__(self, chat_store: ConversationStore):
         self.chat_store = chat_store
+
+    def import_exchange(self, device_id: str, request_id: str, params: dict) -> dict:
+        """Atomically save a phone-generated exchange and its durable receipt.
+
+        Stable message IDs also deduplicate a lost receipt retried with a new
+        RPC ID. A transaction cannot leave one message or a pending operation
+        behind. Deletion tombstones are checked even for a completed receipt.
+        """
+        self._operation_ids(device_id, request_id)
+        normalized = normalize_import(params)
+        identity = json.dumps({"method": "chat.import", "params": normalized},
+                              sort_keys=True, ensure_ascii=False, allow_nan=False,
+                              separators=(",", ":"))
+        digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+        cid, messages = normalized["conversation_id"], normalized["messages"]
+        ids = [message["id"] for message in messages]
+        with self.chat_store._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            operation = connection.execute("SELECT * FROM remote_sync_operations WHERE device_id = ? AND request_id = ?",
+                                           (device_id, request_id)).fetchone()
+            if operation is not None and operation["payload_hash"] != digest:
+                raise RemoteError("import_conflict", "相同请求标识不能回写不同的对话。")
+            deleted = connection.execute("""SELECT 1 FROM remote_sync_tombstones
+                WHERE (entity = 'conversation' AND entity_id = ?)
+                   OR (entity = 'message' AND entity_id IN (?, ?)) LIMIT 1""", (cid, *ids)).fetchone()
+            if deleted is not None:
+                raise RemoteError("conversation_deleted", "会话或消息已在电脑删除，不能通过回写恢复。")
+            if operation is not None:
+                if operation["state"] != "complete":
+                    raise RemoteError("busy", "回写状态尚未确认，请稍后重试。")
+                cached = json.loads(operation["result"])
+                return {**cached["result"], "duplicate": True}
+            existing = []
+            for message in messages:
+                row = connection.execute("SELECT * FROM messages WHERE id = ?", (message["id"],)).fetchone()
+                if row is not None:
+                    try:
+                        metadata = json.loads(row["metadata"])
+                    except (TypeError, ValueError):
+                        raise RemoteError("import_conflict", "现有消息附加信息无效，原记录未被修改。") from None
+                    expected = {"request_status": "complete", "remote_import": True} if message["role"] == "user" else {
+                        "reply_to": ids[0], "remote_import": True}
+                    if "image_id" in message:
+                        expected["image_id"] = message["image_id"]
+                    if (row["conversation_id"] != cid or row["role"] != message["role"]
+                            or row["source"] != message["role"] or row["content"] != message["content"]
+                            or timestamp_key(row["created_at"]) != message["created_at"]
+                            or not isinstance(metadata, dict)
+                            or any(metadata.get(key) != value for key, value in expected.items())
+                            or metadata.get("image_id") != message.get("image_id")):
+                        raise RemoteError("import_conflict", "消息标识已存在且内容不同，原记录未被修改。")
+                existing.append(row is not None)
+            if any(existing) and not all(existing):
+                raise RemoteError("import_conflict", "回写消息标识与现有记录冲突，原记录未被修改。")
+            duplicate = all(existing)
+            if not duplicate:
+                first = messages[0]
+                if "title" in normalized:
+                    connection.execute("""INSERT OR IGNORE INTO conversations
+                        (id, title, summary, created_at, updated_at, status)
+                        VALUES (?, ?, '', ?, ?, 'active')""",
+                        (cid, normalized["title"], first["created_at"], first["created_at"]))
+                else:
+                    self.chat_store._ensure_conversation(connection, cid, first["content"], first["created_at"])
+                for message in messages:
+                    metadata = {"remote_import": True}
+                    if message["role"] == "user":
+                        metadata["request_status"] = "complete"
+                        if "image_id" in message:
+                            metadata["image_id"] = message["image_id"]
+                    else:
+                        metadata["reply_to"] = ids[0]
+                    connection.execute("""INSERT INTO messages
+                        (id, conversation_id, role, content, created_at, source, metadata)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)""", (message["id"], cid, message["role"],
+                        message["content"], message["created_at"], message["role"], _json(metadata)))
+                self.chat_store._touch(connection, cid, messages[-1]["created_at"])
+            result = {"imported": True, "conversation_id": cid, "message_ids": ids, "duplicate": duplicate}
+            now = time.time()
+            connection.execute("""INSERT INTO remote_sync_operations
+                (device_id, request_id, payload_hash, state, result, created_at, updated_at, expires_at, ephemeral)
+                VALUES (?, ?, ?, 'complete', ?, ?, ?, NULL, 0)""",
+                (device_id, request_id, digest, _json({"ok": True, "result": result}), now, now))
+            return result
 
     @staticmethod
     def _item(row: sqlite3.Row, *, change: bool = False) -> dict:

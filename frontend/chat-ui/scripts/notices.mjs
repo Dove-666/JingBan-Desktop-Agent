@@ -41,6 +41,13 @@ for (const { pkg, files } of [...packages.values()].sort((a, b) => a.pkg.name.lo
   for (const { file, content } of files) text.push(`--- ${file} ---`, content.trim(), '');
   if (!files.length) text.push(`Package source: https://www.npmjs.com/package/${pkg.name}/v/${pkg.version}`, '');
 }
+const glassSources = path.resolve(project, '../../third_party/liquid_glass');
+if (fs.existsSync(glassSources)) {
+  text.push('='.repeat(78), 'AURA GlassSurface: adapted SVG refraction sources', '');
+  for (const file of ['PROVENANCE.txt', 'LICENSE', 'LICENSE-rdev']) {
+    text.push(`--- ${file} ---`, fs.readFileSync(path.join(glassSources, file), 'utf8').trim(), '');
+  }
+}
 const output = path.resolve(project, '../../desktop_pet/ui/web_chat/THIRD_PARTY_NOTICES.txt');
 fs.writeFileSync(output, text.join('\n'), 'utf8');
 process.stdout.write(`Third-party notices: ${packages.size} runtime packages.\n`);

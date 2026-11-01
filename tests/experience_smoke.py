@@ -175,21 +175,19 @@ def run_validation():
                 check("both_chat_entries_reuse_same_memory_window", session.memory_panel is memory_panel
                       and chat_window.chat_panel.memory_panel is None and session.debug_panel.chat_panel.memory_panel is None)
 
-                memory_panel.tabs.setCurrentIndex(1)
-                index = memory_panel.embedding_provider_combo.findData("fastembed")
-                memory_panel.embedding_provider_combo.setCurrentIndex(index)
-                check("unsaved_model_selection_cannot_prepare", not memory_panel.prepare_model_button.isEnabled())
-                memory_panel.save_button.click()
+                check("memory_ui_has_no_technical_configuration", not hasattr(memory_panel, "tabs")
+                      and not hasattr(memory_panel, "embedding_provider_combo")
+                      and not hasattr(memory_panel, "credentials_status_label"))
+                check("opening_memory_does_not_enable_it", not session.memory.settings.enabled
+                      and not session.memory.settings.automatic and not memory_panel.automatic_checkbox.isChecked())
+                check("memory_actions_remain_inside_window", button_inside(memory_panel, memory_panel.automatic_checkbox)
+                      and button_inside(memory_panel, memory_panel.refresh_button))
+                # Developer-only fixture preparation keeps the existing cached
+                # ONNX check; ordinary users no longer configure these fields.
+                session.memory.save_settings(replace(session.memory.settings, embedding_provider="fastembed"))
                 spin_until(lambda: not session.memory.busy, timeout=15)
-                check("local_settings_saved_without_enabling_memory", session.memory.settings.embedding_provider == "fastembed"
-                      and not session.memory.settings.enabled and not session.memory.settings.automatic)
-                check("local_mode_hides_remote_credentials", memory_panel.remote_embedding_fields.isHidden()
-                      and memory_panel.local_embedding_fields.isVisible() and "无需 API Key" in memory_panel.credentials_status_label.text())
-                check("normal_settings_hide_advanced_parameters", memory_panel.advanced_fields.isHidden())
-                check("memory_actions_remain_inside_window", button_inside(memory_panel, memory_panel.save_button)
-                      and button_inside(memory_panel, memory_panel.test_button))
                 started = time.monotonic()
-                memory_panel.prepare_model_button.click()
+                session.memory.prepare_local_model()
                 spin_until(lambda: not session.memory.busy, timeout=35)
                 report["metrics"]["cached_model_check_seconds"] = round(time.monotonic() - started, 3)
                 check("cached_chinese_model_real_onnx_ready_offline", not session.memory.error

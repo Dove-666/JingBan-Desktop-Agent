@@ -2,8 +2,8 @@
 
 import math
 
-from PySide6.QtCore import QPointF, QRect, QRectF, QSizeF, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QPen, QPolygonF, QTextLayout, QTextOption
+from PySide6.QtCore import QEvent, QPointF, QRect, QRectF, QSizeF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen, QPolygonF, QTextLayout, QTextOption
 from PySide6.QtWidgets import QWidget
 
 from .bubble_placement import place_bubble
@@ -58,6 +58,11 @@ class SpeechBubble(QWidget):
         self._tail_polygon = QPolygonF()
         self._layout_key = None
         self._page_layout_key = None
+        self._text_layer = QImage()
+        self._text_layer_key = None
+        self._raster_refresh_timer = QTimer(self)
+        self._raster_refresh_timer.setSingleShot(True)
+        self._raster_refresh_timer.timeout.connect(self.reposition)
         self._speech_sequence = -1
         self._placement = None
         self._tail_margin = float(TAIL_MARGIN)
@@ -169,20 +174,45 @@ class SpeechBubble(QWidget):
     def set_font_points(self, points: int) -> None:
         if type(points) is not int or not 12 <= points <= 22:
             raise ValueError("Speech font must be an integer from 12 to 22 pt")
-        if self._font_points == points and self.font().pointSizeF() == points:
+        font = QFont("Microsoft YaHei UI")
+        font.setPointSizeF(points)
+        font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
+        font.setStyleStrategy(QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.NoSubpixelAntialias)
+        if self._font_points == points and self.font() == font:
             return
         self._font_points = points
         self._scale = points / BASE_FONT_POINTS
-        font = QFont("Microsoft YaHei UI")
-        font.setPointSizeF(points)
         self.setFont(font)
         self._layout_key = None
         if self._text:
             self.reposition()
         self.update()
 
+    def event(self, event) -> bool:
+        result = super().event(event)
+        if (event.type() in (QEvent.Type.DevicePixelRatioChange, QEvent.Type.ScreenChangeInternal,
+                             QEvent.Type.FontChange)
+                and hasattr(self, "_text_layer_key")):
+            # A monitor/scale change needs newly hinted glyphs, not a stretched
+            # copy of the old monitor's text. Defer reflow until Qt updates DPI.
+            self._layout_key = self._page_layout_key = self._text_layer_key = None
+            if self._text and self.isVisible():
+                self._raster_refresh_timer.start(0)
+        return result
+
+    def _device_key(self) -> tuple:
+        return (self.devicePixelRatioF(), self.logicalDpiX(), self.logicalDpiY())
+
+    def _snap_text_pixel(self, value: float) -> float:
+        ratio = self.devicePixelRatioF()
+        return round(value * ratio) / ratio
+
+    def _text_origin(self) -> QPointF:
+        return QPointF(self._snap_text_pixel(self._text_rect.left()),
+                       self._snap_text_pixel(self._text_rect.top()))
+
     def _make_layout(self, text: str, width: float) -> QTextLayout:
-        layout = QTextLayout(text.replace("\n", "\u2028"), self.font())
+        layout = QTextLayout(text.replace("\n", "\u2028"), self.font(), self)
         option = QTextOption()
         option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         layout.setTextOption(option)
@@ -193,8 +223,13 @@ class SpeechBubble(QWidget):
             if not line.isValid():
                 break
             line.setLineWidth(width)
-            line.setPosition(QPointF(0, height))
-            height += line.height() * LINE_SPACING
+            # Align the baseline, not just the line box: ascent is fractional
+            # at many Windows display scales. Round up to retain drawing room.
+            ratio = self.devicePixelRatioF()
+            baseline = math.ceil((height + line.ascent()) * ratio - 1e-8) / ratio
+            top = baseline - line.ascent()
+            line.setPosition(QPointF(0, top))
+            height = top + line.height() * LINE_SPACING
         layout.endLayout()
         return layout
 
@@ -220,10 +255,11 @@ class SpeechBubble(QWidget):
 
     def _relayout(self, available: QRect) -> bool:
         pages_changed = False
-        key = (self._text, self.font().pointSizeF(), self._scale, available.width(), available.height())
+        key = (self._text, self.font().key(), self._device_key(), self._scale,
+               available.width(), available.height())
         if key != self._layout_key:
             self._layout_key = key
-            metrics = QFontMetricsF(self.font())
+            metrics = QFontMetricsF(self.font(), self)
             scale = self._scale
             edge = max(1.0, 4 * scale)
             maximum_width = max(1, math.floor(available.width() - 2 * edge))
@@ -301,7 +337,7 @@ class SpeechBubble(QWidget):
         self._previous_page_rect = self._next_page_rect = QRectF()
         if len(self._pages) > 1 and self._conversation_link:
             footer_y = self._text_rect.bottom()
-            button_width = min(self._text_rect.width() * .32, QFontMetricsF(self.font()).horizontalAdvance("‹ 上页") + 10)
+            button_width = min(self._text_rect.width() * .32, QFontMetricsF(self.font(), self).horizontalAdvance("‹ 上页") + 10)
             self._previous_page_rect = QRectF(self._text_rect.left(), footer_y, button_width, self._footer_height)
             self._next_page_rect = QRectF(self._text_rect.right() - button_width, footer_y,
                                           button_width, self._footer_height)
@@ -396,6 +432,50 @@ class SpeechBubble(QWidget):
     def _previous_page(self) -> None:
         self._change_page(-1)
 
+    def _draw_footer_text(self, painter: QPainter, text: str, rectangle: QRectF,
+                          *, centered: bool = True, bottom: bool = False) -> None:
+        metrics = QFontMetricsF(self.font(), self)
+        width = metrics.horizontalAdvance(text)
+        x = (rectangle.center().x() - width / 2 if centered else rectangle.right() - width)
+        baseline = (rectangle.bottom() - metrics.descent() if bottom else
+                    rectangle.center().y() + (metrics.ascent() - metrics.descent()) / 2)
+        painter.drawText(QPointF(self._snap_text_pixel(x), self._snap_text_pixel(baseline)), text)
+
+    def _ensure_text_layer(self) -> None:
+        key = (self._page_layout_key, self.size().width(), self.size().height(), self._device_key(),
+               self._text_rect, len(self._pages), self._page_index, bool(self._conversation_link))
+        if key == self._text_layer_key and not self._text_layer.isNull():
+            return
+        ratio = self.devicePixelRatioF()
+        layer = QImage(math.ceil(self.width() * ratio), math.ceil(self.height() * ratio),
+                       QImage.Format.Format_ARGB32_Premultiplied)
+        layer.setDevicePixelRatio(ratio)
+        layer.setDotsPerMeterX(round(self.logicalDpiX() / .0254))
+        layer.setDotsPerMeterY(round(self.logicalDpiY() / .0254))
+        # DirectWrite can otherwise use RGB subpixel coverage over the painted
+        # white card, leaving colored/soft edges on this translucent window.
+        # Transparent native-resolution text uses grayscale coverage and keeps
+        # colored emoji. This layer is never enlarged or reduced for display.
+        layer.fill(Qt.GlobalColor.transparent)
+        text = QPainter(layer)
+        text.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        text.setFont(self.font())
+        text.setPen(QColor("#243449"))
+        self._layout.draw(text, self._text_origin())
+        if len(self._pages) > 1:
+            text.setPen(QColor("#65788d"))
+            footer = QRectF(self._text_rect.left(), self._text_rect.bottom(),
+                            self._text_rect.width(), self._footer_height)
+            self._draw_footer_text(text, f"{self._page_index + 1} / {len(self._pages)}", footer,
+                                   centered=bool(self._conversation_link), bottom=True)
+            if self._conversation_link:
+                for rectangle, label, enabled in ((self._previous_page_rect, "‹ 上页", self._page_index > 0),
+                        (self._next_page_rect, "下页 ›", self._page_index + 1 < len(self._pages))):
+                    text.setPen(QColor("#415d78") if enabled else QColor("#a4afba"))
+                    self._draw_footer_text(text, label, rectangle)
+        text.end()
+        self._text_layer, self._text_layer_key = layer, key
+
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
@@ -422,19 +502,6 @@ class SpeechBubble(QWidget):
         painter.setPen(QPen(QColor("#d7e3ee"), max(.55, .85 * self._scale)))
         painter.setBrush(QColor("#fcfdff"))
         painter.drawPath(outline)
-        painter.setPen(QColor("#243449"))
-        self._layout.draw(painter, self._text_rect.topLeft())
-        if len(self._pages) > 1:
-            painter.setFont(self.font())
-            painter.setPen(QColor("#65788d"))
-            footer = QRectF(self._text_rect.left(), self._text_rect.bottom(),
-                            self._text_rect.width(), self._footer_height)
-            painter.drawText(footer, Qt.AlignmentFlag.AlignBottom | (Qt.AlignmentFlag.AlignHCenter
-                             if self._conversation_link else Qt.AlignmentFlag.AlignRight),
-                             f"{self._page_index + 1} / {len(self._pages)}")
-            if self._conversation_link:
-                for rectangle, label, enabled in ((self._previous_page_rect, "‹ 上页", self._page_index > 0),
-                        (self._next_page_rect, "下页 ›", self._page_index + 1 < len(self._pages))):
-                    painter.setPen(QColor("#415d78") if enabled else QColor("#a4afba"))
-                    painter.drawText(rectangle, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, label)
+        self._ensure_text_layer()
+        painter.drawImage(QPointF(0, 0), self._text_layer)
 

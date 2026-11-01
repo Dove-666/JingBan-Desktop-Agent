@@ -69,6 +69,7 @@ class RemotePanel(QWidget):
 
         self.enabled_checkbox = QCheckBox("允许手机连接这台电脑")
         self.enabled_checkbox.setObjectName("remoteEnabled")
+        self.enabled_checkbox.setToolTip("开启后随桌宠启动自动恢复连接；网络未就绪时会自动重试。")
         self.enabled_checkbox.toggled.connect(self._enabled_toggled)
         layout.addWidget(self.enabled_checkbox)
         self.status_label = _label("远程连接已关闭", "status")
@@ -150,12 +151,15 @@ class RemotePanel(QWidget):
         self.revoke_button.clicked.connect(self._revoke_device)
         devices_layout.addWidget(self.revoke_button, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(devices_group)
-        layout.addWidget(_label("电脑需保持开机联网；直连失败自动使用加密中继；公共中继无可用性保证。"))
+        layout.addWidget(_label("开启后随桌宠启动自动恢复；同一 Wi-Fi 可局域网直连，网络未就绪时会自动重试。"))
         layout.addStretch()
 
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
         self._timer.timeout.connect(self._update_countdown)
+        self._recovery_timer = QTimer(self)
+        self._recovery_timer.setInterval(1000)
+        self._recovery_timer.timeout.connect(lambda: self._status_changed(self.controller.status))
         controller.status_changed.connect(self._status_changed)
         controller.pairing_changed.connect(self._pairing_changed)
         controller.devices_changed.connect(self._devices_changed)
@@ -190,7 +194,22 @@ class RemotePanel(QWidget):
             "listening": "远程连接已开启 · 等待已配对设备连接",
             "error": "远程连接暂不可用",
         }
-        self.status_label.setText(summaries.get(state, "正在更新连接状态…"))
+        summary = summaries.get(state, "正在更新连接状态…")
+        if state == "listening":
+            if self._status.get("local_available") is True and self._status.get("relay_available") is False:
+                summary = "局域网已就绪 · 公网中继未连接"
+            elif self._status.get("local_available") is False and self._status.get("relay_available") is True:
+                summary = "公网中继已就绪 · 等待已配对设备连接"
+        retry_seconds = self._status.get("retry_in_seconds")
+        recovering = state == "error" and self._status.get("auto_retry") is True
+        if recovering and isinstance(retry_seconds, (int, float)) and math.isfinite(retry_seconds):
+            summary = f"正在恢复远程连接 · {max(0, math.ceil(retry_seconds))} 秒后自动重试"
+        if recovering:
+            if not self._recovery_timer.isActive():
+                self._recovery_timer.start()
+        else:
+            self._recovery_timer.stop()
+        self.status_label.setText(summary)
         message = str(self._status.get("message") or "").strip()
         # A failed preference write can leave a healthy connection running.
         # Preserve that operation error even while the transport is listening.
@@ -198,7 +217,7 @@ class RemotePanel(QWidget):
         self.error_label.setVisible(bool(message))
         dependency_available = self._status.get("dependency_available", True) is not False
         self.dependency_group.setVisible(not dependency_available)
-        self.retry_button.setText("开启连接" if not enabled else "重试连接")
+        self.retry_button.setText("立即重试" if recovering else "开启连接" if not enabled else "重试连接")
         self.retry_button.setEnabled(state != "starting" and dependency_available)
         self.retry_button.setVisible(state != "listening")
         ready = enabled and state == "listening"

@@ -36,7 +36,6 @@ class MemorySetupUiTests(unittest.TestCase):
         self.controller = SetupController()
         self.panel = MemoryPanel(self.controller)
         self.panel.resize(700, 650)
-        self.panel.tabs.setCurrentIndex(1)
         self.panel.show()
         self.app.processEvents()
 
@@ -45,63 +44,87 @@ class MemorySetupUiTests(unittest.TestCase):
         self.panel.deleteLater()
         self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
-    def test_provider_switch_explains_local_privacy_and_retains_remote_values(self):
-        self.panel.embedding_base_input.setText("https://embedding.example.test/v1")
-        self.panel.embedding_provider_combo.setCurrentIndex(1)
-        self.assertTrue(self.panel.remote_embedding_fields.isHidden())
-        self.assertFalse(self.panel.local_embedding_fields.isHidden())
-        self.assertIn("提炼仍使用", self.panel.local_model_hint.text())
-        self.assertIn("512", self.panel.local_model_combo.currentText())
-        self.panel.embedding_provider_combo.setCurrentIndex(0)
-        self.assertEqual(self.panel.embedding_base_input.text(), "https://embedding.example.test/v1")
-
-    def test_saving_local_choice_never_enables_memory_or_copies_chat_key(self):
-        self.panel.embedding_provider_combo.setCurrentIndex(1)
-        self.panel._save_settings()
-        saved = self.controller.settings
-        self.assertEqual(saved.embedding_provider, "fastembed")
-        self.assertEqual(saved.effective_embedding_dimensions, 512)
-        self.assertFalse(saved.enabled)
-        self.assertFalse(saved.automatic)
-        self.assertEqual(self.controller.calls[-1][2:], ("", ""))
-
-    def test_model_download_requires_explicit_click_and_controls_are_busy_safe(self):
-        self.panel.embedding_provider_combo.setCurrentIndex(1)
+    def test_page_exposes_one_automatic_switch_and_no_technical_settings(self):
+        from PySide6.QtWidgets import QCheckBox, QComboBox, QTabWidget
+        self.assertEqual([widget.text() for widget in self.panel.findChildren(QCheckBox)], ["自动记忆"])
+        self.assertEqual(self.panel.findChildren(QComboBox), [])
+        self.assertEqual(self.panel.findChildren(QTabWidget), [])
+        self.assertTrue(self.panel.memory_details_group.isHidden())
+        self.assertTrue(self.panel.status_label.isHidden())
         self.assertEqual(self.controller.calls, [])
-        self.assertFalse(self.panel.prepare_model_button.isEnabled())
-        self.panel._save_settings()
-        self.controller.calls.clear()
-        self.assertTrue(self.panel.prepare_model_button.isEnabled())
-        self.panel.prepare_model_button.click()
-        self.assertEqual(self.controller.calls, [("prepare_local_model",)])
+
+    def test_rejected_toggle_and_async_failure_restore_persisted_choice(self):
+        self.controller.set_automatic_enabled = lambda enabled: False
+        self.panel.automatic_checkbox.click()
+        self.assertFalse(self.panel.automatic_checkbox.isChecked())
+        self.assertIn("无法保存", self.panel.error_label.text())
+        self.controller.set_automatic_enabled = lambda enabled: True
+        self.panel.automatic_checkbox.click()
+        self.assertTrue(self.panel.automatic_checkbox.isChecked())
+        self.controller.error_changed.emit("模型下载失败")
+        self.assertFalse(self.panel.automatic_checkbox.isChecked())
+        self.assertIn("聊天仍可正常使用", self.panel.error_label.text())
+        self.assertFalse(self.panel.retry_button.isHidden())
+
+    def test_switch_can_stop_active_automatic_work_while_other_controls_are_busy(self):
+        self.controller.settings = replace(self.controller.settings, enabled=True, automatic=True)
+        self.controller.settings_changed.emit(self.controller.settings)
         self.controller.busy = True
         self.controller.busy_changed.emit(True)
-        self.assertFalse(self.panel.prepare_model_button.isEnabled())
-        self.assertFalse(self.panel.embedding_provider_combo.isEnabled())
+        self.assertTrue(self.panel.automatic_checkbox.isEnabled())
+        self.assertFalse(self.panel.refresh_button.isEnabled())
+        self.panel.automatic_checkbox.click()
+        self.assertFalse(self.controller.settings.automatic)
+        self.assertTrue(self.controller.settings.enabled)
+        self.assertEqual(self.controller.calls, [("automatic", False)])
 
-    def test_unsaved_model_change_cannot_prepare_previously_saved_model(self):
-        self.panel.embedding_provider_combo.setCurrentIndex(1)
-        self.panel._save_settings()
-        self.panel.local_model_combo.setCurrentIndex(1)
-        self.assertFalse(self.panel.prepare_model_button.isEnabled())
-        self.assertFalse(self.panel.local_preparation_hint.isHidden())
-        self.panel.prepare_model_button.click()
-        self.assertNotIn(("prepare_local_model",), self.controller.calls)
+    def test_preparation_intent_keeps_switch_available_until_cancelled(self):
+        self.controller.setup_state = "preparing"
+        self.controller.automatic_requested = True
+        self.controller.automatic_paused = True
+        self.controller.busy = True
+        self.panel._setup_state_changed()
+        self.assertTrue(self.panel.automatic_checkbox.isChecked())
+        self.assertTrue(self.panel.automatic_checkbox.isEnabled())
+        self.controller.automatic_requested = False
+        self.controller.automatic_pause_changed.emit(True)
+        self.assertFalse(self.panel.automatic_checkbox.isChecked())
 
-    def test_reusing_chat_hides_independent_fields_and_does_not_save_hidden_keys(self):
-        self.assertTrue(self.panel.llm_key_input.isHidden())
-        self.panel.llm_key_input.setText("hidden-unused-test-token")
-        self.panel.embedding_key_input.setText("hidden-unused-embedding-token")
-        self.panel.embedding_provider_combo.setCurrentIndex(1)
-        self.panel._save_settings()
-        self.assertEqual(self.controller.calls[-1][2:], ("", ""))
+    def test_failed_off_save_preserves_actionable_warning_and_retries_off(self):
+        self.controller.automatic_requested = False
+        self.controller.error = "本次运行已停止自动记忆，但关闭设置未能保存；重启后可能恢复，请重试。"
+        self.controller.error_changed.emit(self.controller.error)
+        self.assertIn("重启后可能恢复", self.panel.error_label.text())
+        self.assertEqual(self.panel.retry_button.text(), "重试关闭")
+        self.panel.retry_button.click()
+        self.assertEqual(self.controller.calls, [("automatic", False)])
 
-    def test_advanced_parameters_collapse_without_hiding_save(self):
-        self.assertTrue(self.panel.advanced_fields.isHidden())
-        self.assertFalse(self.panel.save_button.isHidden())
-        self.panel.advanced_button.click()
-        self.assertFalse(self.panel.advanced_fields.isHidden())
-        self.assertEqual(self.panel.advanced_button.text(), "收起高级参数")
+    def test_list_refresh_does_not_hide_failed_setup_recovery(self):
+        self.controller.setup_error = "记忆暂时无法准备，请稍后重试；聊天仍可正常使用。"
+        self.controller.setup_state = "failed"
+        self.controller.error_changed.emit(self.controller.setup_error)
+        self.controller.error = ""
+        self.controller.error_changed.emit("")
+        self.assertFalse(self.panel.error_label.isHidden())
+        self.assertIn("暂时无法准备", self.panel.error_label.text())
+        self.assertFalse(self.panel.retry_button.isHidden())
+        self.panel.retry_button.click()
+        self.assertEqual(self.controller.calls, [("prepare",)])
+        self.controller.setup_error = ""
+        self.controller.setup_state = "ready"
+        self.panel._setup_state_changed()
+        self.assertTrue(self.panel.error_label.isHidden())
+        self.assertTrue(self.panel.retry_button.isHidden())
+
+    def test_list_shows_fact_only_and_details_are_only_visible_after_selection(self):
+        self.controller.memories = [{"id": "preference", "memory": "用户喜欢简洁的页面。", "updated_at": "2026-11-01"}]
+        self.controller.memories_changed.emit()
+        self.assertEqual(self.panel.memory_list.item(0).text(), "用户喜欢简洁的页面。")
+        self.assertTrue(self.panel.memory_details_group.isHidden())
+        self.panel.memory_list.setCurrentRow(0)
+        self.assertFalse(self.panel.memory_details_group.isHidden())
+        self.assertTrue(self.panel.edit_button.isEnabled())
+        self.assertTrue(self.panel.delete_button.isEnabled())
 
     def test_refresh_preserves_selection_and_editor_receives_fact_without_display_time(self):
         old = "用户偏好大字体评论气泡。"
@@ -120,7 +143,7 @@ class MemorySetupUiTests(unittest.TestCase):
         selected = self.panel.memory_list.currentItem()
         self.assertEqual(selected.data(Qt.ItemDataRole.UserRole), "chosen")
         self.assertEqual(self.panel.search_input.text(), "偏好")
-        self.assertIn("1205", self.panel.memory_count_label.text())
+        self.assertNotIn("1205", self.panel.memory_count_label.text())
         self.assertIn("205", self.panel.memory_count_label.text())
         self.assertTrue(self.panel.next_button.isEnabled())
         self.assertTrue(self.panel.previous_button.isEnabled())
@@ -139,27 +162,7 @@ class MemorySetupUiTests(unittest.TestCase):
         self.panel._memory_update_finished("chosen", True, "")
         self.assertIsNone(self.panel._edit_dialog)
 
-    def test_invalid_url_keeps_unsaved_key_and_does_not_submit(self):
-        self.panel.embedding_base_input.setText("invalid-url")
-        self.panel.embedding_key_input.setText("fixture-unsaved-key")
-        self.assertFalse(self.panel._save_settings())
-        self.assertEqual(self.panel.embedding_key_input.text(), "fixture-unsaved-key")
-        self.assertEqual(self.controller.calls, [])
-        self.assertIn("http(s)", self.panel.error_label.text())
-
-    def test_busy_state_disables_fields_that_success_would_replace(self):
-        self.controller.busy = True
-        self.controller.busy_changed.emit(True)
-        for field in (self.panel.embedding_model_input, self.panel.embedding_base_input, self.panel.embedding_key_input,
-                      self.panel.enabled_checkbox, self.panel.automatic_checkbox, self.panel.threshold_input):
-            self.assertFalse(field.isEnabled(), field.objectName())
-        self.controller.busy = False
-        self.controller.busy_changed.emit(False)
-        self.assertTrue(self.panel.embedding_model_input.isEnabled())
-        self.assertTrue(self.panel.enabled_checkbox.isEnabled())
-
     def test_details_show_provenance_and_emit_source_conversation_without_reactivating_expired_record(self):
-        self.panel.tabs.setCurrentIndex(0)
         self.panel.resize(700, 700)
         self.controller.memories = [{"id": "expired", "memory": "用户偏好小字体。", "expiration_date": "2000-01-01",
             "created_at": "2026-01-01", "updated_at": "2026-02-02", "metadata": {
@@ -167,7 +170,7 @@ class MemorySetupUiTests(unittest.TestCase):
         self.controller.memories_changed.emit()
         self.panel.memory_list.setCurrentRow(0)
         text = self.panel.memory_details_label.text()
-        for expected in ("自动提炼", "source-conversation", "2000-01-01", "2026-01-01", "不会重新启用"):
+        for expected in ("自动提炼", "2000-01-01", "2026-01-01", "不会重新启用"):
             self.assertIn(expected, text)
         self.app.processEvents()
         self.assertGreaterEqual(self.panel.memory_details_label.height(), self.panel.memory_details_label.fontMetrics().lineSpacing() * 5)
@@ -186,7 +189,9 @@ class MemorySetupUiTests(unittest.TestCase):
         from desktop_pet.ui.window_state import WindowPlacement, bounded_rect
         import tempfile
         from pathlib import Path
-        self.panel.tabs.setCurrentIndex(0)
+        self.controller.memories = [{"id": "selected", "memory": "用户偏好简洁界面。", "created_at": "2026-11-01", "updated_at": "2026-11-02", "metadata": {"conversation_id": "source", "trigger": "automatic"}}]
+        self.controller.memories_changed.emit()
+        self.panel.memory_list.setCurrentRow(0)
         with tempfile.TemporaryDirectory() as directory, patch("desktop_pet.ui.window_state.bounded_rect", side_effect=lambda rect, _areas: bounded_rect(rect, [QRect(0, 0, 640, 400)])):
             placement = WindowPlacement(self.panel, Path(directory) / "window.ini", "memory")
             placement.fit()
@@ -219,7 +224,7 @@ class MemorySetupUiTests(unittest.TestCase):
         self.controller.memory_matched_total = 100
         self.controller.memories = []
         self.controller.memories_changed.emit()
-        self.assertIn("缓存待刷新", self.panel.memory_count_label.text())
+        self.assertIn("待刷新", self.panel.memory_count_label.text())
         self.assertIn("删除已完成", self.panel.empty_label.text())
         self.assertIn("刷新", self.panel.empty_label.text())
 

@@ -101,11 +101,12 @@ def _is_aura_window(info: ForegroundInfo, own_pid: int) -> bool:
     title = info.title.strip()
     return (title == "AURA · 鲸鱼娘桌宠"
             or title.startswith("鲸鱼娘 · 调试面板 · ")
-            or title in {"和鲸鱼娘聊天", "鲸鱼娘 · 长期记忆"}
+            or title in {"和鲸鱼娘聊天", "设置 · 鲸鱼娘", "鲸鱼娘 · 长期记忆"}
             or title.endswith(" - 鲸鱼娘桌宠"))
 
 
-def privacy_reason(info: ForegroundInfo, settings: PerceptionSettings, own_pid: int) -> str:
+def privacy_reason(info: ForegroundInfo, settings: PerceptionSettings, own_pid: int,
+                   *, enforce_idle_pause: bool = True) -> str:
     if not info.available or not info.hwnd or not info.process_name or not info.title.strip():
         return "无法确认前台窗口，已暂停截图和外发。"
     if _is_aura_window(info, own_pid):
@@ -119,7 +120,7 @@ def privacy_reason(info: ForegroundInfo, settings: PerceptionSettings, own_pid: 
     title = info.title.casefold()
     if any(word.casefold() in title for word in settings.privacy_keywords if word.strip()):
         return "窗口标题命中隐私过滤，未截图；标题不显示。"
-    if info.idle_seconds >= settings.idle_pause_seconds:
+    if enforce_idle_pause and info.idle_seconds >= settings.idle_pause_seconds:
         return "用户长时间无输入活动，暂停观察与主动互动。"
     return ""
 
@@ -147,8 +148,8 @@ class ScreenObserver:
     def current_safety(self, settings: PerceptionSettings) -> str:
         return privacy_reason(self._info(), settings, self._own_pid)
 
-    def _blocked_code(self, info, settings):
-        if not privacy_reason(info, settings, self._own_pid):
+    def _blocked_code(self, info, settings, *, explicit=False):
+        if not privacy_reason(info, settings, self._own_pid, enforce_idle_pause=not explicit):
             return ""
         return "own_window" if info.available and _is_aura_window(info, self._own_pid) else "privacy"
 
@@ -156,23 +157,44 @@ class ScreenObserver:
         return self._blocked_code(self._info(), settings)
 
     def is_current(self, observation: Observation, settings: PerceptionSettings) -> bool:
+        return self._is_current(observation, settings)
+
+    def is_current_explicit(self, observation: Observation, settings: PerceptionSettings) -> bool:
+        """Revalidate a manual request, without treating local idle as inactivity."""
+        return self._is_current(observation, settings, explicit=True)
+
+    def _is_current(self, observation, settings, *, explicit=False):
+        if explicit and not settings.enabled:
+            return False
         info = self._info()
         return ((info.hwnd, info.pid, info.title) ==
                 (observation.info.hwnd, observation.info.pid, observation.info.title)
-                and not privacy_reason(info, settings, self._own_pid))
+                and not privacy_reason(info, settings, self._own_pid, enforce_idle_pause=not explicit))
 
     def observe(self, settings: PerceptionSettings) -> Observation:
+        return self._observe(settings)
+
+    def observe_explicit(self, settings: PerceptionSettings) -> Observation:
+        """An explicit remote user request skips only the valid local idle limit.
+
+        Invalid/missing activity metadata and all window/privacy/image checks
+        still fail closed. Remote authorization is checked by the caller.
+        """
+        return self._observe(settings, explicit=True)
+
+    def _observe(self, settings, *, explicit=False):
         if not settings.enabled:
             return Observation(ForegroundInfo(), blocked_reason="屏幕感知已关闭。", blocked_code="disabled")
         info = self._info()
-        blocked = privacy_reason(info, settings, self._own_pid)
+        blocked = privacy_reason(info, settings, self._own_pid, enforce_idle_pause=not explicit)
         if blocked:
-            return Observation(info, blocked_reason=blocked, blocked_code=self._blocked_code(info, settings))
+            return Observation(info, blocked_reason=blocked, blocked_code=self._blocked_code(info, settings, explicit=explicit))
         try:
             image = self._capture(info)
             after = self._info()
-            if (after.hwnd, after.pid, after.title) != (info.hwnd, info.pid, info.title) or privacy_reason(after, settings, self._own_pid):
-                code = "own_window" if self._blocked_code(after, settings) == "own_window" else "context_changed"
+            if ((after.hwnd, after.pid, after.title) != (info.hwnd, info.pid, info.title)
+                    or privacy_reason(after, settings, self._own_pid, enforce_idle_pause=not explicit)):
+                code = "own_window" if self._blocked_code(after, settings, explicit=explicit) == "own_window" else "context_changed"
                 return Observation(info, blocked_reason="截图期间前台情境发生变化，已丢弃画面。", blocked_code=code)
             if not isinstance(image, QImage) or image.isNull():
                 return Observation(info, blocked_reason="窗口截图不可用，已安全跳过。", blocked_code="capture_unavailable")

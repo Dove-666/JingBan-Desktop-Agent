@@ -25,6 +25,7 @@ settings.ini
 mem0_data/
 conversation_exports/
 model_cache/
+/agent_workspace/
 **/.cache/
 *.onnx
 *.onnx_data

@@ -18,15 +18,18 @@ from .ui.window_state import WindowPlacement
 from .remote.controller import RemoteController
 from .selection.ipc import SelectionInbox
 from .selection.context import SelectionContext
+from .startup_manager import StartupManager
 
 
 class ApplicationController(QObject):
     finished = Signal()
 
     def __init__(self, config: PetConfig, settings: SettingsManager | None = None,
-                 api_client=None, parent=None) -> None:
+                 api_client=None, parent=None, startup_manager=None) -> None:
         super().__init__(parent)
         self.settings = settings if settings is not None else SettingsManager()
+        self.startup_manager = startup_manager if startup_manager is not None else StartupManager()
+        self._startup_config = config
         self.pet = PetWindow(config)
         self.pet_controller = PetController(self.pet, self.settings, parent=self)
         self.pet._placement = WindowPlacement(self.pet, self.settings.config_path, "pet", remember_size=False,
@@ -37,10 +40,11 @@ class ApplicationController(QObject):
         self.memory = MemoryController(self.memory_service, parent=self)
         self.chat = ChatController(self.settings, api_client=api_client, parent=self,
                                    memory_service=self.memory_service)
+        self.chat.busy_changed.connect(self.pet_controller.set_conversation_busy)
         self.chat.emotion_requested.connect(self._set_chat_expression)
         self.chat.reply_received.connect(self._show_chat_reply)
         self.chat.conversation_invalidated.connect(self._dismiss_invalidated_speech)
-        self.chat.memory_status_changed.connect(self.memory._status)
+        self.chat.memory_status_changed.connect(self.memory.handle_chat_memory_status)
         self.chat.memory_saved.connect(self.memory.notify_memories_saved)
         self.perception = PerceptionController(self.settings, self.pet_controller, self.chat, parent=self)
         self.chat.perception_controller = self.perception
@@ -56,7 +60,7 @@ class ApplicationController(QObject):
         self.memory_panel = None
         self._shutting_down = False
         self.shutdown_errors = []
-        self.pet.debug_requested.connect(self.open_debug_panel)
+        self.pet.debug_requested.connect(self.open_settings)
         self.pet.chat_requested.connect(self.open_chat_window)
         self.pet.closed.connect(self.shutdown)
         self.pet.bubble.conversation_requested.connect(self.open_linked_conversation)
@@ -139,34 +143,45 @@ class ApplicationController(QObject):
             self.debug_panel._placement = WindowPlacement(self.debug_panel, self.settings.config_path, "debug")
         self.debug_panel.present()
 
+    def _ensure_chat_window(self):
+        if self.chat_window is None:
+            self.chat_window = ChatWindow(self.chat, memory_controller=self.memory,
+                                          memory_opener=self.open_memory_window, settings_opener=self.open_api_settings,
+                                          settings_factory=self._make_settings_page)
+            self.chat_window._placement = WindowPlacement(self.chat_window, self.settings.config_path, "chat")
+        return self.chat_window
+
+    def _make_settings_page(self, parent):
+        from .ui.settings_page import SettingsPage
+        return SettingsPage(self.pet_controller, self.settings, self.chat, parent,
+                            perception_controller=self.perception, camera_controller=self.camera,
+                            remote_controller=self.remote, memory_controller=self.memory,
+                            startup_manager=self.startup_manager)
+
     def open_chat_window(self) -> None:
         if self._shutting_down:
             return
-        if self.chat_window is None:
-            self.chat_window = ChatWindow(self.chat, memory_controller=self.memory,
-                                          memory_opener=self.open_memory_window, settings_opener=self.open_api_settings)
-            self.chat_window._placement = WindowPlacement(self.chat_window, self.settings.config_path, "chat")
+        self._ensure_chat_window().show_chat()
         self.chat_window.present()
 
+    def open_settings(self, section="general"):
+        if self._shutting_down:
+            return
+        window = self._ensure_chat_window()
+        window.show_settings(section if isinstance(section, str) else "general")
+        window.present()
+
     def open_api_settings(self):
-        self.open_debug_panel()
-        if self.debug_panel is not None and not self._shutting_down:
-            self.debug_panel.tabs.setCurrentIndex(1)
+        self.open_settings("api")
 
     def open_perception_settings(self):
-        self.open_debug_panel()
-        if self.debug_panel is not None and self.debug_panel.perception_panel is not None:
-            self.debug_panel.tabs.setCurrentWidget(self.debug_panel.perception_panel)
+        self.open_settings("perception")
 
     def open_camera_settings(self):
-        self.open_debug_panel()
-        if self.debug_panel is not None and self.debug_panel.camera_panel is not None:
-            self.debug_panel.tabs.setCurrentWidget(self.debug_panel.camera_panel)
+        self.open_settings("camera")
 
     def open_remote_settings(self):
-        self.open_debug_panel()
-        if self.debug_panel is not None and self.debug_panel.remote_panel is not None:
-            self.debug_panel.tabs.setCurrentWidget(self.debug_panel.remote_panel)
+        self.open_settings("remote")
 
     def open_linked_conversation(self, conversation_id, message_id):
         if self._shutting_down:
@@ -177,14 +192,8 @@ class ApplicationController(QObject):
     def open_memory_window(self):
         if self._shutting_down:
             return
-        if self.memory_panel is None:
-            from .ui.memory_panel import MemoryPanel
-            self.memory_panel = MemoryPanel(self.memory, self.pet)
-            source_requested = getattr(self.memory_panel, "conversation_requested", None)
-            if source_requested is not None:
-                source_requested.connect(self.open_memory_conversation)
-            self.memory_panel._placement = WindowPlacement(self.memory_panel, self.settings.config_path, "memory")
-        self.memory_panel.present()
+        self.open_settings("memory")
+        self.memory_panel = self.chat_window.settings_page.memory_panel
 
     def open_memory_conversation(self, conversation_id):
         if not conversation_id or self._shutting_down:
@@ -199,8 +208,27 @@ class ApplicationController(QObject):
         self.pet.setVisible(not self.pet.isVisible())
         self.tray.refresh()
 
-    def show(self) -> None:
+    def show_pet(self) -> None:
+        """An explicit launch restores the pet even after a silent start/hide."""
+        if self._shutting_down:
+            return
+        self.pet._placement.fit()
         self.pet.show()
+        self.pet.raise_()
+        self.tray.refresh()
+
+    def show(self) -> None:
+        silent = self._startup_config.silent_start
+        if silent is None:
+            loader = getattr(self.settings, "load_silent_start", None)
+            # Opening the application explicitly must always reveal the pet.
+            # Saved tray-only startup applies to automatic login launches.
+            silent = bool(self._startup_config.autostart and callable(loader) and loader())
+        if silent and not self._startup_config.show_debug_panel and self.tray.available:
+            self.pet.hide()
+        else:
+            # A missing system tray must never create an unreachable process.
+            self.pet.show()
         self.tray.refresh()
 
     def shutdown(self) -> None:

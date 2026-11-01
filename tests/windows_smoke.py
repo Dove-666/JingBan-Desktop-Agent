@@ -718,9 +718,9 @@ def run_validation(*, bubble_only=False) -> int:
             wait_for(pet_ready_for_input)
             for attempt in range(2):
                 click(native_point(app_hwnd, torso, dpr), right=True)
-                choose_menu_action("打开调试面板")
+                choose_menu_action("设置")
                 try:
-                    wait_for(lambda: panel_window("鲸鱼娘 · 调试面板") is not None)
+                    wait_for(lambda: panel_window("设置 · 鲸鱼娘") is not None)
                 except AssertionError:
                     rect = wintypes.RECT()
                     user32.GetWindowRect(app_hwnd, ctypes.byref(rect))
@@ -728,7 +728,7 @@ def run_validation(*, bubble_only=False) -> int:
                           (rect.left, rect.top, rect.right, rect.bottom), "pid", app_pid.value,
                           "foreground", user32.GetForegroundWindow())
                     raise
-                debug_hwnd = panel_window("鲸鱼娘 · 调试面板")
+                debug_hwnd = panel_window("设置 · 鲸鱼娘")
                 if attempt == 0:
                     first_debug_hwnd = debug_hwnd
                 else:
@@ -736,7 +736,7 @@ def run_validation(*, bubble_only=False) -> int:
                 user32.PostMessageW(debug_hwnd, 0x0010, 0, 0)  # WM_CLOSE hides this panel
                 wait_for(lambda: not user32.IsWindowVisible(debug_hwnd))
                 assert user32.IsWindowVisible(app_hwnd) and normal_app.poll() is None
-            results["native_menu_debug_panel_close_reopen_same_window"] = True
+            results["native_menu_settings_close_reopen_same_window"] = True
             click(native_point(app_hwnd, torso, dpr), right=True)
             choose_menu_action("打开聊天窗口")
             wait_for(lambda: panel_window("和鲸鱼娘聊天") is not None)

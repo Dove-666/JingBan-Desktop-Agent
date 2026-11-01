@@ -4,6 +4,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from .web_rendering import configure_webengine_rendering
+
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -25,6 +27,8 @@ def parse_config(argv: list[str] | None = None) -> PetConfig:
     parser.add_argument("--bubble-seconds", type=float, default=3.0, help="气泡显示秒数")
     parser.add_argument("--fps", type=int, default=AnimationConfig().fps, help="动画帧率，1–120，默认 30")
     parser.add_argument("--debug-panel", action="store_true", help="启动时同时打开调试面板")
+    parser.add_argument("--silent", action="store_true", default=None, help="仅显示托盘图标；托盘不可用时显示桌宠")
+    parser.add_argument("--autostart", action="store_true", help="由登录自启动运行；已有实例时不唤醒窗口")
     args = parser.parse_args(argv)
     try:
         return PetConfig(
@@ -33,12 +37,16 @@ def parse_config(argv: list[str] | None = None) -> PetConfig:
             bubble_duration_ms=round(args.bubble_seconds * 1000),
             animation=AnimationConfig(fps=args.fps),
             show_debug_panel=args.debug_panel,
+            silent_start=args.silent,
+            autostart=args.autostart,
         )
     except (ValueError, OverflowError) as exc:
         parser.error(str(exc))
 
 
 def main(argv: list[str] | None = None, *, settings: SettingsManager | None = None) -> int:
+    # Also cover integrations that invoke this entry point without main.py.
+    configure_webengine_rendering()
     config = parse_config(argv)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName("AURA Desktop Pet")
@@ -51,14 +59,21 @@ def main(argv: list[str] | None = None, *, settings: SettingsManager | None = No
     try:
         settings = settings if settings is not None else SettingsManager()
         instance = SingleInstance(settings.config_path, app)
-        if not instance.start("debug" if config.show_debug_panel else "chat"):
+        activation = ("debug" if config.show_debug_panel else
+                      "silent" if config.silent_start is True or config.autostart else "chat")
+        if not instance.start(activation):
             return 0
         # No pet, conversation, perception worker or Mem0 service is created
         # until this process has acquired its own settings-file lifetime lock.
         session = ApplicationController(config, settings=settings)
-        instance.activation_requested.connect(
-            lambda command: session.open_debug_panel() if command == "debug" else session.open_chat_window()
-        )
+        def activate(command):
+            if command == "debug":
+                session.show_pet()
+                session.open_debug_panel()
+            elif command == "chat":
+                session.show_pet()
+                session.open_chat_window()
+        instance.activation_requested.connect(activate)
         app.setWindowIcon(QIcon(str(config.image_path)))
         session.finished.connect(app.quit)
         app.aboutToQuit.connect(session.shutdown)

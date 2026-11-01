@@ -16,7 +16,7 @@ import unittest
 from uuid import uuid4
 
 from PySide6.QtCore import QSettings, QThreadPool, QTimer
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication
 
 from desktop_pet.api_client import ChatReply
@@ -59,7 +59,7 @@ class Mem0ChatIntegrationTests(unittest.TestCase):
         self.settings.save_api_key("fixture-chat-key")
         self.memory = self.make_memory()
         self.memory.save_settings(replace(
-            self.memory.load_settings(), enabled=True, automatic=True,
+            self.memory.load_settings(), enabled=True, automatic=True, embedding_provider="openai",
             embedding_base_url=self.provider.base_url,
             embedding_model="fixture-embedding", embedding_dimensions=8,
         ), embedding_key="fixture-embedding-key")
@@ -138,7 +138,7 @@ class Mem0ChatIntegrationTests(unittest.TestCase):
         self.send(fresh, "你还记得我偏好的字体吗？")
         request = client.requests[-1]
         system = "\n".join(row["content"] for row in request if row["role"] == "system")
-        self.assertIn("少量相关长期记忆", system)
+        self.assertIn("相关长期记忆", system)
         self.assertIn("用户长期偏好大字体评论气泡", system)
         self.assertEqual(["你还记得我偏好的字体吗？"],
                          [row["content"] for row in request if row["role"] == "user"])
@@ -146,14 +146,14 @@ class Mem0ChatIntegrationTests(unittest.TestCase):
 
         fresh.new_conversation()
         self.send(fresh, "这个项目进度怎样？")
-        self.assertNotIn("少量相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
+        self.assertNotIn("相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
         self.assertNotIn("大字体评论气泡", json.dumps(client.requests[-1], ensure_ascii=False))
 
         reopened.delete(saved[0]["id"])
         fresh.new_conversation()
         self.send(fresh, "你还记得我偏好的字体吗？")
         self.assertEqual([], reopened.search("偏好的字体"))
-        self.assertNotIn("少量相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
+        self.assertNotIn("相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
         # Deleting memory does not remove the separately persisted chat archive.
         self.assertEqual(2, len(fresh.store.load_messages(first_id)))
 
@@ -184,12 +184,13 @@ class Mem0ChatIntegrationTests(unittest.TestCase):
         # being mistaken for the user's own durable preference.
         request = json.dumps(client.requests[-1], ensure_ascii=False)
         self.assertIn("网页作者表示长期喜欢猫", request)
-        self.assertNotIn("少量相关长期记忆", request)
+        self.assertNotIn("相关长期记忆", request)
 
     def test_actual_mem0_provider_failure_keeps_gui_live_and_commits_chat(self):
         self.provider.fail = True
         self.provider.delay = 0.15
         chat, client = self.make_chat()
+        memory_status = QSignalSpy(chat.memory_status_changed)
         ticks = []
         timer = QTimer()
         timer.setInterval(20)
@@ -206,10 +207,12 @@ class Mem0ChatIntegrationTests(unittest.TestCase):
         self.assertGreaterEqual(len(ticks), 3)
         self.assertEqual("", chat.error)
         self.assertIn("长期记忆检索暂不可用", chat.context_usage)
+        self.assertTrue(any("长期记忆检索暂不可用" in memory_status.at(index)[0]
+                            for index in range(memory_status.count())))
         self.assertEqual(2, len(chat.store.load_messages(chat.current_conversation_id)))
         self.assertEqual("assistant", chat.messages[-1]["role"])
         self.assertTrue(client.requests)
-        self.assertNotIn("少量相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
+        self.assertNotIn("相关长期记忆", json.dumps(client.requests[-1], ensure_ascii=False))
         self.assertTrue(any(row["path"].endswith("/embeddings") for row in self.provider.requests))
 
 

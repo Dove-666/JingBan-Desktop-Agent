@@ -94,7 +94,7 @@ class ExpressionManager:
                 pixmap = QPixmap.fromImage(image)
                 self._cache[path] = (fingerprint, pixmap)
             status = ("已加载统一 1024 画布的 master.png；原始 whale.png 保持不变。" if original else
-                      "已加载傲娇静态角色 PNG；此素材不是视频动作，也不是新增 API 表情。")
+                      "已加载傲娇静态角色 PNG；此处选择会固定显示，随机待机也会短暂展示这个姿态。")
             return Expression(code, label, pixmap, status)
         except FileNotFoundError:
             status = ("统一画布 master.png 缺失，安全回退原始 whale.png。" if original else

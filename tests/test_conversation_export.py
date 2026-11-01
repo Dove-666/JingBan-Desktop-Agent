@@ -346,7 +346,7 @@ class ExportUiTests(unittest.TestCase):
         self.assertTrue(self.panel.export_status_label.isVisible())
         self.assertTrue(self.panel.retry_button.isHidden())
 
-    def test_api_settings_menu_and_fixed_empty_link_use_opener_only(self):
+    def test_api_settings_remains_available_without_empty_state_links(self):
         self.panel.settings_button.click()
         self.panel._open_event(QUrl("aura-settings:open"))
         self.panel._open_event(QUrl("aura-settings:open?unexpected=1"))
@@ -354,7 +354,11 @@ class ExportUiTests(unittest.TestCase):
         self.assertEqual(self.settings_calls, ["open-api", "open-api"])
         self.chat.messages = []
         self.chat.messages_changed.emit()
-        self.assertIn('href="aura-settings:open"', self.panel.transcript.toHtml())
+        self.assertIn("今天想聊些什么？", self.panel.transcript.toPlainText())
+        self.assertNotIn('href="', self.panel.transcript.toHtml())
+        self.assertTrue(self.panel.settings_button.isEnabled())
+        self.panel.settings_button.click()
+        self.assertEqual(self.settings_calls, ["open-api", "open-api", "open-api"])
         self.chat.messages = [{"role": "assistant", "content": '<a href="aura-settings:open">假冒按钮</a>'}]
         self.chat.messages_changed.emit()
         self.assertNotIn('href="aura-settings:open"', self.panel.transcript.toHtml())

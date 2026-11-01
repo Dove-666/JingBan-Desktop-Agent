@@ -321,6 +321,83 @@ class FrameAnimationTests(unittest.TestCase):
             player._loaded(player._generation - 1, "think_scratch_head", None, "cancelled test")
             self.assertTrue(player.play("think_scratch_head"))
 
+    def test_once_finishes_looping_hold_clip_with_smooth_exit_without_changing_asset(self):
+        self.write_manifest({**self.data, "loop": True, "completion": "hold_last", "transition_ms": 200})
+        manifest_path = self.clip_dir / "think_scratch_head" / "animation.json"
+        original_manifest = manifest_path.read_bytes()
+        pet = self.pet()
+        baseline = pet._source.cacheKey()
+        player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+        self.assertFalse(player.busy)
+        self.assertTrue(player.play("think_scratch_head", once=True))
+        self.assertTrue(player.loading)
+        self.assertTrue(player.busy)
+        wait_until(lambda: player.playing)
+        self.assertFalse(player.loading)
+        self.assertFalse(player._clip.manifest.loop)
+        self.assertEqual(player._clip.manifest.completion, "idle")
+        self.assertEqual(player._phase, "enter")
+        pet.animation.advance(1)
+        player.advance(.2)
+        self.assertEqual(player._phase, "play")
+        player.advance(.2)
+        self.assertEqual(player._phase, "exit")
+        self.assertTrue(player.busy)
+        self.assertTrue(pet._sequence_frames)
+        player.advance(.1)
+        self.assertTrue(player.playing)
+        player.advance(.1)
+        self.assertFalse(player.busy)
+        self.assertFalse(pet._sequence_frames)
+        self.assertEqual(pet._source.cacheKey(), baseline)
+        self.assertEqual(manifest_path.read_bytes(), original_manifest)
+
+    def test_default_play_retains_looping_manifest_and_stays_busy(self):
+        self.write_manifest({**self.data, "loop": True, "completion": "hold_last"})
+        pet = self.pet()
+        player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+        self.assertTrue(player.play("think_scratch_head"))
+        wait_until(lambda: player.playing)
+        self.assertTrue(player._clip.manifest.loop)
+        self.assertEqual(player._clip.manifest.completion, "hold_last")
+        pet.animation.advance(1)
+        player.advance(100)
+        self.assertTrue(player.playing)
+        self.assertTrue(player.busy)
+        self.assertFalse(player._clock.finished)
+        player.stop()
+        self.assertFalse(player.busy)
+
+    def test_stale_load_callback_cannot_clear_new_decoder_or_replace_current_clip(self):
+        pet = self.pet()
+        player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+        clip = load_clip(self.clip_dir, "think_scratch_head")
+        with patch.object(player.runner, "submit") as submit:
+            self.assertTrue(player.play("think_scratch_head"))
+            old_generation = player._generation
+            old_callback = submit.call_args.args[1]
+            player.stop()
+            self.assertTrue(player.loading)  # Memory remains owned until this worker returns.
+            self.assertFalse(player.play("think_scratch_head", once=True))
+            old_callback(clip, "")
+            self.assertFalse(player.loading)
+            self.assertFalse(player.playing)
+            self.assertTrue(player.play("think_scratch_head", once=True))
+            new_generation = player._generation
+            new_callback = submit.call_args.args[1]
+            self.assertGreater(new_generation, old_generation)
+            old_callback(clip, "late stale error")
+            self.assertTrue(player.loading)
+            self.assertIsNone(player._clip)
+            self.assertEqual(player._loading_generation, new_generation)
+            new_callback(clip, "")
+            self.assertFalse(player.loading)
+            self.assertTrue(player.playing)
+            active = player._clip
+            old_callback(None, "even later stale error")
+            self.assertIs(player._clip, active)
+            self.assertNotIn("stale error", player.status)
+
     def test_static_appearance_is_independent_from_semantic_api_emotion_and_custom_image(self):
         controller, _ = self.controller()
         character = self.root / "character"

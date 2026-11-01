@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QInputMethodEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox, QPushButton
@@ -125,6 +125,9 @@ class DebugUiTests(unittest.TestCase):
         self.window.hide()
         self.panel.deleteLater()
         self.window.deleteLater()
+        # processEvents alone does not drain DeferredDelete without a running
+        # app.exec(); dispose WebEngine owners before Python/Qt finalization.
+        self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.app.processEvents()
 
     def test_scale_presets_slider_reset_and_controller_sync(self):
@@ -239,7 +242,7 @@ class DebugUiTests(unittest.TestCase):
         with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
             self.window.chat_panel.clear_button.click()
         self.assertEqual(self.chat.messages, [])
-        self.assertIn("还没有消息", self.panel.chat_panel.transcript.toPlainText())
+        self.assertIn("今天想聊些什么？", self.panel.chat_panel.transcript.toPlainText())
 
     def test_empty_key_save_keeps_credential_and_clear_deletes(self):
         original = self.settings.key

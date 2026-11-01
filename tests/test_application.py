@@ -99,18 +99,30 @@ class ApplicationIntegrationTests(unittest.TestCase):
         self.app.processEvents()
         self.temp.cleanup()
 
-    def test_startup_transparency_topmost_and_independent_windows(self):
+    def test_startup_transparency_topmost_and_embedded_settings_entry(self):
         pet = self.session.pet
         self.assertTrue(pet.isVisible())
         self.assertTrue(pet.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
         self.assertTrue(pet.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
         self.session.pet.debug_requested.emit()
+        window = self.session.chat_window
+        self.assertTrue(window.isVisible())
+        self.assertIsNone(self.session.debug_panel)
+        self.assertIs(window.pages.currentWidget(), window.settings_page)
+        self.assertEqual(window.settings_page._section_key, "general")
+        self.assertFalse(window.settings_page.isWindow())
         self.session.pet.chat_requested.emit()
+        self.assertIs(self.session.chat_window, window)
+        self.assertIs(window.pages.currentWidget(), window.chat_panel)
+
+        # Explicit diagnostic callers retain the legacy panel, while ordinary
+        # settings and chat entries reuse the single main application window.
+        self.session.open_debug_panel()
         self.assertTrue(self.session.debug_panel.isVisible())
-        self.assertTrue(self.session.chat_window.isVisible())
-        for window in (self.session.debug_panel, self.session.chat_window):
-            self.assertFalse(window.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
-            self.assertIsNone(window.parentWidget())
+        self.assertTrue(window.isVisible())
+        for utility_window in (self.session.debug_panel, window):
+            self.assertFalse(utility_window.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+            self.assertIsNone(utility_window.parentWidget())
 
     def test_panel_reopen_preserves_instance_scale_and_expression(self):
         self.session.open_debug_panel()

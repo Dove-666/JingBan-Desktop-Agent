@@ -7,6 +7,28 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class MessageRole { USER, ASSISTANT, SYSTEM }
 enum class MessageStatus { SENT, QUEUED, SENDING, PENDING, FAILED, UNCERTAIN }
 enum class QueueStatus { QUEUED, SENDING, UNKNOWN, PENDING, FAILED, NEEDS_ATTENTION }
+enum class ApiConfigSyncState { WAITING, SYNCING, READY, ERROR }
+enum class ApiConfigSource { NONE, DESKTOP, LOCAL }
+
+/** Safe presentation summary only. Credentials never belong in UI state. */
+data class UiDirectApi(
+    val available: Boolean = false,
+    val baseUrl: String = "",
+    val model: String = "",
+    val sync: ApiConfigSyncState = ApiConfigSyncState.WAITING,
+    val lastSyncedAt: String = "",
+    val message: String = "",
+    val source: ApiConfigSource = ApiConfigSource.NONE,
+    val keySaved: Boolean = false,
+    val timeoutSeconds: Int = 30,
+    val reasoningEffort: String = "default",
+)
+
+/** Ephemeral form submission; never store this object in saved UI state. */
+class UiApiConfigInput(val baseUrl: String, val model: String, val apiKey: String,
+                       val timeoutSeconds: Int, val reasoningEffort: String) {
+    override fun toString() = "UiApiConfigInput([private])"
+}
 
 data class UiConversation(
     val id: String,
@@ -14,6 +36,23 @@ data class UiConversation(
     val preview: String = "",
     val updatedAt: String = "",
     val localOnly: Boolean = false,
+)
+
+/** Public application/tool observations only; no model reasoning or tool arguments. */
+data class UiExecutionStep(
+    val id: String,
+    val kind: String,
+    val label: String,
+    val status: String,
+    val elapsedMs: Long,
+)
+
+data class UiExecution(
+    val state: String,
+    val startedAt: String,
+    val durationMs: Long,
+    val events: List<UiExecutionStep>,
+    val omittedCount: Int = 0,
 )
 
 data class UiMessage(
@@ -24,6 +63,18 @@ data class UiMessage(
     val detail: String = "",
     val attachmentUri: String? = null,
     val retryable: Boolean = false,
+    val attachmentId: String? = null,
+    val retryOnPhone: Boolean = false,
+    val desktopAgent: Boolean = false,
+    val execution: UiExecution? = null,
+)
+
+data class UiPendingAttachment(
+    val id: String,
+    val filename: String,
+    val localUri: String,
+    val conversationId: String,
+    val preparing: Boolean = false,
 )
 
 data class UiImage(
@@ -42,6 +93,8 @@ data class UiQueueItem(
     val detail: String = "",
     val conversationTitle: String = "",
     val attachmentName: String? = null,
+    val isHistorySync: Boolean = false,
+    val canSendOnPhone: Boolean = false,
 )
 
 data class UiState(
@@ -51,11 +104,14 @@ data class UiState(
     val connectionDetail: String = "",
     val sync: SyncState = SyncState.IDLE,
     val queuedCount: Int = 0,
+    val attentionCount: Int = 0,
     val conversations: List<UiConversation> = emptyList(),
     val selectedConversationId: String? = null,
     val messages: List<UiMessage> = emptyList(),
     val images: List<UiImage> = emptyList(),
     val queue: List<UiQueueItem> = emptyList(),
+    val pendingAttachment: UiPendingAttachment? = null,
+    val preparingImage: Boolean = false,
     val pairing: Boolean = false,
     val pairingError: String? = null,
     val pendingPairInfo: String? = null,
@@ -63,7 +119,28 @@ data class UiState(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val petScale: Int = 100,
     val petVisible: Boolean = true,
-)
+    val directApi: UiDirectApi = UiDirectApi(),
+    val directChatBusy: Boolean = false,
+    val historyPendingCount: Int = 0,
+    val apiConfigSaving: Boolean = false,
+    val apiConfigError: String? = null,
+    val apiConfigSaveGeneration: Long = 0,
+    val desktopTaskAvailable: Boolean = false,
+    val desktopTaskMessage: String = "",
+    val desktopTaskBusy: Boolean = false,
+    val desktopAgentMode: Boolean = false,
+    val desktopTaskRunning: Boolean = false,
+    val desktopTaskActivity: String = "",
+    val desktopTaskError: String = "",
+) {
+    val chatAvailable: Boolean get() = paired || directApi.available || conversations.isNotEmpty()
+    val queueSummary: String get() = when {
+        queuedCount > 0 && attentionCount > 0 -> "$queuedCount 条待发送 · $attentionCount 条需处理"
+        attentionCount > 0 -> "$attentionCount 条消息需处理"
+        queuedCount > 0 -> "$queuedCount 条消息待发送"
+        else -> ""
+    }
+}
 
 sealed interface PetValue {
     data class Text(val value: String) : PetValue
@@ -83,10 +160,17 @@ interface UiActions {
     fun retryMessage(id: String)
     fun discardOutbox(requestId: String)
     fun pickImage()
+    fun removePendingImage()
     fun petCommand(action: String, value: PetValue)
     fun refreshImages()
     fun openImage(id: String)
     fun deleteImage(id: String)
     fun dismissNotice()
     fun setTheme(mode: ThemeMode)
+    fun saveDirectApiConfig(input: UiApiConfigInput)
+    fun sendQueuedOnPhone(requestId: String)
+    fun sendDesktopMessage(text: String, onAccepted: (Boolean) -> Unit)
+    fun requestDesktopScreenshot()
+    fun setDesktopAgentMode(enabled: Boolean) {}
+    fun cancelDesktopTask() {}
 }

@@ -103,7 +103,8 @@ class SettingsUxRound4Tests(unittest.TestCase):
     def test_native_tab_order_reaches_key_reveal_and_model_in_form_order(self):
         self.panel.base_url_input.setFocus()
         self.app.processEvents()
-        for expected in (self.panel.key_input, self.panel.show_key_button, self.panel.model_input):
+        for expected in (self.panel.key_input, self.panel.show_key_button,
+                         self.panel.model_combo, self.panel.fetch_models_button):
             QTest.keyClick(self.app.focusWidget(), Qt.Key.Key_Tab)
             self.assertIs(self.app.focusWidget(), expected)
 
