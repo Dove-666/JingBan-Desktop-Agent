@@ -100,4 +100,3 @@ class ChangeDetector:
 
     def reset(self) -> None:
         self._baseline = None
-

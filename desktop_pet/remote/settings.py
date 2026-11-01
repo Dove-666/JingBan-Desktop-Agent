@@ -121,4 +121,3 @@ class RemotePreferences:
             return value
         except CredentialsError:
             raise RemoteError("credentials_unavailable", "无法可靠保存远程设备密钥，请检查系统凭据权限。") from None
-

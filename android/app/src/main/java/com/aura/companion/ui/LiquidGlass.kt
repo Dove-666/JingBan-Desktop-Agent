@@ -145,4 +145,3 @@ internal fun LiquidSurface(
 /** High-opacity sheet material keeps forms readable while preserving the same lens rim. */
 @Composable
 internal fun glassSheetColor(): Color = MaterialTheme.colorScheme.surface.copy(alpha = .97f)
-

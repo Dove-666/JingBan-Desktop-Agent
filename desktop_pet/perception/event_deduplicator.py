@@ -52,4 +52,3 @@ class EventDeduplicator:
     def reset(self) -> None:
         self._events.clear()
         self._last_now = None
-

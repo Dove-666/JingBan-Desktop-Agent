@@ -72,4 +72,3 @@ class CameraSettings(PerceptionSettings):
         if (not isinstance(self.device_id, str) or len(self.device_id) > 4096
                 or any(ord(c) < 32 or ord(c) == 127 for c in self.device_id)):
             raise ValueError("摄像头设备标识无效。")
-

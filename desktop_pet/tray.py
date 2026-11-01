@@ -95,4 +95,3 @@ class DesktopTray(QObject):
     def shutdown(self):
         self.icon.hide()
         self.menu.close()
-

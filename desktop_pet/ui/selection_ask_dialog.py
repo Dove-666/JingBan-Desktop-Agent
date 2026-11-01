@@ -320,4 +320,3 @@ QDialog#selectionAskDialog QToolButton#selectionPreviewToggle { border: none; ba
             if text:
                 self.send_button.setText("重试提问")
             self._update_buttons()
-

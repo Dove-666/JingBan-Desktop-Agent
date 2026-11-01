@@ -57,4 +57,3 @@ class AgentResult:
     kind: Literal["tools", "computer", "agent"] = "tools"
     backend: str = "nanobot"
     status: str = "completed"
-

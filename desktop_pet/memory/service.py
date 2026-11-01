@@ -721,4 +721,3 @@ class MemoryService:
             for process in list(self._processes):
                 if process.poll() is None:
                     process.terminate()
-

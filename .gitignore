@@ -31,3 +31,5 @@ model_cache/
 *.onnx_data
 *.safetensors
 
+# Machine-specific Photoshop preferences; keep art sources tracked.
+/美术资产/鲸鱼娘_七种表情_Photoshop/工程/Photoshop偏好备份/

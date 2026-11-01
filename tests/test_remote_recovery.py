@@ -337,4 +337,3 @@ class RemoteRecoveryTests(TestCase):
                     session.deleteLater()
                     self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
                     self.app.processEvents()
-

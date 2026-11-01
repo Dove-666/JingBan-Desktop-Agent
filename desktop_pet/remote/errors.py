@@ -6,4 +6,3 @@ class RemoteError(ValueError):
         super().__init__(message)
         self.code = code
         self.message = message
-
