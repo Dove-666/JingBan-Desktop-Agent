@@ -24,6 +24,26 @@ class ForegroundSyncLoopTest {
     private val device = DeviceInfo("验收电脑", "desktop", "public-ticket")
     private fun connected() = AppState(device = device, connectionState = ConnectionState.CONNECTED)
 
+    @Test fun explicitTaskLeasePollsInBackgroundAndStopsWhenReleased() = runTest {
+        val state = MutableStateFlow(connected().copy(desktopAgentBusy = true))
+        val polls = mutableListOf<Long>()
+        var disconnects = 0
+        val loop = ForegroundSyncLoop(this, state, { true }, reconnect = {},
+            poll = { polls += currentTime }, disconnect = { disconnects++ })
+        try {
+            loop.setForeground(true); runCurrent()
+            loop.setBackgroundTaskActive(true); loop.setForeground(false); runCurrent()
+            advanceTimeBy(50_000); runCurrent()
+            assertTrue(polls.size >= 25)
+            assertEquals(0, disconnects)
+            loop.setBackgroundTaskActive(false); runCurrent()
+            val before = polls.size
+            advanceTimeBy(45_000); runCurrent()
+            assertEquals(before, polls.size)
+            assertEquals(1, disconnects)
+        } finally { loop.close(); runCurrent() }
+    }
+
     @Test fun pairedDevicePublishedAfterTwentyMillisecondsConnectsImmediately() = runTest {
         val state = MutableStateFlow(AppState())
         val connectedAt = mutableListOf<Long>()

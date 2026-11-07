@@ -25,7 +25,7 @@ METADATA_PROMPT = (
 
 def _usable(messages: list[dict]) -> list[dict]:
     return [item for item in messages if item.get("metadata", {}).get("request_status")
-            not in {"pending", "failed", "cancelled", "interrupted"}]
+            not in {"queued", "pending", "failed", "cancelled", "interrupted"}]
 
 
 def context_summary(conversation: dict, messages: list[dict]) -> str:

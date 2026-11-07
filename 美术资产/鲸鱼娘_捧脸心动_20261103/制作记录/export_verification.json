@@ -1,0 +1,990 @@
+{
+  "apng_all_rgba_exact_runtime": true,
+  "gif_dark": {
+    "frames": 68,
+    "duration_ms": 5670,
+    "warm_mouth_pixels": 3722,
+    "red_pixels_lost_to_gray": 0,
+    "mouth_interior_dark_pixels": 0,
+    "dark_red_antialias_edge_pixels": 0,
+    "maximum_mean_mouth_channel_error": 10.55322862129145
+  },
+  "gif_light": {
+    "frames": 68,
+    "duration_ms": 5670,
+    "warm_mouth_pixels": 3722,
+    "red_pixels_lost_to_gray": 0,
+    "mouth_interior_dark_pixels": 0,
+    "dark_red_antialias_edge_pixels": 24,
+    "maximum_mean_mouth_channel_error": 10.666666666666666
+  },
+  "old_asset_files_unchanged": 643,
+  "art_package_equals_runtime": true,
+  "mouth_roi": [
+    438,
+    570,
+    473,
+    598
+  ],
+  "gif_mouth_roi": [
+    179,
+    203,
+    203,
+    223
+  ],
+  "mouth_all_runtime_frames_alpha_255": true,
+  "frames": [
+    {
+      "background": "dark",
+      "frame": 1,
+      "expected_warm_mouth_pixels": 1,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.0
+    },
+    {
+      "background": "dark",
+      "frame": 2,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 3,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 4,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 5,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 6,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 7,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 8,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 9,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 10,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 11,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 12,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 13,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 14,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 15,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 16,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 17,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 18,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 19,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 20,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 21,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 22,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 23,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 24,
+      "expected_warm_mouth_pixels": 107,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 6.797507788161994
+    },
+    {
+      "background": "dark",
+      "frame": 25,
+      "expected_warm_mouth_pixels": 162,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.572016460905349
+    },
+    {
+      "background": "dark",
+      "frame": 26,
+      "expected_warm_mouth_pixels": 185,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.920720720720722
+    },
+    {
+      "background": "dark",
+      "frame": 27,
+      "expected_warm_mouth_pixels": 191,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 10.55322862129145
+    },
+    {
+      "background": "dark",
+      "frame": 28,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 10.085034013605442
+    },
+    {
+      "background": "dark",
+      "frame": 29,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.755102040816327
+    },
+    {
+      "background": "dark",
+      "frame": 30,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 10.22278911564626
+    },
+    {
+      "background": "dark",
+      "frame": 31,
+      "expected_warm_mouth_pixels": 200,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.155
+    },
+    {
+      "background": "dark",
+      "frame": 32,
+      "expected_warm_mouth_pixels": 203,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.29392446633826
+    },
+    {
+      "background": "dark",
+      "frame": 33,
+      "expected_warm_mouth_pixels": 204,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.013071895424837
+    },
+    {
+      "background": "dark",
+      "frame": 34,
+      "expected_warm_mouth_pixels": 197,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.971235194585448
+    },
+    {
+      "background": "dark",
+      "frame": 35,
+      "expected_warm_mouth_pixels": 191,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.55322862129145
+    },
+    {
+      "background": "dark",
+      "frame": 36,
+      "expected_warm_mouth_pixels": 192,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.125
+    },
+    {
+      "background": "dark",
+      "frame": 37,
+      "expected_warm_mouth_pixels": 188,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.712765957446809
+    },
+    {
+      "background": "dark",
+      "frame": 38,
+      "expected_warm_mouth_pixels": 188,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.076241134751774
+    },
+    {
+      "background": "dark",
+      "frame": 39,
+      "expected_warm_mouth_pixels": 187,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.884135472370767
+    },
+    {
+      "background": "dark",
+      "frame": 40,
+      "expected_warm_mouth_pixels": 180,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.87037037037037
+    },
+    {
+      "background": "dark",
+      "frame": 41,
+      "expected_warm_mouth_pixels": 169,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.506903353057199
+    },
+    {
+      "background": "dark",
+      "frame": 42,
+      "expected_warm_mouth_pixels": 165,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.567676767676767
+    },
+    {
+      "background": "dark",
+      "frame": 43,
+      "expected_warm_mouth_pixels": 137,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.321167883211679
+    },
+    {
+      "background": "dark",
+      "frame": 44,
+      "expected_warm_mouth_pixels": 86,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.736434108527131
+    },
+    {
+      "background": "dark",
+      "frame": 45,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 46,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 47,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 48,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 49,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 50,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 51,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 52,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 53,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 54,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 55,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 56,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 57,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 58,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 59,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 60,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 61,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 62,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 63,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 64,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 65,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 66,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 67,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "dark",
+      "frame": 68,
+      "expected_warm_mouth_pixels": 1,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.0
+    },
+    {
+      "background": "light",
+      "frame": 1,
+      "expected_warm_mouth_pixels": 1,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 10.666666666666666
+    },
+    {
+      "background": "light",
+      "frame": 2,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 3,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 4,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 5,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 6,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 7,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 8,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 9,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 10,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 11,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 12,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 13,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 14,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 15,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 16,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 17,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 18,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 19,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 20,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 21,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 22,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 23,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 24,
+      "expected_warm_mouth_pixels": 107,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 6.8847352024922115
+    },
+    {
+      "background": "light",
+      "frame": 25,
+      "expected_warm_mouth_pixels": 162,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.962962962962964
+    },
+    {
+      "background": "light",
+      "frame": 26,
+      "expected_warm_mouth_pixels": 185,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.527927927927928
+    },
+    {
+      "background": "light",
+      "frame": 27,
+      "expected_warm_mouth_pixels": 191,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.987783595113438
+    },
+    {
+      "background": "light",
+      "frame": 28,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.547619047619047
+    },
+    {
+      "background": "light",
+      "frame": 29,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.70578231292517
+    },
+    {
+      "background": "light",
+      "frame": 30,
+      "expected_warm_mouth_pixels": 196,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.811224489795919
+    },
+    {
+      "background": "light",
+      "frame": 31,
+      "expected_warm_mouth_pixels": 200,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.456666666666667
+    },
+    {
+      "background": "light",
+      "frame": 32,
+      "expected_warm_mouth_pixels": 203,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.719211822660098
+    },
+    {
+      "background": "light",
+      "frame": 33,
+      "expected_warm_mouth_pixels": 204,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.490196078431373
+    },
+    {
+      "background": "light",
+      "frame": 34,
+      "expected_warm_mouth_pixels": 197,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.306260575296108
+    },
+    {
+      "background": "light",
+      "frame": 35,
+      "expected_warm_mouth_pixels": 191,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.080279232111693
+    },
+    {
+      "background": "light",
+      "frame": 36,
+      "expected_warm_mouth_pixels": 192,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.274305555555555
+    },
+    {
+      "background": "light",
+      "frame": 37,
+      "expected_warm_mouth_pixels": 188,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.131205673758865
+    },
+    {
+      "background": "light",
+      "frame": 38,
+      "expected_warm_mouth_pixels": 188,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.320921985815604
+    },
+    {
+      "background": "light",
+      "frame": 39,
+      "expected_warm_mouth_pixels": 187,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.319073083778965
+    },
+    {
+      "background": "light",
+      "frame": 40,
+      "expected_warm_mouth_pixels": 180,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.364814814814816
+    },
+    {
+      "background": "light",
+      "frame": 41,
+      "expected_warm_mouth_pixels": 169,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.613412228796845
+    },
+    {
+      "background": "light",
+      "frame": 42,
+      "expected_warm_mouth_pixels": 165,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.73939393939394
+    },
+    {
+      "background": "light",
+      "frame": 43,
+      "expected_warm_mouth_pixels": 137,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 8.768856447688565
+    },
+    {
+      "background": "light",
+      "frame": 44,
+      "expected_warm_mouth_pixels": 86,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 9.317829457364342
+    },
+    {
+      "background": "light",
+      "frame": 45,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 46,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 47,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 48,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 49,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 50,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 51,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 52,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 53,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 54,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 55,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 56,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 57,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 58,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 59,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 60,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 61,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 62,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 63,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 64,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 65,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 66,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 67,
+      "expected_warm_mouth_pixels": 0,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 0
+    },
+    {
+      "background": "light",
+      "frame": 68,
+      "expected_warm_mouth_pixels": 1,
+      "warm_mouth_pixels_lost_to_gray": 0,
+      "mean_mouth_channel_error": 10.666666666666666
+    }
+  ]
+}

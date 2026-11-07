@@ -33,7 +33,7 @@ class ChatImageTests(unittest.TestCase):
         self.path = Path(self.directory.name)
         self.settings = SettingsManager(QSettings(str(self.path / "settings.ini"), QSettings.Format.IniFormat),
                                         CredentialStore(backend=FakeVault()))
-        self.chat = ChatController(self.settings)
+        self.chat = ChatController(self.settings, metadata_client_factory=lambda: None)
         self.session = SimpleNamespace(settings=self.settings, chat=self.chat)
         self.remote = RemoteController(self.session, transport_factory=fixtures.FakeTransport)
         fixtures.spin_until(lambda: QThreadPool.globalInstance().activeThreadCount() == 0)

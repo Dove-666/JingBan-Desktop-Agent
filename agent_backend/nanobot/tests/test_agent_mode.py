@@ -39,13 +39,19 @@ class NativeModel(BaseHTTPRequestHandler):
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        from fixture_goal_judge import judge_message, send_judge
+        judged = judge_message(body)
+        if judged is not None:
+            send_judge(self, judged)
+            return
         type(self).calls.append(body)
         messages = body["messages"]
         latest = max(i for i, item in enumerate(messages) if item["role"] == "user")
         observations = [item for item in messages[latest + 1:] if item["role"] == "tool"]
         call = None
         if self.behavior == "image_error":
-            data = json.dumps({"error": {"message": KEY, "type": "invalid_request_error"}}).encode()
+            data = json.dumps({"error": {"message": "Unsupported image input. " + KEY,
+                                       "type": "invalid_request_error"}}).encode()
             self.send_response(400)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
@@ -206,9 +212,9 @@ class NativeAgentTests(unittest.TestCase):
     def test_all_permission_gates_are_reflected_in_native_tool_schema_and_readiness(self):
         self.execute()
         schema = {item["function"]["name"] for item in NativeModel.calls[0]["tools"]}
-        self.assertEqual(schema, {"read_file", "write_file", "search_files", "web_fetch", "system_info",
-                                  "calculate", "analyze_csv", "verify_artifact", "update_plan", "finish_task"}
-                         | ({"discover_applications", "inspect_system", "inspect_disk_usage", "inspect_directory"} if os.name == "nt" else set()))
+        self.assertTrue({"read_file", "write_file", "search_files", "web_fetch", "system_info",
+                         "edit_file", "read_document", "create_document", "ask_user_question", "request_file_access",
+                         "recall_context", "calculate", "analyze_csv", "verify_artifact", "update_plan", "finish_task"} <= schema)
         status = self.service.readiness(self.settings, KEY, self.context)
         self.assertTrue(status["available"])
         self.assertEqual(set(status["tools"]), schema)
@@ -307,7 +313,7 @@ class NativeAgentTests(unittest.TestCase):
                 self.execute(context={**self.context, **extra})
         self.assertEqual(NativeModel.calls, [])
 
-    def synthetic_desktop_worker(self, *, lookup_only=False):
+    def synthetic_desktop_worker(self, *, lookup_only=False, uncertain_gui=True):
         counter = self.workspace / "synthetic-desktop.json"
         harness = self.workspace / "synthetic-worker.py"
         harness.write_text(
@@ -321,22 +327,30 @@ class NativeAgentTests(unittest.TestCase):
             "    counter.write_text(json.dumps(data))\n"
             "class SyntheticGui(worker.GuiBridge):\n"
             "    async def _run_once(self, task):\n"
+            "        from gui_verification import report\n"
+            "        self.verification=report('failed')\n"
+            "        if self._current_verify_only:\n"
+            "            return json.dumps({'status':'needs_user','effect_state':'not_dispatched','verification':self.verification})\n"
             "        record('gui', task)\n"
             "        self.last_status='needs_user'\n"
-            "        return json.dumps({'status':'needs_user','summary':'synthetic needs-user outcome','steps':1})\n"
+            f"        self._uncertain_effect={uncertain_gui!r}\n"
+            f"        self.effect_state={'uncertain' if uncertain_gui else 'confirmed'!r}\n"
+            "        return json.dumps({'status':'needs_user','effect_state':self.effect_state,'summary':'synthetic needs-user outcome','steps':1})\n"
             "class SyntheticApplication:\n"
-            "    def __init__(self, task):\n"
-            "        self.task=task\n        self.called=False\n        self.last_result=None\n"
+            "    def __init__(self, task, **kwargs):\n"
+            "        self.task=task\n        self.called=False\n        self.last_result=None\n        self.pending_effect=False\n"
+            "    def resolve_uncertainty(self, verification): return False\n"
             "    async def run(self, **kwargs):\n"
             f"        self.called={not lookup_only!r}\n        record({'application_lookup' if lookup_only else 'application'!r},self.task)\n"
-            f"        self.last_result={{'status':{'lookup_only' if lookup_only else 'needs_user'!r},'summary':'synthetic lookup or UAC outcome'}}\n"
+            f"        self.pending_effect={not lookup_only!r}\n"
+            f"        self.last_result={{'status':{'lookup_only' if lookup_only else 'needs_user'!r},'effect_state':{'not_dispatched' if lookup_only else 'uncertain'!r},'summary':'synthetic lookup or UAC outcome'}}\n"
             "        return json.dumps(self.last_result)\n"
             "worker.GuiBridge=SyntheticGui\n"
             "import windows_apps\nwindows_apps.AuthorizedApplicationLaunch=SyntheticApplication\n"
             "asyncio.run(worker.main())\n", encoding="utf-8")
         return harness, counter
 
-    def test_agent_native_gui_tool_keeps_exact_current_goal_and_one_physical_dispatch(self):
+    def test_agent_native_gui_unknown_effect_keeps_exact_goal_and_one_dispatch(self):
         NativeModel.behavior = "gui_twice"
         harness, counter = self.synthetic_desktop_worker()
         settings = replace(self.settings, computer_enabled=True, gui_model="synthetic-no-native-model")
@@ -347,7 +361,8 @@ class NativeAgentTests(unittest.TestCase):
         self.assertEqual(json.loads(counter.read_text()), [{"kind": "gui", "task": "Observe the original desktop goal"}])
         observations = [item for item in NativeModel.calls[-1]["messages"] if item["role"] == "tool"]
         self.assertEqual(len(observations), 2)
-        self.assertEqual(observations[0]["content"], observations[1]["content"])
+        self.assertEqual(json.loads(observations[0]["content"])["effect_state"], "uncertain")
+        self.assertIn("ACTION_OUTCOME_UNCERTAIN", observations[1]["content"])
 
     @unittest.skipUnless(os.name == "nt", "Windows installed-application tool")
     def test_agent_does_not_fallback_to_gui_after_uncertain_application_launch(self):

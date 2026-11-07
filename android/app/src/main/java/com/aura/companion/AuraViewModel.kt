@@ -8,7 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aura.companion.data.AppRepository
 import com.aura.companion.data.AppState
-import com.aura.companion.transport.IrohRpcClient
+import com.aura.companion.data.DownloadedArtifact
 import com.aura.companion.ui.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -19,12 +19,13 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import org.json.JSONObject
 
 private data class LocalUi(
     val pairing: Boolean = false,
     val pairingError: String? = null,
     val notice: String? = null,
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.LIGHT,
     val petScale: Int = 100,
     val petVisible: Boolean = true,
     val pendingPairInfo: String? = null,
@@ -34,22 +35,43 @@ private data class LocalUi(
     val apiConfigSaveGeneration: Long = 0,
     val desktopTaskBusy: Boolean = false,
     val draftAgentMode: Boolean = false,
+    val agentInteractionBusy: Boolean = false,
+    val artifactDownloading: String? = null,
+    val taskNotificationsEnabled: Boolean = false,
 )
 
-/** Owns only foreground work. Records and unacknowledged requests live in SQLite. */
-class AuraViewModel(application: Application) : AndroidViewModel(application), UiActions {
-    private val repository = AppRepository(application, IrohRpcClient(application))
+/** UI state stays in this model; an opt-in task session may outlive the Activity. */
+class AuraViewModel internal constructor(application: Application, private val repository: AppRepository,
+    private val session: CompanionSession? = null) :
+    AndroidViewModel(application), UiActions {
+    constructor(application: Application) : this(application, CompanionSession.get(application).repository,
+        CompanionSession.get(application))
+
+    private var pendingArtifact: DownloadedArtifact? = null
+    internal val conversationDraftStore = PrivateDraftStore(File(application.filesDir, "conversation-drafts.json")) { ids ->
+        ids.associateWith { id -> DraftScope(repository.database.conversationGeneration(id), repository.database.isConversationDeleted(id)) }
+    }
     private val preferences = application.getSharedPreferences("appearance", 0)
     private val local = MutableStateFlow(LocalUi(theme = runCatching {
-        ThemeMode.valueOf(preferences.getString("theme", "SYSTEM") ?: "SYSTEM")
-    }.getOrDefault(ThemeMode.SYSTEM)))
+        ThemeMode.valueOf(preferences.getString("theme", "LIGHT") ?: "LIGHT")
+    }.getOrDefault(ThemeMode.LIGHT), taskNotificationsEnabled = preferences.getBoolean("task_notifications", false)))
     private var autoConnect = preferences.getBoolean("auto_connect", true)
+    private var latestConnectionIntent = Any()
     private var pickerConversationId: String? = null
-    private val foregroundSync = ForegroundSyncLoop(viewModelScope, repository.state, { autoConnect },
-        reconnect = { repository.reconnect(silent = true) }, poll = { repository.poll() }, disconnect = { repository.disconnect() })
+    private val foregroundSync = if (session == null) ForegroundSyncLoop(viewModelScope, repository.state, { autoConnect },
+        reconnect = { repository.reconnect(silent = true) }, poll = { repository.poll() }, disconnect = { repository.disconnect() }) else null
 
     val state: StateFlow<UiState> = combine(repository.state, local) { data, ui -> mapState(data, ui) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, UiState(theme = local.value.theme))
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.state.collect {
+                try { conversationDraftStore.refreshScopes() }
+                catch (_: Exception) { local.update { it.copy(notice = "无法保存本机草稿，请检查手机存储空间。") } }
+            }
+        }
+    }
 
     private fun mapState(data: AppState, ui: LocalUi): UiState {
         val outbox = data.outbox.filter { !it.hidden && it.status != "discarded" }
@@ -109,8 +131,10 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
                 lastSyncedAt = data.directApi.lastSyncedAt?.let { historyDate(Instant.ofEpochMilli(it).toString()) }.orEmpty(),
                 message = data.directApi.message, source = ApiConfigSource.valueOf(data.directApi.source.name),
                 keySaved = data.directApi.keySaved, timeoutSeconds = data.directApi.timeoutSeconds,
-                reasoningEffort = data.directApi.reasoningEffort),
+                reasoningEffort = data.directApi.reasoningEffort, reasoningProfile = data.directApi.reasoningProfile,
+                reasoningBudgetTokens = data.directApi.reasoningBudgetTokens, reasoningMetadata = data.directApi.reasoningMetadata),
             directChatBusy = data.directChatBusy, historyPendingCount = data.historyPendingCount,
+            directChatConversationId = data.directChatConversationId,
             apiConfigSaving = ui.apiConfigSaving, apiConfigError = ui.apiConfigError,
             apiConfigSaveGeneration = ui.apiConfigSaveGeneration,
             desktopTaskAvailable = data.desktopTaskAvailable,
@@ -120,21 +144,56 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
             desktopTaskRunning = data.desktopAgentBusy && data.desktopAgentConversationId == data.selectedConversationId,
             desktopTaskActivity = data.messages.lastOrNull { it.executionMode == "agent" && it.requestStatus == "pending" }?.agentActivity.orEmpty(),
             desktopTaskError = data.messages.lastOrNull { it.executionMode == "agent" }?.agentError.orEmpty(),
+            agentInteraction = data.agentInteraction?.takeIf { it.conversationId == data.selectedConversationId }?.let {
+                UiAgentInteraction(it.id, it.kind, it.question, it.conversationId, it.options,
+                    it.resource?.let { resource -> UiAgentFileResource(resource.path, resource.access, resource.directory) })
+            },
+            agentInteractionBusy = ui.agentInteractionBusy,
+            canSteerDesktop = data.desktopSteeringAvailable && data.desktopAgentBusy &&
+                data.desktopAgentConversationId == data.selectedConversationId,
+            agentArtifacts = data.agentArtifacts.map { UiAgentArtifact(it.reference, it.name, it.bytes) },
+            artifactDownloading = ui.artifactDownloading,
+            taskNotificationsEnabled = ui.taskNotificationsEnabled,
+            characterCards = data.characterCards.map { UiCharacterCard(it.id, it.label, it.name) },
+            activeCharacterId = data.activeCharacterId,
+            activeCharacterName = data.activeCharacterName,
+            characterSyncBusy = data.characterSyncBusy,
+            characterSyncError = data.characterSyncError,
+            characterLibrarySupported = data.characterLibrarySupported,
         )
     }
 
     fun setForeground(value: Boolean) {
-        foregroundSync.setForeground(value)
+        if (value && local.value.taskNotificationsEnabled && !TaskNotifications.allowed(getApplication()))
+            setTaskNotifications(false)
+        session?.setForeground(value) ?: foregroundSync?.setForeground(value)
+    }
+
+    override fun setTaskNotifications(enabled: Boolean) {
+        val allowed = enabled && TaskNotifications.allowed(getApplication())
+        preferences.edit().putBoolean("task_notifications", allowed).apply()
+        local.update { it.copy(taskNotificationsEnabled = allowed,
+            notice = if (enabled && !allowed) "请在系统设置中允许鲸伴发送通知。" else it.notice) }
+        session?.settingsChanged()
+    }
+
+    override fun refreshCharacters() {
+        viewModelScope.launch { repository.refreshCharacters() }
+    }
+
+    override fun selectCharacter(id: String) {
+        viewModelScope.launch { repository.selectCharacter(id) }
     }
 
     override fun pair(payload: String) {
         if (local.value.pairing) return
+        val intent = Any().also { latestConnectionIntent = it }
         viewModelScope.launch {
             local.update { it.copy(pairing = true, pairingError = null, notice = null) }
             repository.pair(payload, "${Build.MANUFACTURER} ${Build.MODEL}".take(80))
             val data = repository.state.value
             val succeeded = data.connectionState == com.aura.companion.data.ConnectionState.CONNECTED && data.error == null
-            if (succeeded) {
+            if (succeeded && latestConnectionIntent === intent) {
                 autoConnect = true
                 preferences.edit().putBoolean("auto_connect", true).apply()
             }
@@ -144,28 +203,40 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
     }
 
     override fun reconnect() {
+        latestConnectionIntent = Any()
         autoConnect = true
         preferences.edit().putBoolean("auto_connect", true).apply()
+        session?.settingsChanged()
         viewModelScope.launch { repository.reconnect() }
     }
 
     override fun disconnect() {
+        latestConnectionIntent = Any()
         autoConnect = false
         preferences.edit().putBoolean("auto_connect", false).apply()
+        session?.settingsChanged()
         viewModelScope.launch { repository.disconnect() }
     }
 
     override fun syncNow() { viewModelScope.launch { repository.syncNow() } }
     override fun selectConversation(id: String) { viewModelScope.launch { repository.selectConversation(id) } }
     override fun newConversation() { viewModelScope.launch { repository.newConversation() } }
-    override fun sendMessage(text: String) {
+    override fun sendMessage(text: String) { sendPhoneMessage(text) {} }
+
+    override fun sendPhoneMessage(text: String, onAccepted: (Boolean) -> Unit) {
         if (!repository.state.value.directApi.available) {
             local.update { it.copy(notice = "请先配置手机模型，或连接电脑同步 API 配置。") }
+            onAccepted(false)
             return
         }
         viewModelScope.launch {
-            val id = repository.state.value.selectedConversationId ?: repository.newConversation()
-            repository.sendMessage(id, text)
+            var accepted = false
+            try {
+                val id = repository.state.value.selectedConversationId ?: repository.newConversation()
+                accepted = repository.sendMessage(id, text)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { local.update { it.copy(notice = "消息未提交，草稿已保留。") } }
+            finally { onAccepted(accepted) }
         }
     }
 
@@ -206,6 +277,74 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
         viewModelScope.launch { repository.cancelDesktopTask(id) }
     }
 
+    override fun cancelDirectChat() {
+        val id = repository.state.value.selectedConversationId ?: return
+        viewModelScope.launch(Dispatchers.IO) { repository.cancelDirectChat(id) }
+    }
+
+    override fun answerAgentInteraction(id: String, answer: UiAgentAnswer, onAccepted: (Boolean) -> Unit) {
+        val interaction = repository.state.value.agentInteraction
+        if (local.value.agentInteractionBusy || interaction?.id != id ||
+            interaction.conversationId != repository.state.value.selectedConversationId) { onAccepted(false); return }
+        val payload = when (answer) {
+            is UiAgentAnswer.Text -> JSONObject().put("text", answer.text)
+            is UiAgentAnswer.Permission -> JSONObject().put("allowed", answer.allowed)
+        }
+        local.update { it.copy(agentInteractionBusy = true) }
+        viewModelScope.launch {
+            var accepted = false
+            try { accepted = repository.answerAgentInteraction(interaction.conversationId, id, payload) }
+            finally { local.update { it.copy(agentInteractionBusy = false) }; onAccepted(accepted) }
+        }
+    }
+
+    override fun steerDesktopTask(text: String, onAccepted: (Boolean) -> Unit) {
+        val data = repository.state.value
+        val id = data.selectedConversationId
+        if (id == null || local.value.desktopTaskBusy || !data.desktopAgentBusy || data.desktopAgentConversationId != id) {
+            onAccepted(false); return
+        }
+        local.update { it.copy(desktopTaskBusy = true) }
+        viewModelScope.launch {
+            var accepted = false
+            try { accepted = repository.steerDesktopTask(id, text) }
+            finally { local.update { it.copy(desktopTaskBusy = false) }; onAccepted(accepted) }
+        }
+    }
+
+    fun prepareArtifact(reference: String, onReady: (String, String) -> Unit) {
+        val cid = repository.state.value.selectedConversationId ?: return
+        if (local.value.artifactDownloading != null || pendingArtifact != null) return
+        local.update { it.copy(artifactDownloading = reference) }
+        viewModelScope.launch {
+            try {
+                val downloaded = repository.downloadArtifact(cid, reference)
+                if (downloaded != null) {
+                    pendingArtifact = downloaded
+                    onReady(downloaded.artifact.name, downloaded.artifact.mime)
+                }
+            } finally { local.update { it.copy(artifactDownloading = null) } }
+        }
+    }
+
+    /** The system document picker owns the destination and overwrite confirmation. */
+    fun finishArtifactSave(uri: Uri?) {
+        val downloaded = pendingArtifact ?: return
+        pendingArtifact = null
+        viewModelScope.launch {
+            try {
+                if (uri != null) withContext(Dispatchers.IO) {
+                    requireNotNull(getApplication<Application>().contentResolver.openOutputStream(uri, "w")).use { output ->
+                        downloaded.file.inputStream().use { it.copyTo(output) }
+                    }
+                    local.update { it.copy(notice = "文件已保存") }
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { local.update { it.copy(notice = "文件未能保存，请重新选择保存位置") } }
+            finally { downloaded.file.delete() }
+        }
+    }
+
     override fun requestDesktopScreenshot() {
         if (local.value.desktopTaskBusy) return
         local.update { it.copy(desktopTaskBusy = true) }
@@ -239,7 +378,8 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
         viewModelScope.launch {
             try {
                 val saved = repository.saveDirectApiConfig(input.baseUrl, input.model, input.apiKey,
-                    input.timeoutSeconds, input.reasoningEffort)
+                    input.timeoutSeconds, input.reasoningEffort, input.reasoningProfile,
+                    input.reasoningBudgetTokens, input.reasoningMetadata)
                 val error = if (saved) null else repository.state.value.error ?: "模型配置未保存，请检查后重试。"
                 repository.clearError()
                 local.update { it.copy(apiConfigError = error, notice = if (saved) "已保存，手机可直接对话" else it.notice,
@@ -341,8 +481,8 @@ class AuraViewModel(application: Application) : AndroidViewModel(application), U
     override fun consumePairInfo() { local.update { it.copy(pendingPairInfo = null) } }
 
     override fun onCleared() {
-        foregroundSync.close()
-        CoroutineScope(Dispatchers.IO).launch { repository.close() }
+        foregroundSync?.close()
+        if (session == null) CoroutineScope(Dispatchers.IO).launch { repository.close() }
         super.onCleared()
     }
 

@@ -106,6 +106,10 @@ class ModelListControllerTests(unittest.TestCase):
         self.store = ConversationStore(self.directory / "archive.sqlite3")
         self.chat = ChatController(self.settings, self.client, store=self.store)
         self.spin_until(lambda: QThreadPool.globalInstance().activeThreadCount() == 0)
+        # Readiness initialization may capture the saved API before discovery.
+        # A model-list request must add no further saved-configuration reads.
+        self.initial_api_reads = self.settings.api_reads
+        self.initial_key_reads = self.settings.key_reads
 
     def tearDown(self):
         self.client.release_all()
@@ -159,8 +163,8 @@ class ModelListControllerTests(unittest.TestCase):
         self.assertEqual(QThread.currentThread(), self.app.thread())
         self.assertNotEqual(self.client.calls[0][2], threads[0])
         self.assertEqual(self.client.calls[0][:2], (request, LIST_KEY))
-        self.assertEqual(self.settings.api_reads, 0)
-        self.assertEqual(self.settings.key_reads, 0)
+        self.assertEqual(self.settings.api_reads, self.initial_api_reads)
+        self.assertEqual(self.settings.key_reads, self.initial_key_reads)
         self.assertEqual(self.settings.saved, [])
         self.assertEqual(self.chat.messages, [])
         self.assertEqual(self.store.list_conversations(), [])
@@ -242,8 +246,8 @@ class ModelListControllerTests(unittest.TestCase):
                 self.assertNotIn(LIST_KEY, results[0][1])
         self.assertEqual(self.client.calls, [])
         self.assertEqual(self.chat_state(), before)
-        self.assertEqual(self.settings.api_reads, 0)
-        self.assertEqual(self.settings.key_reads, 0)
+        self.assertEqual(self.settings.api_reads, self.initial_api_reads)
+        self.assertEqual(self.settings.key_reads, self.initial_key_reads)
         self.assertEqual(self.settings.saved, [])
 
     def test_missing_or_unsafe_key_and_noncallable_callback_are_rejected(self):

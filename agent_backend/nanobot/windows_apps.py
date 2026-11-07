@@ -640,7 +640,7 @@ class ApplicationLaunch:
 
 
 class AuthorizedApplicationLaunch:
-    """Activate a current observed candidate, at most once, with verification.
+    """Activate current observed candidates with per-action settlement.
 
     Selection comes from native tool results, not model-authored executable
     paths. The model resolves conversation references under the worker policy.
@@ -654,12 +654,45 @@ class AuthorizedApplicationLaunch:
         self.last_result = None
         self._lock = asyncio.Lock()
         self.discovery = discovery
+        self._results = {}
+        self._identities = {}
+        self.pending_effect = False
+        self.action_epoch = 0
+        self._last_started_at = None
 
-    async def run(self, application_name: str = "", candidate_id: str = ""):
+    def resolve_uncertainty(self, verification):
+        from gui_verification import checked_report
+        value = checked_report(verification, started_at=self._last_started_at)
+        if value is None or value["status"] != "verified":
+            return False
+        self.pending_effect = False
+        return True
+
+    async def run(self, application_name: str = "", candidate_id: str = "", action_id=None):
         async with self._lock:
-            if self.called:
+            explicit = action_id is not None
+            if explicit and (not isinstance(action_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", action_id)):
+                raise LaunchUnavailable("APP_UNSUPPORTED")
+            identity = action_id or "legacy"
+            arguments = (application_name, candidate_id)
+            if explicit and identity in self._identities and self._identities[identity] != arguments:
+                raise LaunchUnavailable("APP_UNSUPPORTED")
+            if explicit and identity in self._results:
+                return self._results[identity]
+            if not explicit and self.called:
                 return json.dumps(self.last_result or {"status": "needs_user", "code": "APP_ALREADY_ATTEMPTED",
                     "summary": _MESSAGES["APP_ALREADY_ATTEMPTED"], "dispatched": False, "verified": False}, ensure_ascii=False)
+            if self.pending_effect:
+                return json.dumps({"status": "needs_user", "code": "APP_ALREADY_ATTEMPTED",
+                    "summary": "先前应用启动的结果尚不明确，请先观察窗口状态；未再次派发启动。",
+                    "dispatched": False, "verified": False, "effect_state": "uncertain"}, ensure_ascii=False)
+            if explicit:
+                self._identities[identity] = arguments
+            def settled():
+                value = json.dumps(self.last_result, ensure_ascii=False)
+                if explicit:
+                    self._results[identity] = value
+                return value
             selected = None
             if candidate_id:
                 selected = self.discovery.observed.get(candidate_id) if self.discovery is not None and isinstance(candidate_id, str) else None
@@ -667,22 +700,35 @@ class AuthorizedApplicationLaunch:
                     self.last_result = {"status": "lookup_only", "code": "APP_REDISCOVER_REQUIRED",
                                         "summary": "请先读取当前应用目录，再选择其中可以启动的候选 ID。尚未启动应用。",
                                         "can_continue": True, "dispatched": False, "verified": False}
-                    return json.dumps(self.last_result, ensure_ascii=False)
+                    return settled()
             elif (not isinstance(application_name, str) or not 1 <= len(application_name) <= 64
                     or normalized_name(application_name) not in normalized_name(self.original_task)
                     or parse_open_request("open " + application_name) != application_name.strip()):
                 self.last_result = {"status": "needs_user", "code": "APP_UNSUPPORTED",
                                     "summary": _MESSAGES["APP_UNSUPPORTED"], "dispatched": False, "verified": False}
-                return json.dumps(self.last_result, ensure_ascii=False)
+                return settled()
             self.called = True
             launch = ApplicationLaunch("open " + application_name, native=self.native,
                                        verification_seconds=self.verification_seconds, selected=selected)
-            result = await launch.run()
+            from gui_verification import utc_now
+            self._last_started_at = utc_now()
+            try:
+                result = await launch.run()
+            except asyncio.CancelledError:
+                self.pending_effect = True
+                raise
             self.last_result = json.loads(result)
+            dispatched = self.last_result.get("dispatched") is True
+            confirmed = self.last_result.get("verified") is True
+            self.pending_effect = dispatched and not confirmed
+            if dispatched:
+                self.action_epoch += 1
+            self.last_result.update(effect_state="uncertain" if self.pending_effect else "confirmed" if dispatched else "not_dispatched",
+                                    action_epoch=self.action_epoch)
             # A failed lookup had no native side effect. It may be followed by
             # discovery or a visual lookup; uncertain activations remain final.
             if self.last_result["code"] in {"APP_NOT_FOUND", "APP_AMBIGUOUS", "APP_UNSUPPORTED"} and not self.last_result["dispatched"]:
                 self.called = False
                 self.last_result.update(status="lookup_only", can_continue=True)
-                return json.dumps(self.last_result, ensure_ascii=False)
-            return result
+                return settled()
+            return settled()

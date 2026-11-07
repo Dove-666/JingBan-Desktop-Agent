@@ -10,10 +10,12 @@ import re
 from PySide6.QtCore import QEvent, QTimer, Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+    QComboBox, QDoubleSpinBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
     QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox,
     QVBoxLayout, QWidget,
 )
+
+from .settings_widgets import CollapsibleSection, SettingsToggle
 
 
 def _label(text: str, name: str = "hint") -> QLabel:
@@ -77,7 +79,7 @@ def _event_value(key: object, value: object) -> str:
 class PerceptionPanel(QWidget):
     """An embeddable fourth tab; settings remain owned by the controller."""
 
-    def __init__(self, controller, parent=None) -> None:
+    def __init__(self, controller, parent=None, *, embedded=False) -> None:
         super().__init__(parent)
         self.controller = controller
         self._preview_image = QImage()
@@ -124,39 +126,38 @@ class PerceptionPanel(QWidget):
         contents = QWidget()
         self.scroll.setWidget(contents)
         layout = QVBoxLayout(contents)
-        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setContentsMargins(*((0, 2, 6, 12) if embedded else (18, 18, 18, 18)))
         layout.setSpacing(14)
-        layout.addWidget(_label(
-            "本地观察默认关闭。仅处理前台窗口，预览只保留在内存。"
-            "“3 秒后本地观察”不会调用 API；远程分析需要单独允许。"
-            "“评论当前画面”会将最近安全预览发给 API，请先检查预览。"
-            "点击后请切到目标应用，观察完成后返回面板查看上次预览；面板在前台时不观察自身。"
-        ))
 
-        consent = QGroupBox("观察与远程发送")
+        consent = QGroupBox("观察权限")
         consent_layout = QVBoxLayout(consent)
-        self.enabled_checkbox = QCheckBox("启用本地前台窗口观察")
+        self.enabled_checkbox = SettingsToggle("观察当前屏幕")
         self.enabled_checkbox.setObjectName("perceptionEnabled")
+        self.enabled_checkbox.setToolTip("仅观察前台窗口，预览只保留在内存。重新开启后需保存设置。")
         self.enabled_checkbox.toggled.connect(self._enabled_toggled)
         consent_layout.addWidget(self.enabled_checkbox)
-        self.remote_checkbox = QCheckBox("允许向已配置 API 发送低分辨率前台画面和窗口标题")
+        self.remote_checkbox = SettingsToggle("允许发送画面给模型")
         self.remote_checkbox.setObjectName("perceptionAllowRemote")
+        self.remote_checkbox.setToolTip("允许向已配置 API 发送低分辨率前台画面和窗口标题；开启时需单独确认。")
         self.remote_checkbox.toggled.connect(self._confirm_remote)
         consent_layout.addWidget(self.remote_checkbox)
-        consent_layout.addWidget(_label("取消勾选立即停止对应权限并尝试保存；重新开启需保存参数，远程发送仍需单独确认。"))
-        consent_layout.addWidget(_label("隐私过滤无法保证识别所有敏感内容；请按需要补充关键词及排除进程。"))
+        consent_layout.addWidget(_label("发送低分辨率前台画面和窗口标题。关闭立即生效；开启后需保存设置。"))
         layout.addWidget(consent)
 
-        parameters = QGroupBox("频率与主动发言限制")
-        form = QFormLayout(parameters)
-        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        interaction = QFormLayout()
         self.commentary_mode_combo = QComboBox()
         self.commentary_mode_combo.setObjectName("perceptionCommentaryMode")
+        self.commentary_mode_combo.setAccessibleName("屏幕感知互动风格")
         self.commentary_mode_combo.addItem("陪伴评论", "companion")
         self.commentary_mode_combo.addItem("只在重要时说话", "quiet")
-        form.addRow("互动风格", self.commentary_mode_combo)
-        form.addRow(_label("陪伴评论可回应视频等日常内容，仍受发言冷却、次数与去重限制；不会每帧都评论。"))
-        form.addRow(_label("屏幕与摄像头的主动评论共享发言次数和最近发言记录；本页频率限制适用于屏幕感知。手动请求评论不消耗主动发言次数。"))
+        self.commentary_mode_combo.setToolTip("陪伴评论会回应视频等日常内容；安静模式只在重要时说话。")
+        interaction.addRow("互动风格", self.commentary_mode_combo)
+        layout.addLayout(interaction)
+
+        parameters = QWidget()
+        form = QFormLayout(parameters)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.observation_interval_input = self._spin("observationInterval", 5, 30)
         form.addRow("本地观察间隔（秒）", self.observation_interval_input)
         self.analysis_interval_input = self._spin("analysisInterval", 30, 600)
@@ -173,11 +174,16 @@ class PerceptionPanel(QWidget):
         form.addRow("每小时主动发言上限", self.max_speeches_input)
         self.idle_pause_input = self._spin("idlePause", 60, 7200)
         form.addRow("用户无操作暂停阈值（秒）", self.idle_pause_input)
-        layout.addWidget(parameters)
+        form.addRow(_label("与摄像头共享主动发言次数；手动评论不消耗次数。"))
+        self.frequency_section = CollapsibleSection("更多选项", content=parameters)
+        self.frequency_section.setObjectName("perceptionFrequencyOptions")
+        layout.addWidget(self.frequency_section)
 
-        privacy = QGroupBox("隐私排除")
+        privacy = QWidget()
         privacy_form = QFormLayout(privacy)
         privacy_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        privacy_form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        privacy_form.addRow(_label("隐私过滤可能遗漏敏感内容，可在此排除应用和窗口。"))
         self.privacy_keywords_input = QPlainTextEdit()
         self.privacy_keywords_input.setObjectName("perceptionPrivacyKeywords")
         self.privacy_keywords_input.setFixedHeight(70)
@@ -188,7 +194,10 @@ class PerceptionPanel(QWidget):
         self.excluded_apps_input.setFixedHeight(70)
         self.excluded_apps_input.setPlaceholderText("进程名称，例如 password-manager.exe；用逗号或换行分隔")
         privacy_form.addRow("排除进程", self.excluded_apps_input)
-        layout.addWidget(privacy)
+        self.privacy_section = CollapsibleSection("隐私保护", content=privacy)
+        self.privacy_section.setObjectName("perceptionPrivacyOptions")
+        layout.addWidget(self.privacy_section)
+        layout.addWidget(_label("请勿在包含敏感信息的窗口开启发送。可在“隐私保护”中排除应用。"))
 
         buttons = QHBoxLayout()
         self.save_button = QPushButton("保存参数")
@@ -206,7 +215,6 @@ class PerceptionPanel(QWidget):
         self.reset_button = QPushButton("清空本次事件")
         self.reset_button.setObjectName("resetPerceptionSession")
         self.reset_button.clicked.connect(self._reset_session)
-        buttons.addWidget(self.reset_button)
         layout.addLayout(buttons)
         self.feedback_label = _label("", "error")
         self.feedback_label.hide()
@@ -226,18 +234,28 @@ class PerceptionPanel(QWidget):
         self.preview_status_label = _label("")
         self.preview_status_label.setObjectName("perceptionPreviewStatus")
         layout.addWidget(self.preview_status_label)
-        layout.addWidget(_label("当前观察详情（经隐私过滤）"))
+        self.observe_button.setToolTip("点击后切到目标应用。3 秒后仅做本地观察，不调用 API；返回这里可查看预览。")
+        self.comment_button.setToolTip("将最近的安全预览发送给已配置模型。请先检查预览是否包含敏感内容。")
+        self.diagnostics_section = CollapsibleSection("运行详情")
+        self.diagnostics_section.setObjectName("perceptionRuntimeDetails")
+        diagnostics_layout = QVBoxLayout(self.diagnostics_section.content)
+        diagnostics_layout.setContentsMargins(0, 4, 0, 4)
+        diagnostics_layout.addWidget(_label("当前观察详情（经隐私过滤）"))
         self.details_view = QPlainTextEdit()
         self.details_view.setObjectName("perceptionDetails")
         self.details_view.setReadOnly(True)
         self.details_view.setFixedHeight(110)
-        layout.addWidget(self.details_view)
-        layout.addWidget(_label("本次事件（最近 30 条，不写入聊天历史）"))
+        diagnostics_layout.addWidget(self.details_view)
+        event_heading = QHBoxLayout()
+        event_heading.addWidget(_label("本次事件（最近 30 条，不写入聊天历史）"), 1)
+        event_heading.addWidget(self.reset_button)
+        diagnostics_layout.addLayout(event_heading)
         self.history_view = QPlainTextEdit()
         self.history_view.setObjectName("perceptionHistory")
         self.history_view.setReadOnly(True)
         self.history_view.setFixedHeight(150)
-        layout.addWidget(self.history_view)
+        diagnostics_layout.addWidget(self.history_view)
+        layout.addWidget(self.diagnostics_section)
         layout.addStretch()
 
         controller.settings_changed.connect(self._load_settings)
@@ -543,9 +561,9 @@ class PerceptionPanel(QWidget):
         if self._preview_image.isNull():
             text = "尚无本地预览。启用并保存后，点击“3 秒后本地观察”，切到目标应用等待采集。"
         elif self._preview_retained:
-            text = "显示上次本地预览。当前 AURA 自身窗口已跳过，预览不是面板的实时画面。"
+            text = "显示上次本地预览。当前鲸伴自身窗口已跳过，预览不是面板的实时画面。"
         else:
-            text = "显示最近一次通过隐私过滤的本地预览；返回面板查看时不会观察 AURA 自身。"
+            text = "显示最近一次通过隐私过滤的本地预览；返回面板查看时不会观察鲸伴自身。"
         age = self._runtime_info.get("previewAgeSeconds")
         if not self._preview_image.isNull() and age is not None:
             text += f" 采集于 {self._runtime_info.get('previewObservedAt', '')}，距今 {age} 秒。"

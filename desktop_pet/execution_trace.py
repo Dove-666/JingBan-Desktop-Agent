@@ -5,6 +5,7 @@ model reasoning fields, images or arbitrary worker diagnostics.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 import threading
@@ -19,8 +20,17 @@ SOURCE_NAMES = {"system", "history", "summary", "events", "memories", "selection
 _DATA_URL = re.compile(r"data:[^\s\"'<>]*", re.I)
 _SUMMARY = {
     "completed": "回复已完成", "failed": "本次请求未能完成", "cancelled": "本次请求已停止",
-    "needs_user": "等待你完成当前步骤", "interrupted": "上次请求意外中断",
+    "needs_user": "任务未完成", "interrupted": "上次请求意外中断",
 }
+
+
+@dataclass(frozen=True)
+class ExecutionViewUpdate:
+    """An immutable public trace notification for an existing message."""
+
+    conversation_id: str
+    message_id: str
+    execution_json: str
 
 
 def _text(value, redact=lambda text: text):

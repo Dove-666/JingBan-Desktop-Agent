@@ -37,6 +37,20 @@ export class BoundedObservations {
   get latest() { return this.frames.at(-1) ?? null; }
   get size() { return this.frames.length; }
 
+  restore(evidence) {
+    // Only BridgeController's request-local memory supplies this value; the
+    // JSONL input validator does not admit caller-authored screenshot history.
+    const frames = evidence?.frames;
+    if (!Array.isArray(frames) || frames.length > this.maxFrames) return;
+    if (!frames.every(frame => typeof frame?.base64 === 'string' && frame.base64.length > 0 &&
+        Number.isSafeInteger(frame.sequence) && frame.sequence > 0 &&
+        typeof frame.captured_at === 'string' && Number.isFinite(Date.parse(frame.captured_at)))) return;
+    this.frames = frames.map(frame => ({ ...frame }));
+    this.sequence = Math.max(evidence?.summary?.total_observations ?? 0, ...frames.map(frame => frame.sequence), 0);
+    this.initial = frames.slice(0, 3).map(frame => frame.sequence);
+    this.trim();
+  }
+
   actionSucceeded(action) {
     const safeAction = ACTIONS.has(action) ? action : 'unknown';
     // Only host-observed execution may attach an action to a real screenshot.

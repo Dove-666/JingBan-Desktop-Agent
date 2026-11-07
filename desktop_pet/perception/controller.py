@@ -11,6 +11,7 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal, Slot
 from PySide6.QtGui import QImage
 
 from ..api_client import ApiError, redact_secret
+from ..character_cards import CharacterCard
 from ..animation_controller import AnimationState
 from ..settings_manager import CredentialsError, SettingsError
 from .change_detector import ChangeDetector
@@ -26,7 +27,7 @@ class _Signals(QObject):
 
 class _AnalysisWorker(QRunnable):
     def __init__(self, request_id, analyzer, observation, settings, key,
-                 commentary_mode="companion", requested_comment=False):
+                 commentary_mode="companion", requested_comment=False, *, character_card=None):
         super().__init__()
         self.signals = _Signals()
         self.request_id = request_id
@@ -36,6 +37,7 @@ class _AnalysisWorker(QRunnable):
         self._key = key
         self.commentary_mode = commentary_mode
         self.requested_comment = requested_comment
+        self.character_card = character_card
         self.cancelled = threading.Event()
 
     @Slot()
@@ -43,10 +45,13 @@ class _AnalysisWorker(QRunnable):
         event, error = None, ""
         try:
             if not self.cancelled.is_set():
+                character_options = ({"character_card": self.character_card}
+                                     if self.character_card is not None else {})
                 event = self.analyzer.analyze(
                     self.observation, self._settings, self._key,
                     commentary_mode=self.commentary_mode,
                     requested_comment=self.requested_comment,
+                    **character_options,
                 )
         except (ApiError, SettingsError, CredentialsError) as exc:
             error = redact_secret(str(exc), self._key)
@@ -216,8 +221,8 @@ class PerceptionController(QObject):
         self.details = dict(self._last_valid_details)
         self.details["preview_retained"] = not self.preview.isNull()
         self.details["status"] = (
-            "上次有效观察（当前前台为 AURA，已跳过）"
-            if not self.preview.isNull() else "当前前台为 AURA，已跳过；尚无外部窗口预览"
+            "上次有效观察（当前前台为鲸伴，已跳过）"
+            if not self.preview.isNull() else "当前前台为鲸伴，已跳过；尚无外部窗口预览"
         )
         self.details["reason"] = reason
         self.details_changed.emit(dict(self.details))
@@ -472,6 +477,10 @@ class PerceptionController(QObject):
             key = self._store.get_api_key()
             if not key:
                 raise SettingsError("请先在 API 设置中保存密钥。")
+            loader = getattr(self._store, "load_character_card", None)
+            character_card = loader() if callable(loader) else None
+            if character_card is not None and not isinstance(character_card, CharacterCard):
+                raise SettingsError("角色资料无效，请重新选择角色后再试。")
         except (SettingsError, CredentialsError) as exc:
             message = str(exc)
             self._record_analysis_error(message)
@@ -481,6 +490,7 @@ class PerceptionController(QObject):
         worker = _AnalysisWorker(
             self._request_id, self._analyzer_factory(), observation, api_settings, key,
             commentary_mode=self.settings.commentary_mode, requested_comment=requested_comment,
+            **({"character_card": character_card} if character_card is not None else {}),
         )
         worker.signals.finished.connect(self._finished)
         self._worker = worker
@@ -517,7 +527,7 @@ class PerceptionController(QObject):
                 if not error and isinstance(event, ContextEvent):
                     self.detector.accept(observation.image, app_id)
                     self.deduplicator.remember("frame:" + fingerprint, self._clock())
-                reason = "当前前台为 AURA，跳过观察；晚到分析未触发动作。"
+                reason = "当前前台为鲸伴，跳过观察；晚到分析未触发动作。"
                 if error:
                     self._record_analysis_error(error)
                     reason = "屏幕分析未完成：" + error + " " + reason

@@ -132,6 +132,34 @@ class StartupRegistryTests(unittest.TestCase):
             self.manager.set_enabled(True)
         self.assertEqual(self.registry.writes, [])
 
+    def test_existing_registration_is_detected_then_renamed_without_duplicate(self):
+        command = self.manager._command()
+        self.registry.values[StartupManager.LEGACY_VALUE_NAME] = (command, self.registry.REG_SZ)
+        self.assertTrue(self.manager.is_enabled())
+        self.assertNotIn(StartupManager.VALUE_NAME, self.registry.values)
+        self.manager.set_enabled(True)
+        self.assertEqual(StartupManager.VALUE_NAME, "鲸伴")
+        self.assertEqual(self.registry.values["鲸伴"], (command, self.registry.REG_SZ))
+        self.assertNotIn(StartupManager.LEGACY_VALUE_NAME, self.registry.values)
+        self.assertIn("AnotherApp", self.registry.values)
+
+    def test_disable_removes_matching_old_registration_and_leaves_it_disabled(self):
+        self.registry.values[StartupManager.LEGACY_VALUE_NAME] = (self.manager._command(), self.registry.REG_SZ)
+        self.assertTrue(self.manager.is_enabled())
+        self.manager.set_enabled(False)
+        self.assertFalse(self.manager.is_enabled())
+        self.assertNotIn(StartupManager.LEGACY_VALUE_NAME, self.registry.values)
+        self.assertIn("AnotherApp", self.registry.values)
+
+    def test_brand_migration_preserves_a_different_checkout_legacy_entry(self):
+        foreign = ('"C:\\different checkout\\pythonw.exe" main.py --autostart', self.registry.REG_SZ)
+        self.registry.values[StartupManager.LEGACY_VALUE_NAME] = foreign
+        self.assertFalse(self.manager.is_enabled())
+        self.manager.set_enabled(True)
+        self.assertEqual(self.registry.values[StartupManager.LEGACY_VALUE_NAME], foreign)
+        self.manager.set_enabled(False)
+        self.assertEqual(self.registry.values[StartupManager.LEGACY_VALUE_NAME], foreign)
+
     def test_read_write_delete_failures_have_static_errors(self):
         for phase, action in (("read", self.manager.is_enabled),
                               ("write", lambda: self.manager.set_enabled(True)),

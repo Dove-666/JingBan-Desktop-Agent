@@ -47,9 +47,19 @@ class MockApiServer:
                         "message": {"role": "assistant", "content": plan["content"]}}],
                     }
                 payload = json.dumps(body).encode("utf-8")
+                stream = data.get("stream") is True and plan["status"] == 200
+                if stream:
+                    frames = []
+                    for choice in body.get("choices", []):
+                        message = choice.get("message", {})
+                        frame = {"id": "local-stream", "object": "chat.completion.chunk", "created": 0,
+                                 "model": "test-model", "choices": [{"index": choice.get("index", 0),
+                                 "delta": message, "finish_reason": choice.get("finish_reason")}]}
+                        frames.append("data: " + json.dumps(frame) + "\n\n")
+                    payload = ("".join(frames) + "data: [DONE]\n\n").encode("utf-8")
                 try:
                     self.send_response(plan["status"])
-                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Type", "text/event-stream" if stream else "application/json")
                     self.send_header("Content-Length", str(len(payload)))
                     self.end_headers()
                     self.wfile.write(payload)

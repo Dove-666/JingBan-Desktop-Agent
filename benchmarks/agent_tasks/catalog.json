@@ -1,0 +1,526 @@
+{
+  "schema": "aura.agent_task_catalog.v1",
+  "version": 3,
+  "description": "Synthetic, isolated tasks for measured Agent capability. Offline oracle self-tests are not model successes. Missing implementations and negative guards never count as real-model passes.",
+  "baseline_policy": "GPT Agent, Claude Code and other products have not been run on this catalog. No scripted provider, proxy model or inferred score may stand in for a baseline.",
+  "tasks": [
+    {
+      "id": "answer_arithmetic",
+      "suite": "real_model",
+      "category": "conversation",
+      "implementation": "implemented",
+      "objective": "Answer a simple question without requiring irrelevant execution tools.",
+      "prompt": "What is 37 plus 47? Return exactly one JSON object with the numeric field answer. No file is requested.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "answer_json",
+          "equals": {
+            "answer": 84
+          }
+        }
+      ]
+    },
+    {
+      "id": "long_context_needle",
+      "suite": "real_model",
+      "category": "context",
+      "implementation": "implemented",
+      "objective": "Locate a unique fact inside a long paged synthetic source without changing it.",
+      "prompt": "Read long_notes.txt and find the unique record whose key is FINAL_RECOVERY_CODE. Return exactly one JSON object with the string field code. The source is long; use page offsets as needed. Do not change any source file.",
+      "fixtures": [
+        {
+          "path": "long_notes.txt",
+          "generator": "long_notes_v1"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "answer_json",
+          "equals": {
+            "code": "WHALE-73F8A2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "file_create_exact",
+      "suite": "real_model",
+      "category": "files",
+      "implementation": "implemented",
+      "objective": "Create, read back and deliver the exact requested bytes.",
+      "prompt": "Create report.txt containing exactly HELLO. Do not add a newline. Read it back before confirming completion.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "file_text",
+          "path": "report.txt",
+          "equals": "HELLO"
+        }
+      ]
+    },
+    {
+      "id": "file_read_modify",
+      "suite": "real_model",
+      "category": "files",
+      "implementation": "implemented",
+      "objective": "Read an existing version, modify one value and preserve all other JSON fields.",
+      "prompt": "Read config.json, change only count from 3 to 7, save config.json and read back the new version. Preserve every other field and value.",
+      "fixtures": [
+        {
+          "path": "config.json",
+          "text": "{\"name\":\"whale\",\"count\":3,\"enabled\":true,\"tags\":[\"blue\",\"small\"]}\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "file_json",
+          "path": "config.json",
+          "equals": {
+            "name": "whale",
+            "count": 7,
+            "enabled": true,
+            "tags": [
+              "blue",
+              "small"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "decimal_csv_totals",
+      "suite": "real_model",
+      "category": "data",
+      "implementation": "implemented",
+      "objective": "Derive exact Decimal category totals, overall total and count from the actual CSV source.",
+      "prompt": "Read transactions.csv. Create totals.json with category_totals, total, record_count. Sum amount exactly by category using decimal arithmetic. Store monetary values as decimal strings. Include every row, preserve the CSV, and verify the JSON against the source.",
+      "fixtures": [
+        {
+          "path": "transactions.csv",
+          "text": "category,amount\ntravel,10.10\nbooks,20.20\ntravel,0.07\nbooks,0.03\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "decimal_csv",
+          "path": "totals.json",
+          "source_path": "transactions.csv",
+          "group_column": "category",
+          "value_column": "amount",
+          "reference": {
+            "category_totals": {
+              "travel": "10.17",
+              "books": "20.23"
+            },
+            "total": "30.40",
+            "record_count": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": "docx_report",
+      "suite": "real_model",
+      "category": "documents",
+      "implementation": "implemented",
+      "objective": "Create a valid Word package containing all requested text. Visual layout is explicitly not scored yet.",
+      "prompt": "Create report.docx with the title Whale Field Report, a heading Observations, and a paragraph containing exactly The water sample is clear. Save the document and inspect its actual content. No PDF or screenshot is requested.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "docx_text",
+          "path": "report.docx",
+          "contains": [
+            "Whale Field Report",
+            "Observations",
+            "The water sample is clear."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "xlsx_budget",
+      "suite": "real_model",
+      "category": "spreadsheets",
+      "implementation": "implemented",
+      "objective": "Create an actual workbook with a named sheet and exact typed cell values.",
+      "prompt": "Create budget.xlsx with a sheet named Budget. Set A1=Item, B1=Amount, A2=Travel, B2 numeric 12.50, A3=Books, B3 numeric 7.25, A4=Total, B4 numeric 19.75. Use numeric literal amounts, not formulas or strings. Save and inspect the workbook.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "xlsx_cells",
+          "path": "budget.xlsx",
+          "sheet": "Budget",
+          "cells": {
+            "A1": {
+              "text": "Item"
+            },
+            "B1": {
+              "text": "Amount"
+            },
+            "A2": {
+              "text": "Travel"
+            },
+            "B2": {
+              "number": "12.50"
+            },
+            "A3": {
+              "text": "Books"
+            },
+            "B3": {
+              "number": "7.25"
+            },
+            "A4": {
+              "text": "Total"
+            },
+            "B4": {
+              "number": "19.75"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "pptx_three_slides",
+      "suite": "real_model",
+      "category": "presentations",
+      "implementation": "implemented",
+      "objective": "Deliver exactly three ordered slides with the requested per-slide content. Rendering quality is not scored yet.",
+      "prompt": "Create briefing.pptx with exactly three slides, in this order: slide 1 title Mission and text Observe the ocean; slide 2 title Findings and text Three whales observed; slide 3 title Next Steps and text Repeat tomorrow. Save and inspect the slide content.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "pptx_slides",
+          "path": "briefing.pptx",
+          "slides": [
+            {
+              "contains": [
+                "Mission",
+                "Observe the ocean"
+              ]
+            },
+            {
+              "contains": [
+                "Findings",
+                "Three whales observed"
+              ]
+            },
+            {
+              "contains": [
+                "Next Steps",
+                "Repeat tomorrow"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "read_sources_compare",
+      "suite": "real_model",
+      "category": "research",
+      "implementation": "implemented",
+      "objective": "Reconcile two actual synthetic sources and cite their filenames in a structured answer.",
+      "prompt": "Read north.txt and south.txt. Which station measured the higher temperature, and by how many degrees? Return exactly JSON with winner (station name), difference (decimal string) and sources (both filenames in alphabetical order). Do not change the sources.",
+      "fixtures": [
+        {
+          "path": "north.txt",
+          "text": "station=North\ntemperature_c=18.75\n"
+        },
+        {
+          "path": "south.txt",
+          "text": "station=South\ntemperature_c=21.10\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "answer_json",
+          "equals": {
+            "winner": "South",
+            "difference": "2.35",
+            "sources": [
+              "north.txt",
+              "south.txt"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "read_original_text",
+      "suite": "real_model",
+      "category": "files",
+      "implementation": "implemented",
+      "objective": "Return existing text verbatim without treating a read request as a creation task.",
+      "prompt": "Read original.txt and return its complete original content exactly as the reply, without a preface, quotes or markdown. Do not create or modify any file.",
+      "fixtures": [
+        {
+          "path": "original.txt",
+          "text": "Whale notes: keep the original punctuation, 7.25!"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "answer_text",
+          "equals": "Whale notes: keep the original punctuation, 7.25!"
+        }
+      ]
+    },
+    {
+      "id": "multi_artifact_delivery",
+      "suite": "real_model",
+      "category": "files",
+      "implementation": "implemented",
+      "objective": "Deliver all requested artifacts, not only the first mentioned file.",
+      "prompt": "Create first.txt containing exactly ALPHA and second.txt containing exactly BETA. Neither file may have a trailing newline. Read back both and confirm only after both files exist with the requested contents.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "file_text",
+          "path": "first.txt",
+          "equals": "ALPHA"
+        },
+        {
+          "kind": "file_text",
+          "path": "second.txt",
+          "equals": "BETA"
+        }
+      ]
+    },
+    {
+      "id": "browser_research_sources",
+      "suite": "real_model",
+      "category": "browser",
+      "implementation": "not_implemented",
+      "objective": "Research a dated question from primary sources with citations and independently checked facts.",
+      "blocked_reason": "A versioned local browser/source fixture and fact oracle are not implemented."
+    },
+    {
+      "id": "browser_form_submission",
+      "suite": "real_model",
+      "category": "browser",
+      "implementation": "not_implemented",
+      "objective": "Fill and submit an owned form once, then verify stored server state.",
+      "blocked_reason": "Owned form fixture, effect identity and submission-state oracle are not implemented."
+    },
+    {
+      "id": "developer_bug_fix",
+      "suite": "real_model",
+      "category": "development",
+      "implementation": "not_implemented",
+      "objective": "Fix a seeded repository bug and pass independent hidden tests without editing them.",
+      "blocked_reason": "Owned checkout runner and independent hidden-test execution are not implemented."
+    },
+    {
+      "id": "developer_build_artifact",
+      "suite": "real_model",
+      "category": "development",
+      "implementation": "not_implemented",
+      "objective": "Build and run a seeded small application, then verify the produced executable behavior.",
+      "blocked_reason": "Terminal/build capability and executable output oracle are not implemented."
+    },
+    {
+      "id": "gui_document_save_reopen",
+      "suite": "real_model",
+      "category": "gui",
+      "implementation": "not_implemented",
+      "objective": "Use an owned desktop fixture to create, save and reopen a document with final visual proof.",
+      "blocked_reason": "Benchmark GUI input fencing and rendered document oracle are not implemented; configured runner never enables desktop input."
+    },
+    {
+      "id": "gui_ordinal_action",
+      "suite": "real_model",
+      "category": "gui",
+      "implementation": "not_implemented",
+      "objective": "Act on the second of two observed items using fresh target identity and chronological evidence.",
+      "blocked_reason": "Existing standalone GUI verification is not yet integrated as a repeatable catalog case."
+    },
+    {
+      "id": "gui_visual_quality",
+      "suite": "real_model",
+      "category": "gui",
+      "implementation": "not_implemented",
+      "objective": "Judge rendered document layout, clipping and readable hierarchy against a fixed visual rubric.",
+      "blocked_reason": "A calibrated independent visual-quality oracle is not implemented."
+    },
+    {
+      "id": "cross_device_sync",
+      "suite": "real_model",
+      "category": "sync",
+      "implementation": "not_implemented",
+      "objective": "Synchronize messages and image attachments between two isolated peers without duplicates.",
+      "blocked_reason": "Two-peer benchmark harness, delivery timestamps and independent sync oracle are not implemented."
+    },
+    {
+      "id": "android_offline_conversation",
+      "suite": "real_model",
+      "category": "android",
+      "implementation": "not_implemented",
+      "objective": "Answer through the phone API while the desktop peer is disconnected, then reconcile once.",
+      "blocked_reason": "An isolated Android device/emulator fixture and mobile API oracle are not implemented."
+    },
+    {
+      "id": "restart_resume_without_replay",
+      "suite": "real_model",
+      "category": "recovery",
+      "implementation": "not_implemented",
+      "objective": "Recover an interrupted long task without replaying a confirmed effect.",
+      "blocked_reason": "Crash injection and restart/replay oracle are not integrated into the real-model runner."
+    },
+    {
+      "id": "parallel_task_coordination",
+      "suite": "real_model",
+      "category": "orchestration",
+      "implementation": "not_implemented",
+      "objective": "Delegate independent work and merge checked results without conflicting writes.",
+      "blocked_reason": "Agent-side subtask delegation and an independent coordination oracle are not implemented."
+    },
+    {
+      "id": "user_correction_mid_task",
+      "suite": "real_model",
+      "category": "interaction",
+      "implementation": "not_implemented",
+      "objective": "Apply an authenticated user correction while working and verify only the revised goal.",
+      "blocked_reason": "Timed benchmark steering and an independent goal-version oracle are not integrated."
+    },
+    {
+      "id": "guard_missing_output",
+      "suite": "guard",
+      "category": "acceptance",
+      "implementation": "implemented",
+      "objective": "A real but irrelevant system observation cannot prove a missing requested artifact.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "goal_contract_guard",
+          "case": "missing_output"
+        }
+      ]
+    },
+    {
+      "id": "guard_wrong_content",
+      "suite": "guard",
+      "category": "acceptance",
+      "implementation": "implemented",
+      "objective": "A claimed successful write cannot override exact-content mismatch.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "goal_contract_guard",
+          "case": "wrong_content"
+        }
+      ]
+    },
+    {
+      "id": "guard_stale_judge",
+      "suite": "guard",
+      "category": "acceptance",
+      "implementation": "implemented",
+      "objective": "A judge receipt cannot approve an answer or file version it did not evaluate.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "goal_contract_guard",
+          "case": "stale_judge"
+        }
+      ]
+    },
+    {
+      "id": "guard_missing_judge",
+      "suite": "guard",
+      "category": "acceptance",
+      "implementation": "implemented",
+      "objective": "An unrecognized natural-language goal without an independent judge fails closed.",
+      "fixtures": [],
+      "oracles": [
+        {
+          "kind": "goal_contract_guard",
+          "case": "missing_judge"
+        }
+      ]
+    },
+    {
+      "id": "js_unicode_window_repair",
+      "suite": "real_model",
+      "category": "development_js_subset",
+      "implementation": "implemented",
+      "objective": "Repair an owned JavaScript function's logic and Unicode code-point boundaries, verified with hidden inputs; no general repository/build claim.",
+      "prompt": "Read README.md and solution.js. Fix the saved solve(input) function for the complete Unicode window contract. Modify only solution.js, preserve README.md, inspect the saved source, and check representative cases with the available pure-JavaScript calculation tool. No terminal, package or build is requested.",
+      "fixtures": [
+        {
+          "path": "README.md",
+          "text": "# Unicode window repair\n\nModify only solution.js. Keep this README unchanged. This is a small JavaScript\nfunction repair task, not a repository build. Do not use modules, Node, shell,\nPython, files, network or host callbacks inside the function.\n\nDefine a top-level function solve(input). Input is {\"text\": a Unicode string}.\nReturn {\"length\": integer, \"start\": integer, \"text\": string} describing the\nlongest contiguous substring with no repeated Unicode code point. Count and\nindex Unicode code points, not UTF-16 code units or grapheme clusters. Do not\nnormalize combining marks or change letter case. For ties choose the earliest\nstart. Empty input returns {\"length\":0,\"start\":0,\"text\":\"\"}.\n\nExamples: \"abcabcbb\" -> length 3, start 0, text \"abc\";\n\"abba\" -> length 2, start 0, text \"ab\"; \"🐳a🐳b\" -> length 3, start 1, text \"a🐳b\".\nRepair the actual saved function; hidden inputs are checked independently.\n"
+        },
+        {
+          "path": "solution.js",
+          "text": "function solve(input) {\n  const text = input.text;\n  const last = {};\n  let left = 0, bestStart = 0, bestLength = 0;\n  for (let right = 0; right < text.length; right++) {\n    const char = text[right];\n    if (last[char] !== undefined) left = last[char] + 1;\n    last[char] = right;\n    if (right - left + 1 >= bestLength) {\n      bestStart = left;\n      bestLength = right - left + 1;\n    }\n  }\n  return {length: bestLength, start: bestStart, text: text.slice(bestStart, bestStart + bestLength)};\n}\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "js_hidden_cases",
+          "path": "solution.js",
+          "case": "unicode_distinct_window_v1"
+        }
+      ]
+    },
+    {
+      "id": "js_interval_union_artifact",
+      "suite": "real_model",
+      "category": "development_js_subset",
+      "implementation": "implemented",
+      "objective": "Implement a small JavaScript interval algorithm and produce its exact public JSON artifact, with separate hidden function checks; no general build claim.",
+      "prompt": "Read README.md, intervals.json and solution.js. Implement solve(input) for the complete grouped interval-union contract, and create result.json for the actual intervals.json input. Preserve README.md and intervals.json exactly. Write only solution.js and result.json, use the pure-JavaScript computation tool as needed, and read back both saved outputs. No shell, Node, Python or package installation is requested.",
+      "fixtures": [
+        {
+          "path": "README.md",
+          "text": "# Grouped interval algorithm and artifact\n\nImplement the top-level function solve(input) in solution.js and create\nresult.json for the exact input in intervals.json. Keep this README and\nintervals.json byte-for-byte unchanged. Write only inside this workspace.\nThis is a small synchronous JavaScript/JSON task, not a build or terminal task.\nFunctions have no host IO; use the scoped read/write tools to load/save data.\n\nInput: {\"records\":[{\"group\":string,\"start\":integer,\"end\":integer}, ...]}.\nAll coordinates and totals fit JavaScript's safe-integer range. Normalize each\nrecord's endpoints using min/max. A record denotes a half-open interval [start,\nend); zero-length records count but contribute no covered interval. Group by\nthe exact string, including names such as \"__proto__\". Merge overlapping OR\ntouching intervals. Sort merged intervals by start, then end; sort groups\nlexicographically by Unicode code points, not locale or UTF-16 code units.\nPreserve groups containing only zero-length records with an empty merged list.\n\nReturn exactly {\"groups\":[{\"group\":string,\"merged\":[[start,end],...],\n\"covered\":integer,\"source_count\":integer},...],\"total_covered\":integer,\n\"record_count\":integer}. covered is the sum of end-start within a group;\ntotal_covered is the sum of group coverage, and record_count includes all rows.\nAn empty records array produces groups [], total_covered 0, record_count 0.\n\nRead back solution.js and result.json. Hidden inputs separately test the saved\nfunction; a correct public artifact alone cannot prove the algorithm works.\n"
+        },
+        {
+          "path": "intervals.json",
+          "text": "{\n  \"records\": [\n    {\n      \"group\": \"north\",\n      \"start\": 8,\n      \"end\": 12\n    },\n    {\n      \"group\": \"north\",\n      \"start\": 1,\n      \"end\": 4\n    },\n    {\n      \"group\": \"north\",\n      \"start\": 4,\n      \"end\": 8\n    },\n    {\n      \"group\": \"north\",\n      \"start\": 20,\n      \"end\": 18\n    },\n    {\n      \"group\": \"南站\",\n      \"start\": -5,\n      \"end\": -2\n    },\n    {\n      \"group\": \"南站\",\n      \"start\": -3,\n      \"end\": 2\n    },\n    {\n      \"group\": \"南站\",\n      \"start\": 10,\n      \"end\": 10\n    },\n    {\n      \"group\": \"__proto__\",\n      \"start\": 3,\n      \"end\": 7\n    },\n    {\n      \"group\": \"__proto__\",\n      \"start\": 5,\n      \"end\": 6\n    },\n    {\n      \"group\": \"🐳\",\n      \"start\": 0,\n      \"end\": 0\n    }\n  ]\n}\n"
+        },
+        {
+          "path": "solution.js",
+          "text": "function solve(input) {\n  // Implement the contract in README.md; this stub does not compute unions.\n  return {groups: [], total_covered: 0, record_count: input.records.length};\n}\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "js_hidden_cases",
+          "path": "solution.js",
+          "case": "grouped_interval_union_v1"
+        },
+        {
+          "kind": "js_algorithm_artifact",
+          "path": "result.json",
+          "source_path": "intervals.json",
+          "case": "grouped_interval_union_v1"
+        }
+      ]
+    },
+    {
+      "id": "xlsx_editable_formula_budget",
+      "suite": "real_model",
+      "category": "spreadsheets_formula_subset",
+      "implementation": "implemented",
+      "objective": "Create one editable three-item budget with source-derived ROUND/SUM formulas, numeric caches, exact formats and a formula-like literal; no general Excel editing or real recalculation claim.",
+      "prompt": "请读取 source.csv，创建 budget.xlsx，工作表名为“预算”。第1行从A到D依次为“商品、数量、单价、金额”；第2至4行按CSV顺序填写商品，数量和单价必须是数值，保留原单价的3位小数。B2:B4用整数格式0，C2:C4用格式0.000。D2、D3、D4分别保留可编辑的ROUND(B2*C2,2)、ROUND(B3*C3,2)、ROUND(B4*C4,2)公式，使用原单价计算，不先改动单价；D2:D4用格式0.00。A5写“合计”，D5保留可编辑的SUM(D2:D4)公式并用格式0.00。A6写“字面示例”，B6原样保存 =SUM(D2:D4) 这段普通文本，不能成为公式。保存后检查实际公式、计算缓存和格式，保持 source.csv 字节完全不变。无需PDF、截图或启动Excel。",
+      "fixtures": [
+        {
+          "path": "source.csv",
+          "text": "item,quantity,unit_price\n鲸鱼贴纸,3,19.995\n笔记本,2,7.235\n包装袋,5,0.105\n"
+        }
+      ],
+      "oracles": [
+        {
+          "kind": "xlsx_editable_formulas",
+          "case": "three_item_budget_round_v1",
+          "path": "budget.xlsx",
+          "source_path": "source.csv"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$Apply,
     [switch]$PrepareOnly,
@@ -17,8 +17,10 @@ if (-not $ProjectDirectory) { $ProjectDirectory = Split-Path -Parent $PSScriptRo
 $ProjectDirectory = [IO.Path]::GetFullPath($ProjectDirectory)
 $InstallDirectory = [IO.Path]::GetFullPath($InstallDirectory)
 $ConfigPath = [IO.Path]::GetFullPath($ConfigPath)
-if (-not $PythonPath) { $PythonPath = Join-Path $ProjectDirectory '.venv\Scripts\python.exe' }
-$PythonPath = [IO.Path]::GetFullPath($PythonPath)
+$packagedHost = Join-Path $ProjectDirectory '鲸伴网页桥.exe'
+$usePackagedHost = Test-Path -LiteralPath $packagedHost -PathType Leaf
+if (-not $PythonPath -and -not $usePackagedHost) { $PythonPath = Join-Path $ProjectDirectory '.venv\Scripts\python.exe' }
+if ($PythonPath) { $PythonPath = [IO.Path]::GetFullPath($PythonPath) }
 $hostScript = Join-Path $ProjectDirectory 'tools\browser_ask_host.py'
 $manifestPath = Join-Path $InstallDirectory 'native-host.json'
 $launcherPath = Join-Path $InstallDirectory 'host.cmd'
@@ -31,7 +33,7 @@ $paths = @{
     Chrome = 'Software\Google\Chrome\NativeMessagingHosts\aura.whale_ask'
 }
 $registryPaths = @($Browser | Select-Object -Unique | ForEach-Object { $paths[$_] })
-foreach ($value in @($InstallDirectory, $ConfigPath, $PythonPath, $ProjectDirectory, $hostScript)) {
+foreach ($value in @($InstallDirectory, $ConfigPath, $PythonPath, $ProjectDirectory, $hostScript, $packagedHost)) {
     if ($value.IndexOfAny([char[]]@([char]13, [char]10, [char]34)) -ge 0) { throw 'Paths cannot contain newlines or double quotes.' }
 }
 $plan = [ordered]@{
@@ -44,10 +46,13 @@ $plan = [ordered]@{
     registry = @($registryPaths | ForEach-Object { [ordered]@{ hive = 'HKEY_CURRENT_USER'; key = $_; value = $manifestPath } })
     files = @($launcherPath, $manifestPath, $markerPath, $backupPath)
     browser_extension_installed = $false
+    packaged_host = [bool]$usePackagedHost
 }
 if (-not $Apply -and -not $PrepareOnly) { $plan | ConvertTo-Json -Depth 6; exit 0 }
-if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) { throw 'Project Python was not found. Create .venv and install requirements first.' }
-if (-not (Test-Path -LiteralPath $hostScript -PathType Leaf)) { throw 'tools/browser_ask_host.py was not found in this project.' }
+if (-not $usePackagedHost) {
+    if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) { throw 'Project Python was not found. Create .venv and install requirements first.' }
+    if (-not (Test-Path -LiteralPath $hostScript -PathType Leaf)) { throw 'tools/browser_ask_host.py was not found in this project.' }
+}
 if (-not (Test-Path -LiteralPath (Join-Path $ProjectDirectory 'browser-extension\whale-ask\manifest.json') -PathType Leaf)) {
     throw 'The browser extension manifest was not found.'
 }
@@ -96,10 +101,14 @@ if ($Apply) {
 }
 Write-Utf8File $backupPath (([ordered]@{ host_name = $hostName; entries = @($backupEntries) }) | ConvertTo-Json -Depth 6)
 $escapePath = { param([string]$Value) $Value.Replace('%', '%%') }
-$launcher = "@echo off`r`n@setlocal DisableDelayedExpansion`r`n@chcp 65001 >nul`r`n@cd /d `"$(& $escapePath $ProjectDirectory)`"`r`n@`"$(& $escapePath $PythonPath)`" -u `"$(& $escapePath $hostScript)`" --config-path `"$(& $escapePath $ConfigPath)`" %*`r`n"
+if ($usePackagedHost) {
+    $launcher = "@echo off`r`n@setlocal DisableDelayedExpansion`r`n@chcp 65001 >nul`r`n@cd /d `"$(& $escapePath $ProjectDirectory)`"`r`n@`"$(& $escapePath $packagedHost)`" --config-path `"$(& $escapePath $ConfigPath)`" %*`r`n"
+} else {
+    $launcher = "@echo off`r`n@setlocal DisableDelayedExpansion`r`n@chcp 65001 >nul`r`n@cd /d `"$(& $escapePath $ProjectDirectory)`"`r`n@`"$(& $escapePath $PythonPath)`" -u `"$(& $escapePath $hostScript)`" --config-path `"$(& $escapePath $ConfigPath)`" %*`r`n"
+}
 Write-Utf8File $launcherPath $launcher
 Write-Utf8File $manifestPath (([ordered]@{
-    name = $hostName; description = 'AURA Whale Ask local browser bridge'; path = $launcherPath
+    name = $hostName; description = '鲸伴 · 网页提问连接桥'; path = $launcherPath
     type = 'stdio'; allowed_origins = @("chrome-extension://$extensionId/")
 }) | ConvertTo-Json -Depth 4)
 $registered = @()

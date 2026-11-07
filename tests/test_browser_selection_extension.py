@@ -95,6 +95,33 @@ class BrowserSelectionExtensionTests(unittest.TestCase):
             self.assertTrue(unrelated.exists())
             self.assertEqual([item.name for item in destination.iterdir()], ["keep-me.txt"])
 
+    @unittest.skipUnless(shutil.which("powershell"), "Windows PowerShell is needed to prepare a temporary host")
+    def test_packaged_host_prepares_without_python_or_source_tree(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="jingban-bridge-package-") as directory:
+            folder = Path(directory)
+            product = folder / "鲸伴 test % path"
+            product.mkdir()
+            (product / "鲸伴网页桥.exe").write_bytes(b"MZ synthetic path fixture, never executed")
+            extension = product / "browser-extension/whale-ask"
+            extension.mkdir(parents=True)
+            (extension / "manifest.json").write_text("{}", encoding="utf-8")
+            destination = folder / "prepared"
+            result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                str(ROOT / "tools/install_browser_ask.ps1"), "-PrepareOnly", "-InstallDirectory", str(destination),
+                "-ProjectDirectory", str(product), "-ConfigPath", str(folder / "isolated.ini")],
+                cwd=ROOT, capture_output=True, encoding="utf-8", timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            plan = json.loads(result.stdout.lstrip("\ufeff"))
+            self.assertTrue(plan["packaged_host"])
+            launcher = (destination / "host.cmd").read_text(encoding="utf-8")
+            self.assertIn("鲸伴网页桥.exe", launcher)
+            self.assertNotIn("python.exe", launcher)
+            self.assertNotIn("browser_ask_host.py", launcher)
+            self.assertIn("%% path", launcher)
+            self.assertFalse((folder / "isolated.ini").exists())
+            marker = json.loads((destination / "installation.json").read_text(encoding="utf-8"))
+            self.assertEqual(marker["registered_keys"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

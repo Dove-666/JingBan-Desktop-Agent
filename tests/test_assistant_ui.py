@@ -821,7 +821,9 @@ class AssistantUiTests(unittest.TestCase):
 
     def test_narrow_history_overlay_closes_and_returns_keyboard_focus(self):
         self.panel.resize(640, 720)
+        wait_js(self.panel, f"Math.abs(innerWidth - {self.panel.web_view.width()}) <= 2 && matchMedia('(max-width:760px)').matches")
         wait_js(self.panel, "document.querySelector('.sidebar').getBoundingClientRect().right <= 1")
+        wait_js(self.panel, "(() => {const n=document.querySelector('[data-testid=history-toggle]'),r=n.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(n).visibility!=='hidden';})()")
         eval_js(self.panel, "document.querySelector('[data-testid=history-toggle]').focus()")
         click_dom(self.panel, "button[aria-label='展开历史会话']")
         wait_js(self.panel, "document.querySelector('.sidebar').getBoundingClientRect().left >= -1")

@@ -21,6 +21,10 @@ sys.path.insert(0, str(ROOT))
 EXTENSION_ID = "gbeikpndpckhjeakbckijelidpdpinei"
 ALLOWED_ORIGIN = "chrome-extension://" + EXTENSION_ID + "/"
 MAX_BYTES = 96 * 1024
+_MISSING_LISTENER_ERRORS = frozenset({
+    "鲸伴尚未就绪，请启动鲸伴后再试。",
+    "桌宠尚未就绪，请启动 AURA 后再试。",  # Older running app protocol.
+})
 
 
 class NativeMessageError(ValueError):
@@ -73,12 +77,19 @@ def start_pet(config_path):
     # another configuration accidentally when a developer supplied a custom one.
     if Path(config_path).resolve() != default_config_path().resolve():
         return False
-    executable = Path(sys.executable)
-    if os.name == "nt" and executable.with_name("pythonw.exe").is_file():
-        executable = executable.with_name("pythonw.exe")
+    if getattr(sys, "frozen", False):
+        executable = Path(sys.executable).with_name("鲸伴.exe")
+        if not executable.is_file():
+            return False
+        command, working_directory = [str(executable)], executable.parent
+    else:
+        executable = Path(sys.executable)
+        if os.name == "nt" and executable.with_name("pythonw.exe").is_file():
+            executable = executable.with_name("pythonw.exe")
+        command, working_directory = [str(executable), str(ROOT / "main.py")], ROOT
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     try:
-        subprocess.Popen([str(executable), str(ROOT / "main.py")], cwd=str(ROOT),
+        subprocess.Popen(command, cwd=str(working_directory),
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, creationflags=flags)
     except OSError:
@@ -103,19 +114,19 @@ def handle_message(message, config_path, *, deliver=None, launch=None, timeout_s
         return {"ok": True}
     # A connected inbox can also decline because its composer limit is reached.
     # Launch only when there is no listener, never restart an already running pet.
-    if result.get("error") != "桌宠尚未就绪，请启动 AURA 后再试。":
+    if result.get("error") not in _MISSING_LISTENER_ERRORS:
         return {"ok": False, "error": result.get("error") or "提问框暂时无法打开，请稍后再试。"}
     if not launch(config_path):
-        return {"ok": False, "error": "无法自动启动桌宠，请先启动 AURA 再使用右键提问。"}
+        return {"ok": False, "error": "无法自动启动鲸伴，请先启动鲸伴再使用右键提问。"}
     deadline = time.monotonic() + max(0.1, min(timeout_seconds, 12))
     while time.monotonic() < deadline:
         result = deliver(config_path, request, timeout_ms=2500)
         if result.get("ok"):
             return {"ok": True}
-        if result.get("error") != "桌宠尚未就绪，请启动 AURA 后再试。":
+        if result.get("error") not in _MISSING_LISTENER_ERRORS:
             return {"ok": False, "error": result.get("error") or "提问框暂时无法打开，请稍后再试。"}
         time.sleep(0.05)
-    return {"ok": False, "error": "桌宠尚未接通右键提问。如果正在运行旧版本，请右键退出并重新启动 AURA，再选中文字提问。"}
+    return {"ok": False, "error": "鲸伴尚未接通右键提问。如果正在运行旧版本，请右键退出并重新启动鲸伴，再选中文字提问。"}
 
 
 def main(argv=None, *, input_stream=None, output_stream=None):

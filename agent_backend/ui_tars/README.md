@@ -1,4 +1,4 @@
-# AURA UI-TARS bridge
+# 鲸伴 UI-TARS bridge
 
 ## Goal verification (current)
 
@@ -137,7 +137,7 @@ single dispatch and cancellation that waits for child exit.
 
 上述分支使用真实 SDK、localhost 假模型和人工图片验证；这些测试不执行实际桌面输入。
 
-按需启动的 Windows GUI 后台，不替换 AURA 的 Qt 窗口、鲸鱼娘 PNG、眼睛或耳尾效果。普通聊天不需要启动此进程。Node 进程通过 stdin/stdout JSON Lines 通信；不监听网络端口，不自行安装或更新软件，也不保存 API key、截图或任务记录。
+按需启动的 Windows GUI 后台，不替换鲸伴的 Qt 窗口、鲸鱼娘 PNG、眼睛或耳尾效果。普通聊天不需要启动此进程。Node 进程通过 stdin/stdout JSON Lines 通信；不监听网络端口，不自行安装或更新软件，也不保存 API key、截图或任务记录。
 
 ## 已安装的依赖
 
@@ -247,7 +247,7 @@ stdin 写入一次 `{"config":{"baseURL":"https://example.invalid/v1/","apiKey":
 - 当前仅 Windows、单显示器；UI-TARS 官方本机指南仍要求单显示器。
 - 取消/超时在模型请求及动作边界生效，已经发出的原生动作不能撤销。宿主应等待终态；必要时仅终止自己启动的进程树，不能把强制终止当作物理动作已撤销。
 - 原生 press/release 长按动作不开放；保留原子快捷键、单/双/右键、拖拽、输入、滚动、悬停、等待。未知动作失败，不直接执行任意代码。
-- 不自动升级权限、不安装软件、不修改 AURA 设置。实际 GUI 操作需要桌面会话和宿主明确派发任务。
+- 不自动升级权限、不安装软件、不修改鲸伴设置。实际 GUI 操作需要桌面会话和宿主明确派发任务。
 - API 请求由宿主选定的模型 endpoint 接收截图；此桥接没有添加额外云服务或图像 API。
 
 ## 验证
@@ -265,3 +265,48 @@ stdin 写入一次 `{"config":{"baseURL":"https://example.invalid/v1/","apiKey":
 - [NutJS operator 源码](https://github.com/bytedance/UI-TARS-desktop/blob/main/packages/ui-tars/operators/nut-js/src/index.ts)
 - [本机部署与单显示器限制](https://github.com/bytedance/UI-TARS-desktop/blob/main/docs/quick-start.md)
 - SDK 与 operator 均为 Apache-2.0；下游依赖许可证见各安装包。
+
+## Task-scoped recovery and tool composition (2026-11-02)
+
+The host may run multiple GUI subgoals in one task. `GuiBridge.run(parent_task,
+action_id=host_id, subtask=bounded_subgoal)` binds the exact parent authorization,
+and deduplicates that specific identity. Reusing an identity with different
+arguments is rejected; a verified application launch no longer prevents a later
+visual or UIA operation. Legacy calls without an action ID keep their one-shot
+contract. Action IDs must be minted by the host, never accepted as model authority.
+
+`effect_state` describes input dispatch (`not_dispatched`, `confirmed`, or
+`uncertain`); it is separate from independent goal verification. A cleanly
+executed action with an unmet goal returns private bounded `feedback.checks` so
+the parent planner can inspect and repair. An input exception/cancellation with
+unknown delivery blocks further mutating GUI calls. Read-only verification is
+still available; `resolve_uncertainty()` is host-only and requires fresh passing
+evidence. Earlier action IDs and their cached outcomes never change or replay.
+
+Subgoal verification is labelled `verification_scope=subgoal`; only a final
+fresh verification of the whole parent task can prove the parent goal. Explicit
+subgoals share their task-owned Node process and bounded screen evidence, which
+is cleared when the host closes the task. Screenshots never enter JSONL output.
+
+`await bridge.pause_current(action_id=None)` interrupts only the active child
+subgoal so the outer planner can admit a user's steering correction. Explicit
+subcalls have distinct wire IDs; a quiet abort arriving after its call settled
+cannot cancel a later call or leave a stale error on the shared pipe. A clean
+model-wait interruption preserves confirmed dispatch state; uncertain input
+delivery still requires fresh observation. Task-owned evidence survives steering
+as reference data, while the updated parent authorization replaces instructions.
+
+The visual model working set retains at most eight target/navigation/current
+images, bounded recent action text, and explicit omission notices. Its adapter
+keeps at most 24 image payloads in memory. A context rejection can retry only a
+strictly smaller request; malformed action syntax gets one request-only repair.
+Temporary 429/502/503/504 model responses may retry once without repeating input.
+Identical actions against unchanged pixels trigger a no-progress handoff, rather
+than adding a whole-task step or duration limit. Windows drag at coordinate zero
+and horizontal scroll are handled explicitly; unsupported directions fail.
+
+UIA also provides observed window references, verified activation, filtered and
+paged snapshots, expand/collapse and directional scroll. It preserves native
+identity checks, password filtering and fresh-reference mutation guards. Secure
+desktop and unsupported monitor coordinate domains still stop safely; this
+release does not claim multi-monitor input support without physical validation.

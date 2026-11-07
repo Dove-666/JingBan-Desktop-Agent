@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -46,7 +45,8 @@ import kotlinx.coroutines.isActive
 
 /** A compact history of real phases and tools, kept separate from the answer. */
 @Composable
-internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifier, identity: String? = null) {
+internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifier,
+                              identity: String? = null, detail: String = "") {
     val running = process.state == "running"
     var expanded by rememberSaveable(process.startedAt) { mutableStateOf(running) }
     var previouslyRunning by rememberSaveable(process.startedAt) { mutableStateOf(running) }
@@ -94,25 +94,24 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
             }
         }
     }
-    val title = when (process.state) {
-        "running" -> "执行中"
-        "completed" -> "已完成"
-        "cancelled" -> "已停止"
-        "needs_user" -> "等待确认"
-        "interrupted" -> "已中断"
-        else -> "未完成"
-    }
+    val title = executionStateLabel(process.state)
     val duration = executionDuration(if (running) elapsed else process.durationMs)
+    val operations = remember(process.events) { process.operationEvents() }
+    val summary = buildString {
+        append(if (running) "已用时 " else "用时 ")
+        append(duration)
+        if (operations.isNotEmpty()) append(" · ${operations.size}项操作")
+        if (!running && process.state != "completed") append(" · $title")
+    }
     val current = process.events.lastOrNull { it.status == "running" }?.label
         ?: process.events.lastOrNull()?.label
     val colors = MaterialTheme.colorScheme
-    val statusColor = if (process.state in setOf("failed", "interrupted")) colors.error else colors.primary
 
     Column(modifier.onGloballyPositioned { inViewport = !it.boundsInWindow().isEmpty }
         .testTag("execution-process")) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
             .semantics(mergeDescendants = true) {
-                contentDescription = "执行过程"
+                contentDescription = if (identity == null) "执行过程" else "$identity，执行过程"
                 stateDescription = "${if (expanded) "已展开" else "已收起"}，$title，用时$duration"
             }
             .testTag("execution-toggle")
@@ -121,12 +120,11 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
             .padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             ProcessGlyph(running = running && foreground && inViewport, animate = motion,
-                state = process.state, modifier = Modifier.size(19.dp))
+                state = process.state, modifier = Modifier.size(17.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (identity != null) Text(identity, color = colors.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall)
-                Text("$title · $duration", color = colors.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Medium)
+                Text(summary, color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
                 if (running && !expanded && !current.isNullOrBlank()) {
                     Text(current, color = colors.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -136,12 +134,12 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
                 contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(19.dp))
         }
         if (expanded) {
-            val visible = if (running && !showAllRunningSteps) process.events.takeLast(6) else process.events
+            val visible = if (running && !showAllRunningSteps) operations.takeLast(6) else operations
             Column(Modifier.fillMaxWidth().padding(start = 9.dp, top = 3.dp, bottom = 8.dp)
                 .testTag("execution-events")) {
-                if (running && !showAllRunningSteps && process.events.size > visible.size) {
+                if (running && !showAllRunningSteps && operations.size > visible.size) {
                     TextButton({ showAllRunningSteps = true }, Modifier.heightIn(min = 48.dp)) {
-                        Text("查看全部 ${process.events.size} 步", style = MaterialTheme.typography.bodySmall)
+                        Text("查看全部 ${operations.size} 步", style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (process.omittedCount > 0) {
@@ -149,12 +147,11 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
                         color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
                 visible.forEachIndexed { index, event ->
-                    val ink = if (event.status == "failed") colors.error else if (event.status == "running") statusColor
-                        else colors.onSurfaceVariant
+                    val ink = if (event.status == "running" && running) colors.primary else colors.onSurfaceVariant
                     val status = when (event.status) {
                         "completed" -> "已完成"
                         "failed" -> "失败"
-                        "running" -> "执行中"
+                        "running" -> if (running) "执行中" else "未完成"
                         "cancelled" -> "已停止"
                         else -> "已记录"
                     }
@@ -169,7 +166,7 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
                     },
                         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Box(Modifier.width(18.dp).padding(top = 3.dp), contentAlignment = Alignment.TopCenter) {
-                            if (event.status == "running") Canvas(Modifier.size(14.dp)) {
+                            if (event.status == "running" && running) Canvas(Modifier.size(14.dp)) {
                                 drawCircle(ink, style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
                                 drawCircle(ink, radius = 2.dp.toPx())
                             } else Icon(when (event.status) {
@@ -178,13 +175,22 @@ internal fun ExecutionProcess(process: UiExecution, modifier: Modifier = Modifie
                                 else -> Icons.Default.Info
                             }, contentDescription = null, tint = ink, modifier = Modifier.size(14.dp))
                         }
-                        Text(event.label, color = if (event.status == "failed") colors.error else colors.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium,
+                        Text(if (event.label == "需要手动接手") "操作已暂停" else event.label,
+                            color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f).padding(bottom = 12.dp))
                         Text(offset, color = colors.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(bottom = 12.dp))
                     }
+                }
+                if (visible.isEmpty()) Text(if (running) current?.takeIf { it.isNotBlank() } ?: "正在处理…"
+                    else "没有执行操作。", color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 20.dp, bottom = 8.dp))
+                if (detail.isNotBlank()) androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(detail, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 8.dp)
+                            .testTag("execution-detail"))
                 }
             }
         }
@@ -198,10 +204,10 @@ private fun ProcessGlyph(running: Boolean, animate: Boolean, state: String, modi
     if (state != "running") {
         Icon(when (state) {
             "completed" -> Icons.Default.Check
-            "failed", "interrupted" -> Icons.Default.Close
+            "failed", "interrupted", "cancelled" -> Icons.Default.Close
             else -> Icons.Default.Info
         }, contentDescription = null,
-            tint = if (state in setOf("failed", "interrupted")) colors.error else colors.primary,
+            tint = colors.onSurfaceVariant,
             modifier = modifier)
     } else {
         val angle = if (running && animate) {

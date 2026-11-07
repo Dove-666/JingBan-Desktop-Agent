@@ -15,6 +15,7 @@ sys.path.insert(0, str(BACKEND))
 from test_agent_mode import NativeModel, ThreadingHTTPServer, PYTHON, KEY
 from desktop_pet.agents import AgentService, AgentSettings, AgentRequest
 from desktop_pet.agents.checkpoints import CheckpointStore, scope_fingerprint
+from desktop_pet.agents.settings import shared_api_settings
 
 
 @unittest.skipUnless(PYTHON.is_file(), "isolated SDK environment unavailable")
@@ -41,9 +42,16 @@ class CheckpointSdkTests(unittest.TestCase):
             result = service.execute(settings, KEY, AgentRequest("Create evidence.txt then verify it by reading it", "agent"), context)
             self.assertIn(result.status, ("completed", "needs_user"))
             self.assertEqual((workspace / "evidence.txt").read_text(), "persistent native evidence")
-            scope = scope_fingerprint(settings, context["api"], secrets=(KEY, ""))
+            # Runtime computer routing is derived from the main API, and only
+            # the credential actually used for requests participates in scope.
+            scope = scope_fingerprint(shared_api_settings(settings, context["api"]),
+                                      context["api"], secrets=(KEY,))
             checkpoint = CheckpointStore(database).load(context["conversation_id"], scope)
+            self.assertTrue(checkpoint["scope_matches"])
             self.assertGreaterEqual(checkpoint["last_barrier"], 4)
+            info = service.checkpoint_info(context["conversation_id"], settings,
+                                           context["api"], secrets=(KEY,))
+            self.assertEqual(info["last_barrier"], checkpoint["last_barrier"])
             self.assertNotEqual(checkpoint["status"], "running")
             original_bytes = (workspace / "evidence.txt").read_bytes()
             service.shutdown()

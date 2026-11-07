@@ -57,7 +57,8 @@ def sanitize_message(message: dict) -> dict:
     if not isinstance(metadata, dict):
         metadata = {}
     status = message.get("request_status", metadata.get("request_status"))
-    result["request_status"] = status if isinstance(status, str) and status in STATUSES else None
+    result["request_status"] = ("pending" if status == "queued" else
+                                status if isinstance(status, str) and status in STATUSES else None)
     reply = message.get("reply_to", metadata.get("reply_to"))
     try:
         valid_reply = str(UUID(reply)) if isinstance(reply, str) else None

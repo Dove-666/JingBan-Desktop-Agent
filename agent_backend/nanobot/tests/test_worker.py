@@ -20,6 +20,8 @@ BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parents[1]
 sys.path.insert(0, str(BACKEND))
 from safe_files import WorkspaceFiles
+from tool_catalog import CATALOG
+from browser_session import find_browser
 
 PYTHON = BACKEND / ".venv" / "Scripts" / "python.exe"
 KEY = "dummy-worker-secret-7d8351"
@@ -28,12 +30,18 @@ KEY = "dummy-worker-secret-7d8351"
 class ModelHandler(BaseHTTPRequestHandler):
     calls = []
     behavior = "normal"
+    reasoning_text = ""
 
     def log_message(self, *_):
         pass
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        from fixture_goal_judge import judge_message, send_judge
+        judged = judge_message(body)
+        if judged is not None:
+            send_judge(self, judged)
+            return
         type(self).calls.append(body)
         behavior = self.behavior
         turns = [m for m in body["messages"] if m["role"] == "tool"]
@@ -53,12 +61,18 @@ class ModelHandler(BaseHTTPRequestHandler):
                 tool = {"id": f"call_gui_{len(turns)}", "type": "function", "function": {"name": "computer_use", "arguments": json.dumps({"task": "model-authored replacement " + str(len(turns))})}}
         elif behavior == "plain":
             pass
+        elif behavior == "discover_unknown":
+            if not turns:
+                tool = {"id": "discover-owned-missing", "type": "function", "function": {
+                    "name": "discover_applications", "arguments": json.dumps({"query": "AURA_Uninstalled_fixture"})}}
         elif not turns:
             tool = {"id": "call_write", "type": "function", "function": {"name": "write_file", "arguments": json.dumps({"path": "result.txt", "content": "Z" * 20000 if behavior == "long_result" else "AURA offline test"})}}
         elif (len(turns) == 1 or behavior == "endless_tools"
               or behavior == "long_tools" and len(turns) < 45):
             tool = {"id": f"call_read_{len(turns)}", "type": "function", "function": {"name": "read_file", "arguments": json.dumps({"path": "result.txt"})}}
         message = {"role": "assistant", "content": None if tool else "已创建并读取 result.txt。 " + KEY}
+        if self.reasoning_text:
+            message["reasoning_content"] = self.reasoning_text
         if tool:
             message["tool_calls"] = [tool]
         result = {"id": "local-test", "object": "chat.completion", "created": 1, "model": "test-model",
@@ -151,6 +165,7 @@ class WorkerTests(unittest.TestCase):
     def setUp(self):
         ModelHandler.calls = []
         ModelHandler.behavior = "normal"
+        ModelHandler.reasoning_text = ""
         root = REPO / "agent_workspace"
         root.mkdir(exist_ok=True)
         self.workspace = Path(tempfile.mkdtemp(prefix="worker-test-", dir=root))
@@ -177,10 +192,17 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(result["status"], "completed")
         self.assertEqual((self.workspace / "result.txt").read_text(), "AURA offline test")
         self.assertEqual(set(result["tools_used"]), {"write_file", "read_file"})
-        self.assertEqual({tool["function"]["name"] for tool in ModelHandler.calls[0]["tools"]},
-                         {"read_file", "write_file", "search_files", "web_fetch", "calculate", "analyze_csv",
-                          "verify_artifact", "update_plan", "finish_task"})
-        self.assertIn("one user-authorized task", ModelHandler.calls[0]["messages"][0]["content"])
+        expected = {name for name, spec in CATALOG.items() if spec.available(
+            tools_enabled=True, computer_enabled=False)} - {
+                "system_info", "inspect_system", "inspect_disk_usage", "inspect_directory", "discover_applications",
+                # This legacy no-CID fixture has no host research identity or
+                # explicit Office preview runtime. Registered-scope positive
+                # cases live in the actual parent research/page review suites.
+                "delegate_research", "inspect_document_page", "compute_project_artifact"}
+        if find_browser() is None:
+            expected = {name for name in expected if not name.startswith("browser_")}
+        self.assertEqual({tool["function"]["name"] for tool in ModelHandler.calls[0]["tools"]}, expected)
+        self.assertIn("current user task", ModelHandler.calls[0]["messages"][0]["content"])
         self.assertNotIn("Dream", ModelHandler.calls[0]["messages"][0]["content"])
         self.assertNotIn(KEY, json.dumps(self.client.all_frames))
         self.assertFalse(any(self.workspace.rglob("MEMORY.md")))
@@ -221,6 +243,11 @@ class WorkerTests(unittest.TestCase):
         ModelHandler.behavior = "long_result"
         payload = self.payload(include_activity=True)
         payload["context"] = "reference " + "x" * 1_100_000
+        payload["options"]["context_store_root"] = str(self.workspace / "observations")
+        payload["options"]["context_store_namespace"] = f"{uuid4()}:{'a' * 64}"
+        from context_store import ObservationStore
+        ObservationStore(payload["options"]["context_store_root"],
+                         payload["options"]["context_store_namespace"]).activate()
         self.client.send(payload)
         result = self.client.terminal()
         self.assertEqual(result.get("status"), "completed", result)
@@ -228,11 +255,26 @@ class WorkerTests(unittest.TestCase):
         for call in ModelHandler.calls:
             self.assertFalse({"max_tokens", "max_completion_tokens", "max_output_tokens"} & call.keys())
         tool_messages = [item for call in ModelHandler.calls for item in call["messages"] if item["role"] == "tool"]
-        self.assertTrue(any("Z" * 20000 in item["content"] for item in tool_messages))
+        pages = [json.loads(item["content"]) for item in tool_messages if item.get("name") == "read_file"]
+        page = pages[-1]
+        if "context_observation" in page:
+            from context_store import ObservationStore
+            store = ObservationStore(payload["options"]["context_store_root"],
+                                     payload["options"]["context_store_namespace"])
+            page = json.loads(json.loads(store.read(page["context_observation"]["reference"], limit=24000))["text"])
+        self.assertEqual(page["text"], "Z" * 12000)
+        self.assertEqual(page["next_offset"], 12000)
+        self.assertEqual(page["total_characters"], 20000)
+        self.assertTrue(page["truncated"])
         events = [item for item in self.client.all_frames if item["type"] == "activity"]
         self.assertEqual([(item["name"], item["status"]) for item in events],
                          [("write_file", "running"), ("write_file", "completed"), ("read_file", "running"), ("read_file", "completed")])
-        self.assertTrue(all(set(item) <= {"type", "id", "kind", "name", "event_id", "status"} for item in events))
+        self.assertTrue(all(set(item) <= {"type", "id", "kind", "name", "event_id", "status", "subject"} for item in events))
+        from activity_subject import subject_detail
+        for item in events:
+            if "subject" in item:
+                self.assertEqual(item["kind"], "tool")
+                self.assertIsNotNone(subject_detail(item["name"], item["subject"]))
         self.assertNotIn(KEY, json.dumps(events))
 
     def test_service_context_capacity_error_is_specific_and_not_retried(self):
@@ -257,7 +299,7 @@ class WorkerTests(unittest.TestCase):
         ModelHandler.behavior = "error"
         self.client.send(self.payload())
         result = self.client.terminal()
-        self.assertEqual(result, {"type": "error", "id": "test-run", "code": "AGENT_FAILED"})
+        self.assertEqual(result, {"type": "error", "id": "test-run", "code": "PROVIDER_AUTH_FAILED"})
         self.assertNotIn(KEY, json.dumps(self.client.all_frames))
 
     def test_cancel_and_busy_do_not_start_second_task(self):
@@ -336,7 +378,7 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(self.client.terminal()["code"], "INVALID_REQUEST")
         self.assertEqual(ModelHandler.calls, [])
 
-    def test_single_unknown_application_does_not_call_model_or_gui(self):
+    def test_unknown_application_is_observed_by_agent_without_launch_or_gui(self):
         # This unique nonexistent shortcut name is resolved read-only. No real
         # application can be selected or launched by this worker acceptance test.
         payload = self.payload()
@@ -344,15 +386,15 @@ class WorkerTests(unittest.TestCase):
         payload["task"] = "打开 AURA_Uninstalled_" + uuid4().hex
         payload["config"]["gui"] = {"base_url": "https://example.invalid/v1", "api_key": KEY,
                                      "model": "test-gui-model", "provider": "ui-tars-1.5"}
+        ModelHandler.behavior = "discover_unknown"
         self.client.send(payload)
         result = self.client.terminal()
         self.assertEqual(result["type"], "final", result)
         self.assertEqual(result["status"], "needs_user")
-        self.assertEqual(result["tools_used"], ["open_application"])
-        # A UAC prompt already open on the host takes precedence over even
-        # read-only shortcut resolution; both outcomes must avoid any launch.
-        self.assertTrue("没有找到" in result["reply"] or "管理员授权" in result["reply"], result)
-        self.assertEqual(ModelHandler.calls, [])
+        self.assertEqual(result["tools_used"], ["discover_applications"])
+        self.assertEqual(len(ModelHandler.calls), 2)
+        observation = [m for m in ModelHandler.calls[-1]["messages"] if m.get("name") == "discover_applications"][-1]
+        self.assertEqual(json.loads(observation["content"])["applications"], [])
 
     def test_invalid_gui_coordinate_profile_rejected_before_any_tool(self):
         payload = self.payload()
@@ -370,7 +412,7 @@ class WorkerTests(unittest.TestCase):
     def test_gui_failure_is_not_masked_by_later_model_failure(self):
         self.check_missing_gui_runtime("computer_error")
 
-    def test_real_sdk_second_computer_call_reuses_terminal_gui_result_without_native_replay(self):
+    def test_real_sdk_identified_confirmed_subgoals_allow_two_actions_then_parent_verification(self):
         # The harness replaces only the physical GUI dispatch. It retains the
         # production GuiBridge.run cache, real tool registry and real SDK loop.
         for status in ("completed", "needs_user"):
@@ -389,7 +431,10 @@ class WorkerTests(unittest.TestCase):
                     "        assert self.deadline_monotonic is None\n"
                     "        assert self._timeout_budget_ms()==0\n"
                     f"        counter=Path({str(counter)!r})\n"
-                    "        counter.write_text(str(int(counter.read_text())+1) if counter.exists() else '1')\n"
+                    "        counts=json.loads(counter.read_text()) if counter.exists() else {'actions':[],'checks':0}\n"
+                    "        if self._current_verify_only: counts['checks']+=1\n"
+                    "        else: counts['actions'].append(self._current_action_id)\n"
+                    "        counter.write_text(json.dumps(counts))\n"
                     f"        self.last_status={status!r}\n        self.steps=2\n"
                     f"        self.verification=report({'verified' if status == 'completed' else 'unverified'!r})\n"
                     f"        return json.dumps({{'status':{status!r},'summary':'verified original GUI outcome','steps':2}})\n"
@@ -406,7 +451,10 @@ class WorkerTests(unittest.TestCase):
                 result = self.client.terminal()
                 self.assertEqual(result["type"], "final", result)
                 self.assertEqual(result["status"], status)
-                self.assertEqual(counter.read_text(), "1")
+                counts = json.loads(counter.read_text())
+                self.assertEqual(len(counts["actions"]), 2)
+                self.assertEqual(len(set(counts["actions"])), 2)
+                self.assertEqual(counts["checks"], 1)
                 self.assertEqual(len(ModelHandler.calls), 3)
                 tool_results = [item["content"] for item in ModelHandler.calls[-1]["messages"] if item["role"] == "tool"]
                 self.assertEqual(len(tool_results), 2)
@@ -428,7 +476,12 @@ class WorkerTests(unittest.TestCase):
                                      "model": "test-gui-model", "provider": "ui-tars-1.5"}
         self.client.send(payload)
         result = self.client.terminal()
-        self.assertEqual(result, {"type": "error", "id": "test-run", "code": "GUI_RUNTIME_MISSING"})
+        if behavior == "computer_error":
+            self.assertEqual(result, {"type": "error", "id": "test-run", "code": "GUI_RUNTIME_MISSING"})
+        else:
+            self.assertEqual(result["type"], "final", result)
+            self.assertEqual(result["status"], "needs_user", result)
+            self.assertTrue(any("GUI_RUNTIME_MISSING" in json.dumps(call["messages"]) for call in ModelHandler.calls[1:]))
         self.assertEqual(len(ModelHandler.calls), 2)
         self.assertNotIn(KEY, json.dumps(self.client.all_frames))
         self.assertNotIn("example.invalid", json.dumps(self.client.all_frames))

@@ -62,7 +62,7 @@ def main():
                        enabled=True, tools_enabled=True, computer_enabled=True)
     identifier = str(uuid4())
     context = {"api": manager.load_api_settings(), "messages": [],
-               "conversation_id": identifier, "gui_api_key": manager.get_agent_gui_api_key()}
+               "conversation_id": identifier, "gui_api_key": manager.get_api_key()}
     service = AgentService()
     report = {"real_provider": True, "workspace": str(workspace), "turns": [],
               "desktop_actions": 0, "cleanup_performed": False, "model_selected_tools": True}

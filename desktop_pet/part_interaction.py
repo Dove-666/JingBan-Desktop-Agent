@@ -181,6 +181,9 @@ def load_interaction_rig(rig_path: Path, source_path: Path) -> InteractionRig | 
         body_bounds = _alpha_bounds(base)
         if body_bounds.isEmpty():
             return None
+        # Cutout/repair pixels are alpha-only sources; painted color layers and
+        # QPainter render targets retain premultiplied ARGB32.
+        mask = mask.convertToFormat(QImage.Format.Format_Alpha8)
         items = data["parts"]
         if not isinstance(items, list) or not items:
             return None
@@ -234,6 +237,7 @@ def load_interaction_rig(rig_path: Path, source_path: Path) -> InteractionRig | 
                     crop = hit_bounds.toAlignedRect()
                     hit_origin += QPointF(crop.topLeft())
                     hit_mask = hit_mask.copy(crop)
+                hit_mask = hit_mask.convertToFormat(QImage.Format.Format_Alpha8)
             z = item.get("z", "behind")
             if z not in {"behind", "front"}:
                 return None

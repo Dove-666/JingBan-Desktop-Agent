@@ -5,7 +5,7 @@
     "videos": 0
   },
   "source_artwork": {
-    "path": "C:\\Users\\25136\\Desktop\\蓝发鲸鱼少女女仆立绘.png",
+    "path": "assets/character/source/master-white-background-v2.png",
     "sha256": "0160d77f0cdce6f5f170ae7ee209430277e272ab3fb1062f8e1549b10abb2738"
   },
   "native_frames_resegmented_with_real_sam2": 248,
@@ -21,7 +21,7 @@
   },
   "clips": {
     "think_scratch_head": {
-      "candidate_directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\think_scratch_head_candidate_v4",
+      "candidate_directory": "artifacts/asset_pipeline/hair_repair_v2/think_scratch_head_candidate_v4",
       "pixel_checks": {
         "native_frames": 124,
         "delivered_frames": 62,
@@ -36,7 +36,7 @@
         "white_core_removal_fraction": 1.0
       },
       "fixed_placement": {
-        "directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\think_scratch_head_candidate_v4",
+        "directory": "artifacts/asset_pipeline/hair_repair_v2/think_scratch_head_candidate_v4",
         "native_count": 124,
         "delivery_count": 62,
         "qa_warnings": [],
@@ -139,7 +139,7 @@
       "candidate_manifest_sha256": "1e568bfa1e7a7569f1bb30ed76df8aa4f116fb8a1560a50786d5ef4de7e882de"
     },
     "snarl_cute": {
-      "candidate_directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\snarl_cute_candidate_v4",
+      "candidate_directory": "artifacts/asset_pipeline/hair_repair_v2/snarl_cute_candidate_v4",
       "pixel_checks": {
         "native_frames": 124,
         "delivered_frames": 62,
@@ -154,7 +154,7 @@
         "white_core_removal_fraction": 1.0
       },
       "fixed_placement": {
-        "directory": "E:\\github\\AURA-Desktop-Agent\\artifacts\\asset_pipeline\\hair_repair_v2\\snarl_cute_candidate_v4",
+        "directory": "artifacts/asset_pipeline/hair_repair_v2/snarl_cute_candidate_v4",
         "native_count": 124,
         "delivery_count": 62,
         "qa_warnings": [],

@@ -41,7 +41,7 @@ class ReasoningEffortSettingsTests(unittest.TestCase):
         self.settings.save_api_key(KEY)
         for effort in REASONING_EFFORTS:
             with self.subTest(effort=effort):
-                config = ApiSettings("https://example.invalid/custom/v1", "reasoning-model", 23, effort)
+                config = ApiSettings("https://example.invalid/custom/v1", "reasoning-model", 23, effort, "legacy")
                 self.settings.save_api_settings(config)
                 reopened = isolated_settings(self.path, self.vault)
                 self.assertEqual(reopened.load_api_settings(), config)
@@ -49,7 +49,7 @@ class ReasoningEffortSettingsTests(unittest.TestCase):
         self.assertNotIn(KEY, self.path.read_text(encoding="utf-8"))
 
     def test_invalid_effort_is_rejected_before_writes_without_echoing_the_value(self):
-        original = ApiSettings("https://example.invalid/v1", "kept-model", 21, "low")
+        original = ApiSettings("https://example.invalid/v1", "kept-model", 21, "low", "legacy")
         self.settings.save_api_settings(original)
         for invalid in (None, True, 1, [], "HIGH", "auto", " high ", KEY):
             with self.subTest(case=type(invalid).__name__):
@@ -88,7 +88,7 @@ class ReasoningEffortTransportTests(unittest.TestCase):
             for index, effort in enumerate(REASONING_EFFORTS[1:], start=1):
                 with self.subTest(effort=effort):
                     server.enqueue("已收到思考强度")
-                    config = ApiSettings(server.base_url, "gpt-5.4", 5, effort)
+                    config = ApiSettings(server.base_url, "gpt-5.4", 5, effort, "legacy")
                     ApiClient().complete_context(config, KEY, [{"role": "user", "content": "测试参数"}],
                                                  output_tokens=192)
                     self.assertEqual(len(server.requests), index)
@@ -101,7 +101,7 @@ class ReasoningEffortTransportTests(unittest.TestCase):
     def test_connection_test_uses_the_selected_effort_in_a_real_request(self):
         with MockApiServer() as server:
             server.enqueue("连接成功")
-            status = ApiClient().test_connection(ApiSettings(server.base_url, "compatible-model", 5, "medium"), KEY)
+            status = ApiClient().test_connection(ApiSettings(server.base_url, "compatible-model", 5, "medium", "legacy"), KEY)
             self.assertIn("连接成功", status)
             self.assertEqual(server.requests[0]["body"]["reasoning_effort"], "medium")
             self.assertEqual(len(server.requests), 1)
@@ -113,7 +113,7 @@ class ReasoningEffortTransportTests(unittest.TestCase):
                     server.enqueue("SENSITIVE-PROVIDER-BODY " + KEY +
                                    " Unsupported parameter: reasoning_effort", status=status)
                     with self.assertRaises(ApiError) as caught:
-                        ApiClient().complete(ApiSettings(server.base_url, "compatible-model", 5, "xhigh"), KEY,
+                        ApiClient().complete(ApiSettings(server.base_url, "compatible-model", 5, "xhigh", "legacy"), KEY,
                                              [{"role": "user", "content": "一次请求"}])
                     self.assertEqual(caught.exception.code, "reasoning_unsupported")
                     self.assertIn("默认", str(caught.exception))
@@ -133,7 +133,7 @@ class ReasoningEffortTransportTests(unittest.TestCase):
                 with self.subTest(status=status):
                     server.enqueue(message, status=status)
                     with self.assertRaises(ApiError) as caught:
-                        ApiClient().complete(ApiSettings(server.base_url, "compatible-model", 5, "high"), KEY,
+                        ApiClient().complete(ApiSettings(server.base_url, "compatible-model", 5, "high", "legacy"), KEY,
                                              [{"role": "user", "content": "测试错误分类"}])
                     self.assertEqual(caught.exception.code, expected)
                     self.assertNotIn(KEY, str(caught.exception))
@@ -147,7 +147,7 @@ class ReasoningEffortTransportTests(unittest.TestCase):
                 {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA=="}},
             ]}]
             with self.assertRaises(ApiError) as caught:
-                ApiClient().complete_context(ApiSettings(server.base_url, "vision-model", 5, "max"), KEY, messages)
+                ApiClient().complete_context(ApiSettings(server.base_url, "vision-model", 5, "max", "legacy"), KEY, messages)
             self.assertEqual(caught.exception.code, "reasoning_unsupported")
             self.assertEqual(len(server.requests), 1)
 
@@ -198,9 +198,9 @@ class ReasoningEffortUiTests(unittest.TestCase):
 
     def test_dropdown_exposes_localized_options_and_save_restores_selected_setting(self):
         combo = self.page.reasoning_effort_combo
-        self.assertEqual([combo.itemData(index) for index in range(combo.count())], list(REASONING_EFFORTS))
+        self.assertEqual([combo.itemData(index) for index in range(combo.count())], ["default", "none", "low", "medium", "high", "xhigh"])
         self.assertEqual([combo.itemText(index) for index in range(combo.count())],
-                         ["默认", "关闭", "极低", "低", "中", "高", "很高", "最高"])
+                         ["默认（由模型决定）", "关闭思考", "低", "中", "高", "很高"])
         self.assertEqual(combo.accessibleName(), "模型思考强度")
         self.select_effort("high")
         self.page.save_api_button.click()
@@ -215,11 +215,11 @@ class ReasoningEffortUiTests(unittest.TestCase):
         self.assertEqual(self.server.requests[0]["body"]["reasoning_effort"], "high")
 
     def test_unsaved_dropdown_is_used_for_connection_test_without_changing_saved_config(self):
-        self.select_effort("minimal")
+        self.select_effort("medium")
         self.server.enqueue("连接成功")
         self.page.test_connection_button.click()
         spin_until(lambda: not self.chat.busy)
-        self.assertEqual(self.server.requests[0]["body"]["reasoning_effort"], "minimal")
+        self.assertEqual(self.server.requests[0]["body"]["reasoning_effort"], "medium")
         self.assertEqual(self.settings.load_api_settings().reasoning_effort, "default")
         self.assertIn("连接成功", self.page.connection_label.text())
 
@@ -234,7 +234,7 @@ class ReasoningEffortUiTests(unittest.TestCase):
         self.assertIn("此结果对应测试发起时", self.page.connection_label.text())
 
     def test_unsupported_effort_is_visible_and_returning_to_default_makes_one_new_request(self):
-        self.select_effort("max")
+        self.select_effort("xhigh")
         self.server.enqueue("Unsupported reasoning_effort " + KEY, status=400)
         self.page.test_connection_button.click()
         spin_until(lambda: not self.chat.busy)

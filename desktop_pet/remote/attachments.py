@@ -135,6 +135,26 @@ class ImageInbox:
             finally:
                 db.close()
 
+    def usage(self):
+        """Worker-only logical totals, using the same store recovery as list.
+
+        Count the entire metadata table, not one page or physical disk blocks.
+        A failed query is unavailable, never an apparently empty inbox.
+        """
+        with self._lock:
+            try:
+                db = self._db()
+                try:
+                    row = db.execute("SELECT count(*),coalesce(sum(size),0) FROM images").fetchone()
+                    count, used = row[0], row[1]
+                    if type(count) is not int or count < 0 or type(used) is not int or used < 0:
+                        raise RemoteError("storage_error", "无法读取图片存储用量，请检查本地存储后重试。")
+                    return {"count": count, "used_bytes": used, "limit_bytes": MAX_TOTAL_BYTES}
+                finally:
+                    db.close()
+            except (sqlite3.Error, OSError):
+                raise RemoteError("storage_error", "无法读取图片存储用量，请检查本地存储后重试。") from None
+
     def list(self, offset=0, limit=50):
         if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
             raise RemoteError("invalid_request", "图片分页参数无效。")

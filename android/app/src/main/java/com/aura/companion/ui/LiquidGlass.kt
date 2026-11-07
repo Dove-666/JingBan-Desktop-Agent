@@ -66,17 +66,12 @@ private fun LiquidBackdrop(modifier: Modifier) {
     val aqua = if (dark) Color(0xFF154C50) else Color(0xFFBAF0EB)
     Canvas(modifier) {
         drawRect(colors.background)
-        drawRect(Brush.radialGradient(listOf(blue.copy(alpha = if (dark) .43f else .38f), Color.Transparent),
+        drawRect(Brush.radialGradient(listOf(blue.copy(alpha = if (dark) .16f else .22f), Color.Transparent),
             center = Offset(size.width * .07f, size.height * .07f), radius = size.width * .96f))
-        drawRect(Brush.radialGradient(listOf(lilac.copy(alpha = if (dark) .40f else .33f), Color.Transparent),
+        drawRect(Brush.radialGradient(listOf(lilac.copy(alpha = if (dark) .14f else .18f), Color.Transparent),
             center = Offset(size.width * 1.05f, size.height * .42f), radius = size.width * 1.02f))
-        drawRect(Brush.radialGradient(listOf(aqua.copy(alpha = if (dark) .36f else .28f), Color.Transparent),
+        drawRect(Brush.radialGradient(listOf(aqua.copy(alpha = if (dark) .12f else .14f), Color.Transparent),
             center = Offset(size.width * .04f, size.height * .94f), radius = size.width * .94f))
-        // Broad, very faint water-light contours make transparency visible without competing with prose.
-        drawCircle(Color.White.copy(alpha = if (dark) .018f else .14f), size.width * .72f,
-            Offset(size.width * .88f, -size.width * .20f), style = Stroke(1.5.dp.toPx()))
-        drawCircle(Color.White.copy(alpha = if (dark) .012f else .08f), size.width * .84f,
-            Offset(size.width * .88f, -size.width * .20f), style = Stroke(1.dp.toPx()))
     }
 }
 
@@ -102,9 +97,9 @@ internal fun LiquidSurface(
     var position by remember { mutableStateOf(Offset.Zero) }
     val tintAlpha = if (prominent) { if (dark) .80f else .74f } else { if (dark) .75f else .67f }
     val rim = Brush.linearGradient(listOf(
-        Color.White.copy(alpha = if (dark) .24f else .72f),
+        Color.White.copy(alpha = if (dark) .12f else .44f),
         Color.White.copy(alpha = if (dark) .04f else .20f),
-        Color(0xFFA5C9FF).copy(alpha = if (dark) .18f else .34f),
+        Color(0xFFA5C9FF).copy(alpha = if (dark) .10f else .20f),
     ))
     Surface(modifier = modifier.onGloballyPositioned { position = it.positionInRoot() },
         shape = shape, color = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface,

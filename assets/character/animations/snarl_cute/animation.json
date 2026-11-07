@@ -78,6 +78,8 @@
   },
   "loop": false,
   "completion": "hold_last",
+  "transition_ms": 250,
+  "return_transition": "fade",
   "union_bbox": [
     427,
     33,

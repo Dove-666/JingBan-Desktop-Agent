@@ -206,6 +206,133 @@ class DiskObservationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(tree.scan_calls, [])
 
 
+class DiskCategoryRecoveryTests(unittest.IsolatedAsyncioTestCase):
+    def registered(self, system):
+        try:
+            from nanobot.agent.tools.base import Tool
+            from nanobot.agent.tools.registry import ToolRegistry
+        except ModuleNotFoundError as error:
+            if error.name == "nanobot":
+                self.skipTest("Run registered-tool checks with the adjacent backend SDK interpreter")
+            raise
+        from tool_catalog import CATALOG
+        spec = CATALOG["inspect_disk_usage"]
+        calls = []
+
+        class RegisteredDiskTool(Tool):
+            @property
+            def name(self):
+                return spec.name
+
+            @property
+            def description(self):
+                return spec.description
+
+            @property
+            def parameters(self):
+                return spec.parameters
+
+            @property
+            def read_only(self):
+                return spec.read_only
+
+            async def execute(self, **arguments):
+                calls.append(dict(arguments))
+                return await system.inspect_disk_usage(**arguments)
+
+        registry = ToolRegistry()
+        registry.register(RegisteredDiskTool())
+        return registry, calls, spec
+
+    async def test_registered_schema_accepts_fixed_categories_and_rejects_unknown_arguments(self):
+        tree = Tree()
+        registry, calls, spec = self.registered(tree.system())
+        schema = registry.get_definitions()[0]["function"]["parameters"]
+        expected = ["all", "user_temporary_files", "system_temporary_files", "recycle_bin", "downloads",
+                    "windows_update_downloads", "delivery_optimization_cache"]
+        self.assertEqual(schema["properties"]["category"]["enum"], expected)
+        self.assertEqual(schema["required"], [])
+        self.assertFalse(schema["additionalProperties"])
+        self.assertTrue(spec.read_only)
+        self.assertEqual(spec.effect, "none")
+        self.assertFalse(spec.requires_gui)
+        self.assertTrue(spec.available(tools_enabled=True, computer_enabled=False, gui_configured=False, platform="win32"))
+        for category in ("", "unknown", "C:\\owned_fake", None, True, 1, [], {}):
+            with self.subTest(category=category):
+                result = await registry.execute("inspect_disk_usage", {"drive": "C:", "category": category})
+                self.assertTrue(result.is_error)
+        self.assertEqual(calls, [])
+        self.assertEqual(tree.scan_calls, [])
+
+    async def test_registered_target_recovers_downloads_after_default_temp_budget_is_exhausted(self):
+        tree = Tree()
+        tree.folders["C:\\qa"] = [Entry("C:\\qa", str(i), metadata(size=10)) for i in range(5)]
+        tree.folders["C:\\later"] = [Entry("C:\\later", "archive.iso", metadata(size=12 * 1024**3))]
+        system = tree.system(max_entries=2)
+        system.categories_provider = lambda root: [
+            {"category": "user_temporary_files", "path": "C:\\qa"},
+            {"category": "downloads", "path": "C:\\later"}]
+        registry, calls, _ = self.registered(system)
+        default = json.loads(await registry.execute("inspect_disk_usage", {"drive": "C:"}))
+        explicit = await registry.execute("inspect_disk_usage", {"drive": "C:", "category": "all"})
+        self.assertFalse(getattr(explicit, "is_error", False), explicit)
+        self.assertEqual(default, json.loads(explicit))
+        self.assertEqual(default["used_category"], "all")
+        self.assertEqual(default["available_categories"], ["user_temporary_files", "downloads"])
+        self.assertEqual(default["status"], "partial")
+        self.assertEqual(default["entries_examined"], 2)
+        self.assertEqual(default["categories"][0]["measured_bytes"], 20)
+        self.assertEqual(default["categories"][1]["scan_status"], "not_scanned")
+        self.assertIsNone(default["categories"][1]["measured_bytes"])
+        self.assertIsNone(default["reclaimable_bytes"])
+        tree.scan_calls.clear()
+        selected = await registry.execute("inspect_disk_usage", {"drive": "C:", "category": "downloads"})
+        self.assertFalse(getattr(selected, "is_error", False), selected)
+        selected = json.loads(selected)
+        self.assertEqual(tree.scan_calls, ["C:\\later"])
+        self.assertEqual(selected["used_category"], "downloads")
+        self.assertEqual(selected["available_categories"], default["available_categories"])
+        self.assertEqual(selected["status"], "complete")
+        self.assertEqual(selected["entries_examined"], 1)
+        self.assertEqual([item["category"] for item in selected["categories"]], ["downloads"])
+        self.assertEqual(selected["categories"][0]["measured_bytes"], 12 * 1024**3)
+        self.assertTrue(selected["read_only"])
+        self.assertFalse(selected["cleanup_performed"])
+        self.assertFalse(selected["file_contents_read"])
+        self.assertEqual(selected["deleted_files"], 0)
+        self.assertEqual(calls[-1], {"drive": "C:", "category": "downloads"})
+
+    async def test_direct_invalid_or_unavailable_category_is_rejected_without_enumeration(self):
+        tree = Tree()
+        system = tree.system()
+        for category in ("", "unknown", "C:\\owned_fake", None, True, 1, [], {}, "downloads"):
+            with self.subTest(category=category):
+                result = json.loads(await system.inspect_disk_usage("C:", category=category))
+                self.assertEqual(result["status"], "unavailable")
+                self.assertEqual(result["error"], "invalid_category")
+                self.assertEqual(result["categories"], [])
+                self.assertIsNone(result["used_category"])
+                self.assertEqual(result["available_categories"], ["fixture"])
+        self.assertEqual(tree.scan_calls, [])
+
+    async def test_selected_category_retains_unsafe_path_denial_and_cancellation(self):
+        tree = Tree()
+        system = tree.system()
+        system.categories_provider = lambda root: [{"category": "downloads", "path": "C:\\qa"}]
+        tree.folder_metadata["C:\\qa"] = metadata(stat.S_IFDIR, attributes=0x400)
+        result = json.loads(await system.inspect_disk_usage("C:", category="downloads"))
+        self.assertEqual(result["categories"][0]["scan_status"], "unavailable")
+        self.assertEqual(result["categories"][0]["incomplete_reasons"], ["reparse_or_offline_path"])
+        self.assertEqual(tree.scan_calls, [])
+        tree.folder_metadata.clear()
+        system.cancel.set()
+        result = json.loads(await system.inspect_disk_usage("C:", category="downloads"))
+        self.assertEqual(result["used_category"], "downloads")
+        self.assertEqual(result["categories"][0]["scan_status"], "not_scanned")
+        self.assertEqual(result["categories"][0]["incomplete_reasons"], ["cancelled"])
+        self.assertEqual(tree.scan_calls, [])
+
+
 class DirectoryObservationTests(unittest.IsolatedAsyncioTestCase):
     async def test_metadata_listing_is_non_recursive_and_bounded(self):
         tree = Tree()

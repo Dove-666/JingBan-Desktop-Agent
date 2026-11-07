@@ -28,7 +28,8 @@ class ApplicationController(QObject):
                  api_client=None, parent=None, startup_manager=None) -> None:
         super().__init__(parent)
         self.settings = settings if settings is not None else SettingsManager()
-        self.startup_manager = startup_manager if startup_manager is not None else StartupManager()
+        self.startup_manager = startup_manager if startup_manager is not None else StartupManager(
+            profile_dir=getattr(self.settings, "profile_dir", None))
         self._startup_config = config
         self.pet = PetWindow(config)
         self.pet_controller = PetController(self.pet, self.settings, parent=self)
@@ -41,6 +42,7 @@ class ApplicationController(QObject):
         self.chat = ChatController(self.settings, api_client=api_client, parent=self,
                                    memory_service=self.memory_service)
         self.chat.busy_changed.connect(self.pet_controller.set_conversation_busy)
+        self.chat.work_active_changed.connect(self.pet_controller.set_task_working)
         self.chat.emotion_requested.connect(self._set_chat_expression)
         self.chat.reply_received.connect(self._show_chat_reply)
         self.chat.conversation_invalidated.connect(self._dismiss_invalidated_speech)
@@ -58,10 +60,19 @@ class ApplicationController(QObject):
         self.debug_panel: DebugPanel | None = None
         self.chat_window: ChatWindow | None = None
         self.memory_panel = None
+        self._image_storage_dialog = None
+        self.xiangqi = None
+        self.xiangqi_window = None
+        self.xiangqi_commentary = None
+        self.gomoku = None
+        self.gomoku_window = None
+        self.gomoku_commentary = None
         self._shutting_down = False
         self.shutdown_errors = []
         self.pet.debug_requested.connect(self.open_settings)
         self.pet.chat_requested.connect(self.open_chat_window)
+        self.pet.xiangqi_requested.connect(self.open_xiangqi_window)
+        self.pet.gomoku_requested.connect(self.open_gomoku_window)
         self.pet.closed.connect(self.shutdown)
         self.pet.bubble.conversation_requested.connect(self.open_linked_conversation)
         self.pet.click_handler = self._pet_clicked
@@ -149,6 +160,10 @@ class ApplicationController(QObject):
                                           memory_opener=self.open_memory_window, settings_opener=self.open_api_settings,
                                           settings_factory=self._make_settings_page)
             self.chat_window._placement = WindowPlacement(self.chat_window, self.settings.config_path, "chat")
+            self.chat_window.chat_panel.xiangqi_opener = self.open_xiangqi_window
+            self.chat_window.chat_panel.tools_menu.addAction("和鲸鱼娘下象棋", self.open_xiangqi_window)
+            self.chat_window.chat_panel.gomoku_opener = self.open_gomoku_window
+            self.chat_window.chat_panel.tools_menu.addAction("和鲸鱼娘下五子棋", self.open_gomoku_window)
         return self.chat_window
 
     def _make_settings_page(self, parent):
@@ -156,13 +171,73 @@ class ApplicationController(QObject):
         return SettingsPage(self.pet_controller, self.settings, self.chat, parent,
                             perception_controller=self.perception, camera_controller=self.camera,
                             remote_controller=self.remote, memory_controller=self.memory,
-                            startup_manager=self.startup_manager)
+                            startup_manager=self.startup_manager,
+                            image_storage_opener=self.open_image_storage)
+
+    def open_image_storage(self, parent=None):
+        if self._shutting_down:
+            return
+        from shiboken6 import isValid
+        from .ui.image_storage_dialog import ImageStorageDialog
+        dialog = self._image_storage_dialog
+        if dialog is None or not isValid(dialog):
+            dialog = ImageStorageDialog(self.chat.image_storage_manager, parent or self.chat_window)
+            self._image_storage_dialog = dialog
+
+            def released(_result):
+                if self._image_storage_dialog is dialog:
+                    self._image_storage_dialog = None
+            dialog.finished.connect(released)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
 
     def open_chat_window(self) -> None:
         if self._shutting_down:
             return
         self._ensure_chat_window().show_chat()
         self.chat_window.present()
+
+    def open_xiangqi_window(self) -> None:
+        if self._shutting_down:
+            return
+        if self.xiangqi is None:
+            from .games.xiangqi_controller import XiangqiController
+            from .games.xiangqi_commentary import XiangqiCommentary
+            from .ui.xiangqi_panel import XiangqiWindow
+            self.xiangqi = XiangqiController(self.settings, parent=self)
+            self.xiangqi_commentary = XiangqiCommentary(self.settings, self.xiangqi, parent=self)
+            self.xiangqi.move_selector_factory = self.xiangqi_commentary.move_selector
+            self.xiangqi.speech.connect(self._show_game_reply)
+            self.xiangqi_window = XiangqiWindow(self.xiangqi, icon_path=self.pet.config.image_path)
+            self.xiangqi_window._placement = WindowPlacement(
+                self.xiangqi_window, self.settings.config_path, "xiangqi")
+            self.xiangqi.start()
+        self.xiangqi_window.present()
+
+    def open_gomoku_window(self) -> None:
+        if self._shutting_down:
+            return
+        if self.gomoku is None:
+            from .games.gomoku_controller import GomokuController
+            from .games.gomoku_commentary import GomokuCommentary
+            from .ui.gomoku_panel import GomokuWindow
+            self.gomoku = GomokuController(self.settings, parent=self)
+            self.gomoku_commentary = GomokuCommentary(self.settings, self.gomoku, parent=self)
+            self.gomoku.move_selector_factory = self.gomoku_commentary.move_selector
+            self.gomoku.speech.connect(self._show_game_reply)
+            self.gomoku_window = GomokuWindow(self.gomoku, icon_path=self.pet.config.image_path)
+            self.gomoku_window._placement = WindowPlacement(
+                self.gomoku_window, self.settings.config_path, "gomoku")
+            self.gomoku.start()
+        self.gomoku_window.present()
+
+    def _show_game_reply(self, text, emotion):
+        if (self._shutting_down or not self.pet.isVisible() or self.chat.busy
+                or not isinstance(text, str) or not text.strip()):
+            return
+        self.pet_controller.apply_context_expression(emotion, source="game")
+        self.pet.bubble.say(text, max(6000, min(18000, 1800 + len(text) * 140)))
 
     def open_settings(self, section="general"):
         if self._shutting_down:
@@ -243,15 +318,25 @@ class ApplicationController(QObject):
                 # Keep only a static component label for diagnostics.
                 self.shutdown_errors.append(label)
         try:
+            if self.xiangqi_commentary is not None:
+                safely("xiangqi_commentary", self.xiangqi_commentary.shutdown)
+            if self.xiangqi is not None:
+                safely("xiangqi", self.xiangqi.shutdown)
+            if self.gomoku_commentary is not None:
+                safely("gomoku_commentary", self.gomoku_commentary.shutdown)
+            if self.gomoku is not None:
+                safely("gomoku", self.gomoku.shutdown)
             if self.selection_inbox is not None:
                 safely("selection", self.selection_inbox.shutdown)
             for dialog in list(self._selection_dialogs.values()):
                 safely("selection_dialog", dialog.close)
+            if self._image_storage_dialog is not None:
+                safely("image_storage_dialog", self._image_storage_dialog.close)
             for label, component in (("remote", self.remote), ("tray", self.tray), ("perception", self.perception),
                                      ("camera", self.camera),
                                      ("chat", self.chat), ("memory", self.memory)):
                 safely(label, component.shutdown)
-            for panel in (self.debug_panel, self.chat_window, self.memory_panel):
+            for panel in (self.debug_panel, self.chat_window, self.memory_panel, self.xiangqi_window, self.gomoku_window):
                 if panel is not None:
                     safely("panel", panel.hide)
             safely("pet", self.pet.close)

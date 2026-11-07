@@ -12,6 +12,14 @@ import java.util.UUID
 
 internal const val LOCAL_PHONE_AUTHORITY = "LOCAL_PHONE"
 
+/** An immediate local label, without another model request or a transcript copy. */
+internal fun phoneConversationTitle(text: String, hasImage: Boolean): String {
+    val plain = text.replace(Regex("[\\p{Cc}\\p{Z}\\s]+"), " ").trim()
+    if (plain.isEmpty()) return if (hasImage) "图片对话" else "新对话"
+    val length = plain.codePointCount(0, plain.length)
+    return if (length <= 24) plain else plain.substring(0, plain.offsetByCodePoints(0, 24)) + "…"
+}
+
 internal val AGENT_ERROR_MESSAGES = mapOf(
     "disabled" to "任务助手尚未启用，请在设置中启用后再试。",
     "kind_disabled" to "这类任务尚未启用，请先检查任务助手设置。",
@@ -22,7 +30,7 @@ internal val AGENT_ERROR_MESSAGES = mapOf(
     "sdk_unlimited_unsupported" to "当前任务 SDK 与不限步数模式不兼容，任务未执行；请检查本地后端版本。",
     "gui_not_configured" to "电脑操作模型尚未配置，请填写 GUI 模型地址、名称和密钥。",
     "cancelled" to "任务已停止；已经完成的操作会保留，未自动重试。",
-    "timeout" to "任务超时并已停止；已经完成的操作会保留，未自动重试。",
+    "timeout" to "任务超时，本次等待已结束。已完成的操作会保留，本次未自动重试。",
     "protocol" to "任务助手返回格式无效，已停止且未自动重试。",
     "backend_failed" to "任务助手未能完成这次操作；请检查当前结果，再发送新的任务消息。",
     "agent_failed" to "任务规划模型请求失败；请检查模型服务是否可用，再发送新的任务消息。",
@@ -44,6 +52,8 @@ internal val AGENT_ERROR_MESSAGES = mapOf(
     "gui_model_failed" to "电脑操作模型请求失败；请检查视觉模型服务、密钥和动作格式是否可用。",
     "gui_context_length_exceeded" to "电脑操作上下文已达到模型服务的实际容量；请新建任务或选择容量更大的模型。",
     "model_context_exceeded" to "任务上下文已达到模型服务的实际容量；请新建对话或选择容量更大的模型。",
+    "execution_runtime_invalid" to "项目计算环境尚未就绪，任务未继续；请在电脑上检查本地执行环境。",
+    "execution_runtime_changed" to "项目计算配置已发生变化，任务已停止；请确认电脑端设置后发送新任务。",
     "gui_action_failed" to "鼠标或键盘操作执行失败，任务已停止；请检查当前画面。",
     "gui_unsupported_action" to "模型返回了尚不支持的电脑动作，任务已停止；请检查当前画面。",
     "gui_sdk_failed" to "电脑操作组件未能完成任务；请检查画面，再发送新的任务消息。",
@@ -61,12 +71,18 @@ internal fun validAgentErrorCode(value: String?): String? = value?.takeIf { it i
 private val AGENT_ACTIVITY_MESSAGES = setOf(
     "正在保存消息…", "正在检索相关记忆…", "正在生成回复…", "正在保存回复…",
     "正在启动任务助手…", "正在规划任务…", "正在使用任务工具…", "正在操作电脑…",
-    "正在整理任务结果…", "任务已完成。",
+    "正在整理任务结果…", "正在核验任务结果…", "任务已完成。",
     "查看系统信息", "读取文件", "写入文件", "查找文件", "读取网页", "执行电脑操作", "打开应用", "查找已安装应用",
     "检查电脑状态", "检查磁盘占用", "查看目录信息",
-    "查看当前画面", "点击界面", "双击界面", "右键点击", "中键点击", "拖动界面元素", "选择界面元素",
+    "查看当前画面", "查看电脑画面", "点击界面", "双击界面", "右键点击", "中键点击", "拖动界面元素", "选择界面元素",
     "移动指针", "输入文字", "使用快捷键", "滚动界面", "等待界面响应", "电脑操作返回结果",
     "需要手动接手", "检查操作环境", "停止电脑操作",
+    "读取任务记录", "修改文件", "读取文档", "生成文档", "查看交付文件", "搜索网页", "查看历史图片",
+    "等待你的答复", "等待文件授权", "查找电脑窗口", "切换电脑窗口", "原生浏览器", "渲染文档",
+    "操作界面控件", "更新任务计划", "核对控件状态", "核算表格数据", "检查任务完成条件", "精确计算", "执行数据代码",
+    "读取界面控件", "验收输出结果", "确认操作结果",
+    "切换网页标签", "打开网页", "操作网页控件", "查看网页标签", "读取网页结构",
+    "分工阅读资料", "查看文档页面", "计算项目产物",
 )
 internal fun validAgentActivity(value: String?): String? = value?.takeIf { it in AGENT_ACTIVITY_MESSAGES }
 
@@ -171,6 +187,24 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
 
     fun getSetting(key: String): String? = setting(readableDatabase, key)
     fun setSetting(key: String, value: String?) = transaction { putSetting(it, key, value) }
+
+    internal fun clearContextEnvelopes(conversationId: String? = null) = transaction { db ->
+        if (conversationId == null) db.delete("settings", "key LIKE 'context_envelope:%'", null)
+        else db.delete("settings", "key LIKE ?", arrayOf("context_envelope:%:$conversationId"))
+        Unit
+    }
+    private fun invalidateContext(db: SQLiteDatabase, conversationId: String) {
+        db.delete("settings", "key LIKE ?", arrayOf("context_envelope:%:$conversationId"))
+        putSetting(db, "context_epoch:$conversationId", UUID.randomUUID().toString())
+    }
+    internal fun contextEpoch(conversationId: String): String = getSetting("context_epoch:$conversationId").orEmpty()
+    internal fun cacheContextEnvelope(authority: String, cid: String, generation: String?, epoch: String,
+        encoded: String) = transaction { db ->
+        require(setting(db, "device_id") == authority && !isDeleted(db, "conversation", cid) &&
+            setting(db, "authorization_blocked") != "1" && conversationGeneration(cid) == generation &&
+            setting(db, "context_epoch:$cid").orEmpty() == epoch) { "上下文已变化，请重新同步" }
+        putSetting(db, "context_envelope:$authority:$cid", encoded)
+    }
     fun setDesktopAgentMode(conversationId: String, enabled: Boolean) = transaction { db ->
         require(!isDeleted(db, "conversation", conversationId)) { "该会话已删除，请新建会话" }
         putSetting(db, "agent_mode:$conversationId", if (enabled) "1" else null)
@@ -191,7 +225,9 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     fun saveDevice(device: DeviceInfo, localPeer: String) = transaction { db ->
         val old = setting(db, "device_id")
         if (!old.isNullOrBlank() && old != device.endpointId) {
+            db.delete("settings", "key LIKE 'context_envelope:%'", null)
             db.delete("settings", "key LIKE 'agent_mode:%'", null)
+            db.delete("settings", "key LIKE 'host_title_manual:%' OR key LIKE 'phone_title:%'", null)
             db.execSQL("""UPDATE outbox SET state='needs_attention',error='已更换电脑，请处理原设备的待发内容'
                 WHERE state NOT IN ('sent','discarded')""")
             db.delete("messages", null, null)
@@ -216,12 +252,32 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     fun createConversation(id: String = UUID.randomUUID().toString(), select: Boolean = true): String = transaction { db ->
         require(!isDeleted(db, "conversation", id)) { "该会话已在电脑删除，请新建会话" }
         val now = Instant.now().toString()
-        db.insertWithOnConflict("conversations", null, ContentValues().apply {
+        val inserted = db.insertWithOnConflict("conversations", null, ContentValues().apply {
             put("id", id); put("title", "新对话"); put("created_at", now); put("updated_at", now)
             put("message_count", 0); put("local_only", 1)
         }, SQLiteDatabase.CONFLICT_IGNORE)
+        if (inserted != -1L) invalidateContext(db, id)
         if (select) putSetting(db, "selected_conversation", id)
         id
+    }
+
+    private fun hostTitleManual(db: SQLiteDatabase, cid: String): Boolean? =
+        setting(db, "host_title_manual:$cid")?.let { value -> runCatching {
+            JSONObject(value).takeIf { it.optString("peer") == setting(db, "device_id") }
+                ?.opt("manual") as? Boolean
+        }.getOrNull() }
+
+    private fun restorePhoneTitle(db: SQLiteDatabase, cid: String) {
+        val source = setting(db, "phone_title:$cid")?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return
+        val label = source.optString("title")
+        val generation = source.optString("generation")
+        if (generation.isEmpty() || generation != conversationGeneration(cid) || isDeleted(db, "message", generation)) {
+            putSetting(db, "phone_title:$cid", null)
+            db.execSQL("UPDATE conversations SET title='新对话' WHERE id=? AND title=?", arrayOf(cid, label))
+            return
+        }
+        if (hostTitleManual(db, cid) == false) db.execSQL("""UPDATE conversations SET title=? WHERE id=?
+            AND trim(title) IN ('','新对话')""", arrayOf(label, cid))
     }
 
     private fun isDeleted(db: SQLiteDatabase, entity: String, id: String): Boolean =
@@ -236,17 +292,21 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     }
 
     private fun blockDeletedQueue(db: SQLiteDatabase, id: String) {
+        db.delete("settings", "key LIKE ?", arrayOf("context_envelope:%:$id"))
         putSetting(db, "agent_mode:$id", null)
+        putSetting(db, "phone_title:$id", null)
+        putSetting(db, "host_title_manual:$id", null)
         db.execSQL("""UPDATE outbox SET state='needs_attention',error='会话已在电脑删除，请复制内容后新建会话'
             WHERE conversation_id=? AND state NOT IN ('sent','discarded')""", arrayOf(id))
         db.execSQL("UPDATE direct_turns SET state='needs_attention',error='会话已在电脑删除，请复制内容后新建会话' WHERE conversation_id=? AND state!='imported'", arrayOf(id))
     }
 
-    private fun applyEntity(db: SQLiteDatabase, item: JSONObject) {
+    private fun applyEntity(db: SQLiteDatabase, item: JSONObject, resolveTitle: Boolean = true) {
         val entity = item.getString("entity")
         val id = item.getString("id")
         val cid = item.getString("conversation_id")
         require(id.length in 1..200 && cid.length in 1..200) { "同步标识无效" }
+        if (entity in setOf("conversation", "message")) invalidateContext(db, if (entity == "conversation") id else cid)
         if (item.optBoolean("deleted")) {
             tombstone(db, entity, id)
             when (entity) {
@@ -260,6 +320,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
                     db.delete("messages", "id=?", arrayOf(id))
                     db.execSQL("""UPDATE outbox SET state=CASE WHEN state='sent' THEN 'discarded' ELSE 'needs_attention' END,
                         error='该消息已在电脑清空，不能自动重新发送' WHERE message_id=? AND state!='discarded'""", arrayOf(id))
+                    restorePhoneTitle(db, cid)
                 }
             }
             return
@@ -267,11 +328,19 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         if (isDeleted(db, entity, id) || isDeleted(db, "conversation", cid)) return
         val data = item.getJSONObject("data")
         when (entity) {
-            "conversation" -> db.insertWithOnConflict("conversations", null, ContentValues().apply {
-                put("id", id); put("title", data.optString("title", "新对话"))
-                put("created_at", data.optString("created_at")); put("updated_at", data.optString("updated_at"))
-                put("message_count", data.optInt("message_count")); put("local_only", 0)
-            }, SQLiteDatabase.CONFLICT_REPLACE)
+            "conversation" -> {
+                val title = data.optString("title", "新对话")
+                val manual = data.opt("title_manual") as? Boolean
+                putSetting(db, "host_title_manual:$id", manual?.let { JSONObject()
+                    .put("peer", setting(db, "device_id")).put("manual", it).toString() })
+                if (manual != false || title.trim() !in setOf("", "新对话")) putSetting(db, "phone_title:$id", null)
+                db.insertWithOnConflict("conversations", null, ContentValues().apply {
+                    put("id", id); put("title", title)
+                    put("created_at", data.optString("created_at")); put("updated_at", data.optString("updated_at"))
+                    put("message_count", data.optInt("message_count")); put("local_only", 0)
+                }, SQLiteDatabase.CONFLICT_REPLACE)
+                if (resolveTitle) restorePhoneTitle(db, id)
+            }
             "message" -> {
                 db.insertWithOnConflict("messages", null, ContentValues().apply {
                     put("id", id); put("conversation_id", cid); put("role", data.getString("role"))
@@ -346,8 +415,14 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             db.rawQuery("SELECT * FROM snapshot_items ORDER BY CASE entity WHEN 'conversation' THEN 0 ELSE 1 END,id", null).use {
                 while (it.moveToNext()) applyEntity(db, JSONObject().put("entity", it.getString(0))
                     .put("id", it.getString(1)).put("conversation_id", it.getString(2)).put("deleted", false)
-                    .put("data", JSONObject(it.getString(3))))
+                    .put("data", JSONObject(it.getString(3))), resolveTitle = false)
             }
+            // Conversation rows precede message rows. Re-check generation only
+            // after the complete replacement snapshot has loaded its messages.
+            val titleConversations = db.rawQuery("SELECT key FROM settings WHERE key LIKE 'phone_title:%'", null).use {
+                buildList { while (it.moveToNext()) add(it.getString(0).removePrefix("phone_title:")) }
+            }
+            for (cid in titleConversations) restorePhoneTitle(db, cid)
             putSetting(db, "sync_cursor", watermark.toString())
             putSetting(db, "sync_ready", "1")
             resetSnapshot(db)
@@ -358,7 +433,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     private fun sanitizeSnapshotItem(item: JSONObject): JSONObject {
         val entity = item.getString("entity")
         val fields = when (entity) {
-            "conversation" -> listOf("id", "title", "created_at", "updated_at", "message_count")
+            "conversation" -> listOf("id", "title", "title_manual", "created_at", "updated_at", "message_count")
             "message" -> listOf("id", "conversation_id", "role", "content", "created_at", "source", "request_status", "reply_to", "image_id", "image_error", "agent_error_code", "agent_activity", "execution_mode")
             "screen_event" -> listOf("id", "conversation_id", "observed_at", "source_kind")
             else -> throw IllegalArgumentException("不支持的同步实体")
@@ -451,6 +526,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             params.put("image_id", pending.attachmentId)
         }
         val requestId = addOutbox(db, method, params, conversationId, text, pending?.attachmentId, dependency)
+        invalidateContext(db, conversationId)
         db.delete("pending_images", "conversation_id=?", arrayOf(conversationId))
         requestId
     }
@@ -536,16 +612,30 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
 
     fun hasMessage(id: String): Boolean = readableDatabase.rawQuery("SELECT 1 FROM messages WHERE id=?", arrayOf(id)).use { it.moveToFirst() }
 
+    /** Indexed identity lookup for sync polling; never materialize the archive. */
+    internal fun conversationGeneration(conversationId: String): String? {
+        if (isConversationDeleted(conversationId)) return null
+        readableDatabase.rawQuery("SELECT id FROM messages WHERE conversation_id=? ORDER BY created_at,id LIMIT 1",
+            arrayOf(conversationId)).use { if (it.moveToFirst()) return it.getString(0) }
+        // An unacknowledged outbox item cannot define the desktop generation.
+        return readableDatabase.rawQuery("""SELECT user_id FROM direct_turns WHERE conversation_id=?
+            AND state NOT IN ('imported','needs_attention') AND authority_id IN (?,?) ORDER BY user_at,user_id LIMIT 1""",
+            arrayOf(conversationId, device()?.endpointId.orEmpty(), LOCAL_PHONE_AUTHORITY)).use {
+            if (it.moveToFirst()) it.getString(0) else null
+        }
+    }
+
     fun conversations(): List<Conversation> = readableDatabase.rawQuery("SELECT * FROM conversations ORDER BY updated_at DESC,id LIMIT 500", null).use {
         buildList { while (it.moveToNext()) add(Conversation(it.getString(0), it.getString(1), it.getString(2), it.getString(3), it.getInt(4), it.getInt(5) == 1)) }
     }
 
-    fun messages(conversationId: String?): List<Message> {
+    fun messages(conversationId: String?, limit: Int? = 500): List<Message> {
         // A purged conversation has no visible thread, including optimistic
         // drafts. Its unsent text remains exclusively in the attention queue.
         if (conversationId == null || isConversationDeleted(conversationId)) return emptyList()
+        require(limit == null || limit > 0)
         val mirrored = readableDatabase.rawQuery("""SELECT * FROM messages WHERE conversation_id=?
-            ORDER BY created_at DESC,id DESC LIMIT 500""", arrayOf(conversationId)).use {
+            ORDER BY created_at DESC,id DESC LIMIT ${limit ?: -1}""", arrayOf(conversationId)).use {
             buildList { while (it.moveToNext()) add(Message(it.getString(0), it.getString(1), it.getString(2),
                 it.getString(3), it.getString(4), it.getString(5), it.nullable("request_status"), it.nullable("reply_to"),
                 attachmentId = it.nullable("image_id"), imageError = it.nullable("image_error"),
@@ -579,7 +669,8 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         val visibleMirror = mirrored.map { message ->
             localTraces[message.id]?.let { message.copy(execution = it.execution) } ?: message
         }
-        return (visibleMirror + pending + direct).sortedWith(compareBy<Message> { it.createdAt }.thenBy { it.id }).takeLast(500)
+        val ordered = (visibleMirror + pending + direct).sortedWith(compareBy<Message> { it.createdAt }.thenBy { it.id })
+        return if (limit == null) ordered else ordered.takeLast(limit)
     }
 
     internal fun directTurns(): List<DirectTurn> = readableDatabase.rawQuery("SELECT * FROM direct_turns ORDER BY user_at,id", null).use {
@@ -587,6 +678,13 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             it.getString(5), it.getString(6), it.nullable("reply"), it.nullable("assistant_at"), it.nullable("image_id"), it.getString(10),
             it.nullable("error"), it.nullable("import_request_id"), parseExecutionProcess(it.nullable("process_json")))) }
     }
+
+    internal fun directTurnIsGenerating(id: String, cid: String, userId: String, assistantId: String): Boolean =
+        readableDatabase.rawQuery("""SELECT 1 FROM direct_turns WHERE id=? AND conversation_id=?
+            AND user_id=? AND assistant_id=? AND state='generating'
+            AND NOT EXISTS (SELECT 1 FROM tombstones WHERE (entity='conversation' AND id=?)
+                OR (entity='message' AND id IN (?,?)))""", arrayOf(id, cid, userId, assistantId, cid, userId, assistantId))
+            .use { it.moveToFirst() }
 
     internal fun recoverInterruptedDirectTurns() = transaction { db ->
         for (turn in directTurns().filter { it.state == "generating" }) db.update("direct_turns", ContentValues().apply {
@@ -597,7 +695,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     }
 
     internal fun beginDirectTurn(conversationId: String, text: String, imageId: String?, expectedAuthority: String? = null,
-        allowUnpaired: Boolean = false, legacyRequestId: String? = null): DirectTurn = transaction { db ->
+        allowUnpaired: Boolean = false, legacyRequestId: String? = null, titleText: String = text): DirectTurn = transaction { db ->
         require(!isDeleted(db, "conversation", conversationId)) { "该会话已在电脑删除，请新建会话" }
         val authority = if (allowUnpaired && (setting(db, "device_id") == null || setting(db, "authorization_blocked") == "1")) LOCAL_PHONE_AUTHORITY
             else setting(db, "device_id") ?: throw IllegalArgumentException("请先配置手机模型或配对电脑")
@@ -622,12 +720,29 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         val id = UUID.randomUUID().toString(); val user = legacy?.item?.messageId ?: legacy?.item?.requestId ?: UUID.randomUUID().toString()
         val assistant = UUID.randomUUID().toString()
         val now = legacy?.item?.createdAt ?: Instant.now().toString()
+        // Old PCs do not expose title provenance: only their phone-created
+        // conversations are eligible. A new PC explicitly marks automatic
+        // titles, so an intentional rename to “新对话” is never replaced.
+        val priorPhoneTurn = db.rawQuery("""SELECT 1 FROM direct_turns d WHERE conversation_id=?
+            AND authority_id IN (?,?) AND state!='needs_attention'
+            AND NOT EXISTS (SELECT 1 FROM tombstones t WHERE t.entity='message' AND t.id=d.user_id)
+            AND (state!='imported' OR EXISTS (SELECT 1 FROM messages m WHERE m.id=d.user_id)) LIMIT 1""",
+            arrayOf(conversationId, authority, LOCAL_PHONE_AUTHORITY)).use { it.moveToFirst() }
+        if (!priorPhoneTurn) {
+            val title = phoneConversationTitle(titleText, imageId != null)
+            val changed = db.update("conversations", ContentValues().apply { put("title", title) },
+                "id=? AND (local_only=1 OR ?='1') AND trim(title) IN ('','新对话')",
+                arrayOf(conversationId, if (hostTitleManual(db, conversationId) == false) "1" else "0"))
+            if (changed == 1) putSetting(db, "phone_title:$conversationId", JSONObject().put("title", title)
+                .put("generation", conversationGeneration(conversationId) ?: user).toString())
+        }
         val execution = newDirectExecution()
         db.insertOrThrow("direct_turns", null, ContentValues().apply {
             put("id", id); put("conversation_id", conversationId); put("authority_id", authority); put("user_id", user); put("assistant_id", assistant)
             put("text", text); put("user_at", now); put("image_id", imageId); put("state", "generating")
             put("process_json", execution.canonicalJson())
         })
+        invalidateContext(db, conversationId)
         if (legacyRequestId == null) db.delete("pending_images", "conversation_id=?", arrayOf(conversationId))
         db.execSQL("UPDATE conversations SET updated_at=? WHERE id=?", arrayOf(now, conversationId))
         DirectTurn(id, conversationId, authority, user, assistant, text, now, null, null, imageId, "generating", null, null, execution)
@@ -636,6 +751,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     internal fun finishDirectTurn(id: String, reply: String) = transaction { db ->
         require(reply.isNotBlank() && reply.length <= 24000) { "模型回复为空或过长，未自动重试" }
         val turn = directTurns().first { it.id == id }
+        if (turn.state != "generating") return@transaction
         val blocked = (turn.authorityId != LOCAL_PHONE_AUTHORITY && (turn.authorityId != setting(db, "device_id") || setting(db, "authorization_blocked") == "1")) ||
             isDeleted(db, "conversation", turn.conversationId) || turn.state == "needs_attention"
         db.update("direct_turns", ContentValues().apply {
@@ -643,14 +759,20 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             put("process_json", finishDirectExecution(turn.execution, "completed")?.canonicalJson())
             if (!blocked) putNull("error")
         }, "id=?", arrayOf(id))
+        invalidateContext(db, turn.conversationId)
     }
 
-    internal fun failDirectTurn(id: String, error: String, unknown: Boolean = true) = transaction { db ->
+    internal fun failDirectTurn(id: String, error: String, unknown: Boolean = true, partial: String? = null,
+        interrupted: Boolean = false) = transaction { db ->
         val turn = directTurns().firstOrNull { it.id == id && it.state == "generating" } ?: return@transaction
         db.update("direct_turns", ContentValues().apply {
             put("state", if (unknown) "unknown" else "failed"); put("error", error)
-            put("process_json", finishDirectExecution(turn.execution, "failed")?.canonicalJson())
+            partial?.takeIf { it.isNotBlank() && it.length <= 24000 }?.let {
+                put("reply", it); put("assistant_at", Instant.now().toString())
+            }
+            put("process_json", finishDirectExecution(turn.execution, if (interrupted) "interrupted" else "failed")?.canonicalJson())
         }, "id=? AND state='generating'", arrayOf(id))
+        invalidateContext(db, turn.conversationId)
         Unit
     }
 

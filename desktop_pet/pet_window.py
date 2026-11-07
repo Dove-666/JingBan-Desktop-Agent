@@ -10,6 +10,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QApplication, QMenu, QWidget
 
 from .bubble import SpeechBubble
+from .branding import APP_NAME
 from .animation_controller import AnimationController, AnimationState
 from .config import PetConfig
 from .eye_tracking import EyeTracker, cursor_in_source
@@ -58,6 +59,8 @@ class PetWindow(QWidget):
     frame_tick = Signal(float)
     debug_requested = Signal()
     chat_requested = Signal()
+    xiangqi_requested = Signal()
+    gomoku_requested = Signal()
     closed = Signal()
     part_clicked = Signal(str)
     interaction_started = Signal()
@@ -108,7 +111,7 @@ class PetWindow(QWidget):
         self._scene_scale = 1.0
         self.click_handler: Callable[[str], None] | None = None
 
-        self.setWindowTitle("AURA · 鲸鱼娘桌宠")
+        self.setWindowTitle(APP_NAME)
         self.setWindowFlags(
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
@@ -123,7 +126,7 @@ class PetWindow(QWidget):
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_AlwaysShowToolTips)
         self.setToolTipDuration(4500)
-        self.setAccessibleName("鲸鱼娘桌宠")
+        self.setAccessibleName(APP_NAME)
         self.setAccessibleDescription("单击身体打开聊天；单击耳朵或尾巴互动。拖动可移动位置，右键打开菜单。")
 
         self.bubble = SpeechBubble(self)
@@ -303,12 +306,21 @@ class PetWindow(QWidget):
             cached = []
             alpha_rects = []
             alpha = QRectF()
+            # Bounds are constant for this layout. Repeated/implicitly shared
+            # source images need one display surface; detached pixels get a
+            # different cacheKey. Never retain this map across clips or scales.
+            by_source = {}
             for image in self._sequence_frames:
-                scaled = image.scaled(bounds, Qt.AspectRatioMode.KeepAspectRatio,
-                                      Qt.TransformationMode.SmoothTransformation)
-                cached.append((QPixmap.fromImage(scaled), scaled))
-                frame_alpha = _alpha_bounds(scaled)
-                alpha_rects.append(frame_alpha)
+                key = image.cacheKey()
+                prepared = by_source.get(key)
+                if prepared is None:
+                    scaled = image.scaled(bounds, Qt.AspectRatioMode.KeepAspectRatio,
+                                          Qt.TransformationMode.SmoothTransformation)
+                    prepared = QPixmap.fromImage(scaled), scaled, _alpha_bounds(scaled)
+                    by_source[key] = prepared
+                pixmap, scaled, frame_alpha = prepared
+                cached.append((pixmap, scaled))
+                alpha_rects.append(QRectF(frame_alpha))
                 alpha = alpha.united(frame_alpha)
             self._sequence_sprites = tuple(cached)
             self._sequence_alpha_rects = tuple(alpha_rects)
@@ -858,8 +870,13 @@ class PetWindow(QWidget):
             self._menu.close()
             self._menu.deleteLater()
         self._menu = QMenu(self)
+        from .ui.styles import MENU_STYLE
+        from .ui.theme import style_widget
+        style_widget(self._menu, MENU_STYLE)
         self._menu.addAction("设置", self.debug_requested.emit)
         self._menu.addAction("打开聊天窗口", self.chat_requested.emit)
+        self._menu.addAction("和鲸鱼娘下象棋", self.xiangqi_requested.emit)
+        self._menu.addAction("和鲸鱼娘下五子棋", self.gomoku_requested.emit)
         if self._eye_tracking.has_rigs:
             # A session-only opt-out keeps this visual trial easy to disable.
             gaze_action = self._menu.addAction("眼睛跟随鼠标")
@@ -872,7 +889,7 @@ class PetWindow(QWidget):
             parts_action.setChecked(self._part_interaction_enabled)
             parts_action.toggled.connect(self.set_part_interaction_enabled)
         self._menu.addSeparator()
-        self._menu.addAction("退出桌宠", self.close)
+        self._menu.addAction(f"退出{APP_NAME}", self.close)
         # Nonmodal popup keeps frame/bubble timers running while the menu is open.
         self._menu.popup(event.globalPos())
         event.accept()

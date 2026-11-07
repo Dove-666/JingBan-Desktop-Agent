@@ -1,0 +1,582 @@
+{
+  "status": "pixel_checks_passed_visual_review_required",
+  "source_video_sha256": "b57b5d9b416bd54315eeda6d5e647723e6b78e18aee2ed6cc4e0540efdb3f1fe",
+  "sampled_frame_count": 62,
+  "native_mouth_roi": [
+    600,
+    800,
+    705,
+    855
+  ],
+  "normalized_mouth_roi": [
+    429,
+    569,
+    498,
+    603
+  ],
+  "all_sampled_mouth_alpha_255": true,
+  "maximum_mouth_rgb_channel_error": 0,
+  "visible_rgb_never_recolored": true,
+  "alpha_never_expanded_by_exterior_cleanup": true,
+  "total_cleanup_alpha_decreased_pixels": 282206,
+  "frames": [
+    {
+      "delivered_frame": 1,
+      "native_index": 0,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4704
+    },
+    {
+      "delivered_frame": 2,
+      "native_index": 2,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4492
+    },
+    {
+      "delivered_frame": 3,
+      "native_index": 4,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4493
+    },
+    {
+      "delivered_frame": 4,
+      "native_index": 6,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4512
+    },
+    {
+      "delivered_frame": 5,
+      "native_index": 8,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4467
+    },
+    {
+      "delivered_frame": 6,
+      "native_index": 10,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4485
+    },
+    {
+      "delivered_frame": 7,
+      "native_index": 12,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4451
+    },
+    {
+      "delivered_frame": 8,
+      "native_index": 14,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4444
+    },
+    {
+      "delivered_frame": 9,
+      "native_index": 16,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4382
+    },
+    {
+      "delivered_frame": 10,
+      "native_index": 18,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4390
+    },
+    {
+      "delivered_frame": 11,
+      "native_index": 20,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4325
+    },
+    {
+      "delivered_frame": 12,
+      "native_index": 22,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4399
+    },
+    {
+      "delivered_frame": 13,
+      "native_index": 24,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4403
+    },
+    {
+      "delivered_frame": 14,
+      "native_index": 26,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4474
+    },
+    {
+      "delivered_frame": 15,
+      "native_index": 28,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4401
+    },
+    {
+      "delivered_frame": 16,
+      "native_index": 30,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4723
+    },
+    {
+      "delivered_frame": 17,
+      "native_index": 32,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4721
+    },
+    {
+      "delivered_frame": 18,
+      "native_index": 34,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4726
+    },
+    {
+      "delivered_frame": 19,
+      "native_index": 36,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4732
+    },
+    {
+      "delivered_frame": 20,
+      "native_index": 38,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4534
+    },
+    {
+      "delivered_frame": 21,
+      "native_index": 40,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4622
+    },
+    {
+      "delivered_frame": 22,
+      "native_index": 42,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4685
+    },
+    {
+      "delivered_frame": 23,
+      "native_index": 44,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4582
+    },
+    {
+      "delivered_frame": 24,
+      "native_index": 46,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4497
+    },
+    {
+      "delivered_frame": 25,
+      "native_index": 48,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4526
+    },
+    {
+      "delivered_frame": 26,
+      "native_index": 50,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4531
+    },
+    {
+      "delivered_frame": 27,
+      "native_index": 52,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4596
+    },
+    {
+      "delivered_frame": 28,
+      "native_index": 54,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4498
+    },
+    {
+      "delivered_frame": 29,
+      "native_index": 56,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4562
+    },
+    {
+      "delivered_frame": 30,
+      "native_index": 58,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4602
+    },
+    {
+      "delivered_frame": 31,
+      "native_index": 60,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4613
+    },
+    {
+      "delivered_frame": 32,
+      "native_index": 62,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4687
+    },
+    {
+      "delivered_frame": 33,
+      "native_index": 64,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4615
+    },
+    {
+      "delivered_frame": 34,
+      "native_index": 66,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4686
+    },
+    {
+      "delivered_frame": 35,
+      "native_index": 68,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4795
+    },
+    {
+      "delivered_frame": 36,
+      "native_index": 70,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4749
+    },
+    {
+      "delivered_frame": 37,
+      "native_index": 72,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4770
+    },
+    {
+      "delivered_frame": 38,
+      "native_index": 74,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4804
+    },
+    {
+      "delivered_frame": 39,
+      "native_index": 76,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4805
+    },
+    {
+      "delivered_frame": 40,
+      "native_index": 78,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4736
+    },
+    {
+      "delivered_frame": 41,
+      "native_index": 80,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4677
+    },
+    {
+      "delivered_frame": 42,
+      "native_index": 82,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4687
+    },
+    {
+      "delivered_frame": 43,
+      "native_index": 84,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4584
+    },
+    {
+      "delivered_frame": 44,
+      "native_index": 86,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4594
+    },
+    {
+      "delivered_frame": 45,
+      "native_index": 88,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4386
+    },
+    {
+      "delivered_frame": 46,
+      "native_index": 90,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4483
+    },
+    {
+      "delivered_frame": 47,
+      "native_index": 92,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4434
+    },
+    {
+      "delivered_frame": 48,
+      "native_index": 94,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4511
+    },
+    {
+      "delivered_frame": 49,
+      "native_index": 96,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4507
+    },
+    {
+      "delivered_frame": 50,
+      "native_index": 98,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4545
+    },
+    {
+      "delivered_frame": 51,
+      "native_index": 100,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4452
+    },
+    {
+      "delivered_frame": 52,
+      "native_index": 102,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4602
+    },
+    {
+      "delivered_frame": 53,
+      "native_index": 104,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4505
+    },
+    {
+      "delivered_frame": 54,
+      "native_index": 106,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4484
+    },
+    {
+      "delivered_frame": 55,
+      "native_index": 108,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4438
+    },
+    {
+      "delivered_frame": 56,
+      "native_index": 110,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4432
+    },
+    {
+      "delivered_frame": 57,
+      "native_index": 112,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4476
+    },
+    {
+      "delivered_frame": 58,
+      "native_index": 114,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4373
+    },
+    {
+      "delivered_frame": 59,
+      "native_index": 116,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4452
+    },
+    {
+      "delivered_frame": 60,
+      "native_index": 118,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4439
+    },
+    {
+      "delivered_frame": 61,
+      "native_index": 120,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4440
+    },
+    {
+      "delivered_frame": 62,
+      "native_index": 122,
+      "mouth_alpha_min": 255,
+      "mouth_max_channel_error_from_resized_source": 0,
+      "cleanup_alpha_never_expanded": true,
+      "cleanup_remaining_visible_rgb_unchanged": true,
+      "cleanup_alpha_decreased_pixels": 4486
+    }
+  ]
+}

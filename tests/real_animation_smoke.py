@@ -160,8 +160,14 @@ def check_clip(session, directory, name, expected_count, output, heartbeat):
         assert player._installed, player.status
 
     record["load_and_cache"] = heartbeat.measure(start)
-    assert len(pet._sequence_frames) == len(manifest.paths)
-    assert len(pet._sequence_sprites) == len(manifest.paths)
+    assert len(player._clip.frames) == len(manifest.paths), "Decoded source frame count differs from the manifest"
+    # The player prepends its bounded entry transition to the cached sequence.
+    # Those frames belong to playback, not to the source asset's frame_count.
+    cached_count = len(manifest.paths) + len(player._clip.entry_frames)
+    assert len(pet._sequence_frames) == cached_count
+    assert len(pet._sequence_sprites) == cached_count
+    record["runtime_entry_frame_count"] = len(player._clip.entry_frames)
+    record["cached_playback_frame_count"] = cached_count
     record["assertions"].append("real frame count decoded and cached")
     render_pet(pet, folder / "playing.png")
 

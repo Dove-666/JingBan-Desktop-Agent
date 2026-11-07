@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "action": "idle_hands_on_hips",
+  "title": "待机 · 叉腰小得意",
+  "generation_submissions": 1,
+  "observed_charge_cny": 1.5,
+  "source_native_frames": 124,
+  "sam2_native_frames": 124,
+  "runtime_frames": 68,
+  "runtime_fps": 12,
+  "canvas": [
+    1024,
+    1024
+  ],
+  "endpoint_derived_frames": 6,
+  "regression": {
+    "tests": 146,
+    "seconds": 97.637,
+    "passed": true
+  },
+  "native_windows": {
+    "passed": true,
+    "report": "runtime/native_qa/verification.json"
+  },
+  "offscreen_real_asset_smoke": {
+    "passed": true,
+    "report": "runtime/real_playback_v2/result.json"
+  },
+  "export_verification": {
+    "apng_all_68_rgba_frames_equal_runtime": true,
+    "gif_dark": {
+      "frames": 68,
+      "duration_ms": 5670,
+      "dimensions": [
+        480,
+        480
+      ]
+    },
+    "gif_light": {
+      "frames": 68,
+      "duration_ms": 5670,
+      "dimensions": [
+        480,
+        480
+      ]
+    },
+    "old_assets_unchanged": 548,
+    "art_package_equals_runtime": true
+  },
+  "old_asset_files_preserved": 548,
+  "production_settings_changed": false,
+  "production_process_restarted": false,
+  "changed_source_files": [
+    {
+      "path": "desktop_pet/frame_animation.py",
+      "sha256": "941ffef8fe5131386ce2703caa2c4dc258e2a84c5dfdc71850645f3e7fedb5c2"
+    },
+    {
+      "path": "desktop_pet/idle_behavior.py",
+      "sha256": "d4f704314261e23b3a3393d2aaae5c0afc310b7fadfb3120ae443b456c625bf9"
+    },
+    {
+      "path": "tests/test_frame_animation.py",
+      "sha256": "9474016201ea7c8cf13f6bcf9af6bb45992b94fbdae7c8e51f9b98547bebb4e3"
+    },
+    {
+      "path": "tests/test_idle_behavior_integration.py",
+      "sha256": "42cff07c44cb41a814cb9285ea6110598a520eae8f075ecabc6a8f557cb46b9f"
+    },
+    {
+      "path": "tests/real_animation_smoke.py",
+      "sha256": "c812098a72011767dd9dafd5dcf1c5e366cb6e4e692914b5fa7fa4baad22bf80"
+    }
+  ],
+  "new_runtime_folder": "assets/character/animations/idle_hands_on_hips",
+  "art_package": "美术资产/鲸鱼娘_叉腰小得意_20261103",
+  "testing_note": "Initial old real_animation_smoke assumed cached playback frames equal source frame_count. The test helper now counts bounded runtime entry frames separately; the second run passed. Initial failure is retained in runtime/real_playback/result.json. No product change or extra generation was used to address that assertion."
+}

@@ -13,7 +13,7 @@ class DesktopCaptureUnavailable(RemoteError):
 
     def __init__(self, blocked_code=""):
         self.blocked_code = "own_window" if blocked_code == "own_window" else ""
-        message = ("前台是 AURA 自身窗口，未读取画面。可发送明确的电脑任务，或先切换到需要查看的窗口后重新获取。"
+        message = ("前台是鲸伴自身窗口，未读取画面。可发送明确的电脑任务，或先切换到需要查看的窗口后重新获取。"
                    if self.blocked_code == "own_window" else
                    "当前窗口因隐私过滤、窗口变化或截图限制无法读取，请在电脑端确认前台窗口后重试。")
         super().__init__("desktop_capture_unavailable", message)

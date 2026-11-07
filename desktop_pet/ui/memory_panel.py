@@ -4,12 +4,14 @@ from html import escape
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QAbstractButton, QCheckBox, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout, QLabel,
+    QAbstractButton, QDialog, QDialogButtonBox, QGroupBox, QHBoxLayout, QLabel,
     QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
     QLayout, QPlainTextEdit, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
+from .theme import style_widget
 from .styles import PANEL_STYLE
+from .settings_widgets import SettingsToggle
 
 
 def _plain_label(text="", name="hint"):
@@ -86,10 +88,10 @@ class MemoryPanel(QWidget):
         self.controller = controller
         self._edit_dialog = None
         self.setObjectName("memoryPanel")
-        self.setWindowTitle("鲸鱼娘 · 长期记忆")
+        self.setWindowTitle("鲸伴 · 长期记忆")
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         if not embedded:
-            self.setStyleSheet(PANEL_STYLE)
+            style_widget(self, PANEL_STYLE)
             self.setMinimumSize(590, 500)
             self.resize(700, 700)
         layout = QVBoxLayout(self)
@@ -98,7 +100,7 @@ class MemoryPanel(QWidget):
             layout.addWidget(heading)
         else:
             layout.setContentsMargins(0, 0, 0, 0)
-        self.automatic_checkbox = QCheckBox("自动记忆")
+        self.automatic_checkbox = SettingsToggle("自动记忆")
         self.automatic_checkbox.setObjectName("automaticMemory")
         self.automatic_checkbox.setToolTip("记住你表达的偏好和重要事项；关闭后不再新增，已有记忆仍可使用。")
         self.automatic_checkbox.toggled.connect(self._set_automatic)
@@ -134,7 +136,7 @@ class MemoryPanel(QWidget):
         self._show_error(getattr(controller, "error", ""))
         for control in self.findChildren(QAbstractButton) + self.findChildren(QLineEdit):
             control.setMinimumHeight(32)
-        self.setStyleSheet(("" if embedded else PANEL_STYLE) + """
+        style_widget(self, ("" if embedded else PANEL_STYLE) + """
             QWidget#memoryPanel { background: #ffffff; }
             QListWidget#memoryList { background: #ffffff; border: 1px solid #e1e7ee; border-radius: 10px; outline: none; }
             QListWidget#memoryList::item { color: #283d50; padding: 12px 14px; border: none; border-radius: 7px; }

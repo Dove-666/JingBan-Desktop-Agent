@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from ..config import DEFAULT_IMAGE
 from ..selection.context import SelectionContext
 from .chat_panel import MessageInput
+from .theme import style_widget
 from .styles import PANEL_STYLE
 from .window_state import bounded_rect
 
@@ -84,7 +85,7 @@ class SelectionAskDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.setMinimumSize(380, 360)
         self.resize(540, 520)
-        self.setStyleSheet(PANEL_STYLE + """
+        style_widget(self, PANEL_STYLE + """
 QDialog#selectionAskDialog QLabel#selectionHeading { font-size: 22px; font-weight: 600; }
 QDialog#selectionAskDialog QLabel#selectionSource { font-size: 16px; color: #344054; }
 QDialog#selectionAskDialog QLabel#hint { font-size: 14px; }

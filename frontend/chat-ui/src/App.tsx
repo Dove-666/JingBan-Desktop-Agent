@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type { ClipboardEvent as ReactClipboardEvent, CSSProperties, DragEvent as ReactDragEvent, FormEvent, KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AssistantRuntimeProvider, MessagePrimitive, ThreadPrimitive,
@@ -9,16 +9,21 @@ import type { AppendMessage, ThreadMessageLike } from '@assistant-ui/react';
 import {
   ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, ChevronUp, Copy,
   Download, LoaderCircle, Menu, MoreHorizontal, PanelLeftClose,
-  Pencil, Plus, Search, Settings2, Square, Trash2, X,
+  Pencil, Plus, Search, Settings2, Square, Trash2, X, Gamepad2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import whaleAvatar from '../../../assets/expressions/neutral.png';
-import { IMAGE_THUMBNAIL_EVENT, normalizeImageThumbnail, normalizeThumbnailError, useBridge } from './bridge';
+import { IMAGE_THUMBNAIL_EVENT, normalizeImageRevision, normalizeImageThumbnail, normalizeThumbnailError, useBridge } from './bridge';
+import { AgentInteractionCard } from './components/AgentInteractionCard';
 import { GlassSurface } from './components/GlassSurface';
-import { ExecutionDetails } from './components/ExecutionDetails';
-import type { ChatState, Dispatch, ExecutionTrace, ImageErrorCode, ImageThumbnail, ImageThumbnailReady, ScreenEvent, SelectionSource } from './bridge';
+import { displayedReply, ExecutionDetails } from './components/ExecutionDetails';
+import { AgentArtifactCards } from './components/AgentArtifactCards';
+import { ConversationRail } from './components/ConversationRail';
+import { hasFileTransfer, ImageInputController } from './imageInput';
+import type { ImageInputContext, ImageInputSnapshot } from './imageInput';
+import type { ChatMessage, ChatState, Dispatch, ExecutionTrace, ImageErrorCode, ImageThumbnail, ImageThumbnailReady, ScreenEvent, SelectionSource } from './bridge';
 
 const IMAGE_ERROR_TEXT: Record<ImageErrorCode, string> = {
   image_missing: '引用的图片不存在或已删除，请重新发送图片后重试。',
@@ -27,16 +32,50 @@ const IMAGE_ERROR_TEXT: Record<ImageErrorCode, string> = {
 };
 
 type ModalState = { kind: 'rename'; id: string; title: string } | null;
-type PendingSend = { conversationId: string; text: string };
+type PendingSend = { conversationId: string; text: string; draftSequence: number };
 type ConversationAction = 'find' | 'export' | 'clear';
 type PendingConversationAction = {
   conversationId: string; kind: ConversationAction; serial: number; accepted: boolean;
 };
+type ReadingPosition = { top: number; anchorId?: string; offset: number; following: boolean };
+type ScrollGeometry = { conversationId: string; top: number; height: number; client: number };
+
+function captureReadingPosition(node: HTMLElement, following: boolean): ReadingPosition {
+  const bounds = node.getBoundingClientRect();
+  const messages = node.querySelectorAll<HTMLElement>('[data-message-id]');
+  // Message rectangles are ordered vertically; avoid a layout read for every
+  // message on each scroll in long histories.
+  let start = 0, end = messages.length;
+  while (start < end) {
+    const middle = (start + end) >>> 1;
+    if (messages[middle].getBoundingClientRect().bottom <= bounds.top + 4) start = middle + 1;
+    else end = middle;
+  }
+  const anchor = messages[start];
+  return { top: node.scrollTop, anchorId: anchor?.dataset.messageId,
+    offset: anchor ? anchor.getBoundingClientRect().top - bounds.top : 0, following };
+}
+
+function restoreReadingPosition(node: HTMLElement, saved: ReadingPosition) {
+  const anchor = saved.anchorId
+    ? node.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(saved.anchorId)}"]`) : null;
+  if (anchor) node.scrollTop += anchor.getBoundingClientRect().top - node.getBoundingClientRect().top - saved.offset;
+  else node.scrollTop = saved.top;
+}
+type DisplayedErrorBinding = { conversationId: string; messageId: string; error: string; retryStatus: string };
 const HostContext = createContext<{ dispatch: Dispatch; conversationId: string; busy: boolean; canBudget?: boolean;
-  focusRequest?: { id: string; serial: number }; findMatches?: Set<string>; findMatchId?: string }>({ dispatch: () => false, conversationId: '', busy: false });
+  focusRequest?: { id: string; serial: number }; findMatches?: Set<string>; findMatchId?: string;
+  displayedError?: DisplayedErrorBinding }>({ dispatch: () => false, conversationId: '', busy: false });
+
+function guidanceShownGlobally(text: string | undefined, messageId: string, conversationId: string,
+  error: DisplayedErrorBinding | undefined) {
+  return Boolean(text && error && error.conversationId === conversationId && error.messageId === messageId
+    && (text === error.error || text === error.retryStatus));
+}
 // A changing converter invalidates assistant-ui's entire message cache. Draft
 // edits should update the editor, not reconvert all previous messages.
 const identityMessage = (message: ThreadMessageLike) => message;
+const EMPTY_FIND_RESULTS: readonly string[] = [];
 
 function ExternalLink({ href, children }: { href?: string; children: ReactNode }) {
   const { dispatch } = useContext(HostContext);
@@ -91,8 +130,8 @@ function Markdown({ text }: { text: string }) {
   >{text}</ReactMarkdown>;
 }
 
-function MessageImageAttachment({ conversationId, messageId, imageId, thumbnail, error, unavailable }: {
-  conversationId: string; messageId: string; imageId: string; thumbnail?: ImageThumbnail; error?: string; unavailable?: boolean;
+function MessageImageAttachment({ conversationId, messageId, imageId, imageRevision, thumbnail, error, unavailable }: {
+  conversationId: string; messageId: string; imageId: string; imageRevision: number; thumbnail?: ImageThumbnail; error?: string; unavailable?: boolean;
 }) {
   const { dispatch } = useContext(HostContext);
   const container = useRef<HTMLDivElement>(null);
@@ -156,7 +195,8 @@ function MessageImageAttachment({ conversationId, messageId, imageId, thumbnail,
     const receive = (event: Event) => {
       const result = (event as CustomEvent<ImageThumbnailReady>).detail;
       if (!visibleNow.current || unavailable || !result || result.conversationId !== conversationId ||
-          result.messageId !== messageId || result.imageId !== imageId) return;
+          result.messageId !== messageId || result.imageId !== imageId ||
+          normalizeImageRevision(result.imageRevision) !== imageRevision) return;
       const safeError = normalizeThumbnailError(result.error);
       const safePreview = normalizeImageThumbnail(result.thumbnail);
       if (safeError) setLoadError(safeError);
@@ -165,7 +205,7 @@ function MessageImageAttachment({ conversationId, messageId, imageId, thumbnail,
     };
     window.addEventListener(IMAGE_THUMBNAIL_EVENT, receive);
     return () => window.removeEventListener(IMAGE_THUMBNAIL_EVENT, receive);
-  }, [conversationId, messageId, imageId, unavailable, accept]);
+  }, [conversationId, messageId, imageId, imageRevision, unavailable, accept]);
   useEffect(() => {
     if (!visible || preview || thumbnail || error || loadError || failed || unavailable || requested.current) return;
     requested.current = true;
@@ -201,13 +241,15 @@ function MessageImageAttachment({ conversationId, messageId, imageId, thumbnail,
 
 function ChatMessageView() {
   const message = useAuiState((value) => value.message);
-  const { dispatch, focusRequest, conversationId, busy, canBudget, findMatches, findMatchId } = useContext(HostContext);
-  const text = message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n');
+  const { dispatch, focusRequest, conversationId, busy, findMatches, findMatchId, displayedError } = useContext(HostContext);
+  const rawText = message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n');
   const meta = message.metadata.custom as { source?: string; screen_event?: ScreenEvent; selection_context?: SelectionSource; request_status?: string; retryAvailable?: boolean; retryStatus?: string;
     agent_error_code?: string; agent_error?: string;
-    image_id?: string; image_error?: ImageErrorCode; image_unavailable?: boolean;
-    image_thumbnail?: ImageThumbnail; image_thumbnail_error?: string; execution?: ExecutionTrace };
+    image_id?: string; image_revision?: number; image_error?: ImageErrorCode; image_unavailable?: boolean;
+    image_thumbnail?: ImageThumbnail; image_thumbnail_error?: string; execution?: ExecutionTrace;
+    streaming_status?: 'streaming' | 'interrupted' };
   const isUser = message.role === 'user';
+  const text = isUser ? rawText : displayedReply(rawText, meta.execution);
   const isCamera = meta?.source === 'proactive_camera' || meta?.screen_event?.source_kind === 'camera';
   const isPerception = isCamera || meta?.source === 'proactive_screen';
   const [expanded, setExpanded] = useState(false);
@@ -224,10 +266,11 @@ function ChatMessageView() {
       }
     });
   };
-  return <MessagePrimitive.Root className={`message ${isUser ? 'message-user' : 'message-assistant'} ${findMatches?.has(message.id) ? 'message-find-match' : ''} ${findMatchId === message.id ? 'message-find-current' : ''}`} data-message-id={message.id}>
+  return <MessagePrimitive.Root className={`message ${isUser ? 'message-user' : 'message-assistant'} ${findMatches?.has(message.id) ? 'message-find-match' : ''} ${findMatchId === message.id ? 'message-find-current' : ''}`} data-message-id={message.id}
+    data-stream-state={meta.streaming_status} aria-busy={meta.streaming_status === 'streaming' || undefined}>
     {!isUser && <span className="assistant-avatar"><img src={whaleAvatar} alt="鲸鱼娘" draggable={false} /></span>}
     <div className="message-body">
-      {!isUser && meta.execution && <ExecutionDetails execution={meta.execution} onContextSettings={canBudget ? () => dispatch('budget') : undefined} />}
+      {!isUser && meta.execution && <ExecutionDetails execution={meta.execution} />}
       {!isUser && isPerception && meta.screen_event && <div className="screen-event" data-source-kind={isCamera ? 'camera' : 'screen'}>
         <button className="event-toggle" data-testid="screen-event-toggle" type="button" onClick={() => {
           setExpanded((value) => !value);
@@ -243,10 +286,12 @@ function ChatMessageView() {
         </div>}
       </div>}
       {isUser && meta.image_id && /^[0-9a-f]{64}$/.test(meta.image_id) &&
-        <MessageImageAttachment key={`${conversationId}:${message.id}:${meta.image_id}`}
-          conversationId={conversationId} messageId={message.id} imageId={meta.image_id} thumbnail={meta.image_thumbnail}
+        <MessageImageAttachment key={`${conversationId}:${message.id}:${meta.image_id}:${meta.image_revision ?? 0}`}
+          conversationId={conversationId} messageId={message.id} imageId={meta.image_id} imageRevision={meta.image_revision ?? 0} thumbnail={meta.image_thumbnail}
           error={meta.image_thumbnail_error} unavailable={meta.image_unavailable} />}
       <div className="markdown"><Markdown text={text} /></div>
+      {!isUser && meta.streaming_status === 'streaming' && <span className="streaming-indicator" role="status" aria-label="正在生成回复"><LoaderCircle size={13} className="spin" aria-hidden="true" /></span>}
+      {!isUser && meta.streaming_status === 'interrupted' && <span className="request-message-state" role="status">部分回复 · 未完成</span>}
       {isUser && meta.image_unavailable &&
         <p className="image-attachment-error" role="status" data-testid="image-attachment-unavailable">图片附件不可用，请重新发送图片。</p>}
       {isUser && meta.request_status === 'failed' && meta.image_error && IMAGE_ERROR_TEXT[meta.image_error] &&
@@ -263,19 +308,20 @@ function ChatMessageView() {
           <span>{meta.request_status === 'failed' && meta.agent_error_code ?
             (meta.agent_error_code === 'timeout' ? '任务超时' : '任务未完成') :
             ({ failed: '回复失败', cancelled: '已停止生成', interrupted: '上次请求未完成', pending: '正在等待回复' } as Record<string, string>)[meta.request_status!]}</span>
-          {meta.agent_error && <span className="retry-explanation" data-testid="agent-message-error">{meta.agent_error}</span>}
+          {meta.agent_error && !guidanceShownGlobally(meta.agent_error, message.id, conversationId, displayedError)
+            && <span className="retry-explanation" data-testid="agent-message-error">{meta.agent_error}</span>}
           {meta.request_status !== 'pending' && meta.retryAvailable !== false && <button type="button" disabled={busy} onClick={() =>
             dispatch('retry', { conversationId, messageId: message.id })}>重试回复</button>}
-          {meta.retryStatus && <span className="retry-explanation">{meta.agent_error_code && meta.retryAvailable === false ?
-            '请先检查已完成的操作，再发送新消息继续。' : meta.retryStatus}</span>}
+          {meta.retryStatus && !guidanceShownGlobally(meta.retryStatus, message.id, conversationId, displayedError)
+            && <span className="retry-explanation">{meta.retryStatus}</span>}
         </div>}
-      <div className="message-actions">
+      {meta.streaming_status !== 'streaming' && <div className="message-actions">
         <IconButton label={copied ? '已复制' : '复制消息'} onClick={copy}>{copied ? <Check size={15} /> : <Copy size={15} />}</IconButton>
-      </div>
+      </div>}
     </div>
     {isUser && meta.execution && <div className="execution-user-result">
       <span className="assistant-avatar"><img src={whaleAvatar} alt="鲸鱼娘" draggable={false} /></span>
-      <ExecutionDetails execution={meta.execution} onContextSettings={canBudget ? () => dispatch('budget') : undefined} />
+      <ExecutionDetails execution={meta.execution} />
     </div>}
   </MessagePrimitive.Root>;
 }
@@ -309,6 +355,16 @@ function Modal({ children, title, onClose }: { children: ReactNode; title: strin
 
 export function App() {
   const { state, dispatch, connectionError } = useBridge();
+  // Change the material in place: preserve the editor, draft and scroll state.
+  // Depending only on theme also keeps ordinary keystrokes off the root style.
+  useLayoutEffect(() => {
+    // Native installs the saved theme before hydration. Keep that bootstrap
+    // material until the first authoritative bridge snapshot arrives.
+    if (!state.ready) return;
+    const theme = state.theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, [state.ready, state.theme]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebar, setDesktopSidebar] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -325,6 +381,9 @@ export function App() {
   const [modal, setModal] = useState<ModalState>(null);
   const [renameValue, setRenameValue] = useState('');
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const draftEpochs = useRef<Record<string, string>>({});
+  const draftSequences = useRef<Record<string, number>>({});
+  const draftVersions = useRef<Record<string, number>>({});
   const [pending, setPending] = useState<PendingSend | null>(null);
   const [showLatest, setShowLatest] = useState(false);
   const editor = useRef<HTMLTextAreaElement>(null);
@@ -333,6 +392,7 @@ export function App() {
   const findInput = useRef<HTMLInputElement>(null);
   const renameComposition = useRef(false);
   const sidebar = useRef<HTMLElement>(null);
+  const gamePicker = useRef<HTMLDetailsElement>(null);
   const main = useRef<HTMLElement>(null);
   const drawerOrigin = useRef<HTMLElement | null>(null);
   const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 760px)').matches);
@@ -342,6 +402,14 @@ export function App() {
   const [composerHeight, setComposerHeight] = useState(133);
   const nearBottom = useRef(true);
   const previousConversation = useRef('');
+  const readingPositions = useRef(new Map<string, ReadingPosition>());
+  const pendingReadingRestore = useRef<string | null>(null);
+  const scrollGeometry = useRef<ScrollGeometry | null>(null);
+  const readerScrollIntent = useRef(false);
+  const readingState = useRef({ conversationId: state.conversationId, loading: state.historyLoading,
+    firstId: state.messages[0]?.id, focusRequest: state.focusRequest });
+  readingState.current = { conversationId: state.conversationId, loading: state.historyLoading,
+    firstId: state.messages[0]?.id, focusRequest: state.focusRequest };
   const composition = useRef(false);
   const lastSearch = useRef('');
   const readySent = useRef(false);
@@ -351,27 +419,146 @@ export function App() {
   const focusHighlightTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const draft = drafts[state.conversationId] || '';
   const stagedImage = state.stagedImage?.conversationId === state.conversationId ? state.stagedImage : undefined;
-  const canSend = state.ready && !state.busy && !state.historyLoading && !state.imagePreparing && !pending && Boolean(draft.trim() || stagedImage);
+  const [imageInputState, setImageInputState] = useState<ImageInputSnapshot>({ busy: false });
+  const imageInputContext = useRef<ImageInputContext>({ conversationId: '', draftEpoch: '', draftDocument: '',
+    supported: false, available: false });
+  imageInputContext.current = { conversationId: state.conversationId,
+    draftEpoch: state.draftEpochs[state.conversationId] || '', draftDocument: state.draftDocument,
+    supported: state.canStageImageData, available: state.ready && !state.historyLoading && !state.busy
+      && !state.imageImportBusy && !pending && !modal };
+  const imageInputDispatch = useRef(dispatch);
+  imageInputDispatch.current = dispatch;
+  const imageInput = useRef<ImageInputController | null>(null);
+  if (!imageInput.current) imageInput.current = new ImageInputController({
+    context: () => imageInputContext.current,
+    dispatch: (payload, callback) => imageInputDispatch.current('stageImageData', payload, callback),
+    changed: setImageInputState,
+  });
+  const localImagePreparing = imageInputState.busy && imageInputState.origin?.conversationId === state.conversationId
+    && imageInputState.origin.draftEpoch === imageInputContext.current.draftEpoch
+    && imageInputState.origin.draftDocument === state.draftDocument;
+  const imagePreparing = state.imagePreparing || localImagePreparing;
+  const imageInputError = imageInputState.error?.conversationId === state.conversationId
+    && imageInputState.error.draftEpoch === imageInputContext.current.draftEpoch
+    && imageInputState.error.draftDocument === state.draftDocument ? imageInputState.error.message : '';
+  useLayoutEffect(() => { imageInput.current?.syncContext(); },
+    [state.conversationId, state.draftEpochs[state.conversationId], state.draftDocument]);
+  useEffect(() => {
+    const input = imageInput.current!;
+    input.activate();
+    // Preserve normal text drops; file drops outside the composer must never
+    // navigate WebEngine away from the current conversation.
+    const preventFileNavigation = (event: globalThis.DragEvent) => {
+      if (hasFileTransfer(event.dataTransfer)) event.preventDefault();
+    };
+    window.addEventListener('dragover', preventFileNavigation);
+    window.addEventListener('drop', preventFileNavigation);
+    return () => {
+      input.dispose();
+      window.removeEventListener('dragover', preventFileNavigation);
+      window.removeEventListener('drop', preventFileNavigation);
+    };
+  }, []);
+  const pasteImage = (event: ReactClipboardEvent<HTMLTextAreaElement>) => {
+    if (!event.clipboardData.files.length) return;
+    event.preventDefault();
+    imageInput.current?.add(event.clipboardData.files);
+  };
+  const dropImage = (event: ReactDragEvent<HTMLElement>) => {
+    if (!hasFileTransfer(event.dataTransfer)) return;
+    event.preventDefault();
+    imageInput.current?.add(event.dataTransfer.files);
+  };
+  const rememberReadingPosition = useCallback(() => {
+    const node = viewport.current, current = readingState.current;
+    if (!node || current.loading || pendingReadingRestore.current
+        || current.firstId && !node.querySelector(`[data-message-id="${CSS.escape(current.firstId)}"]`)) return;
+    const positions = readingPositions.current;
+    positions.delete(current.conversationId);
+    positions.set(current.conversationId, captureReadingPosition(node, nearBottom.current));
+    if (positions.size > 128) positions.delete(positions.keys().next().value!);
+  }, []);
+  const reconcileReadingPosition = useCallback(() => {
+    const node = viewport.current, current = readingState.current;
+    if (!node || current.loading || readerScrollIntent.current) return;
+    const request = current.focusRequest;
+    const key = request?.id ? `${request.serial}:${request.id}` : '';
+    if (request?.id && appliedFocus.current !== key) {
+      // Search can arrive before assistant-ui has committed its new message
+      // nodes. Keep the explicit target pending ahead of any cached anchor.
+      pendingReadingRestore.current = null;
+      nearBottom.current = false;
+      const target = node.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(request.id)}"]`);
+      if (target) {
+        clearTimeout(focusHighlightTimer.current);
+        focusHighlightNode.current?.classList.remove('message-highlight');
+        focusHighlightNode.current = target;
+        appliedFocus.current = key;
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add('message-highlight');
+        focusHighlightTimer.current = setTimeout(() => {
+          target.classList.remove('message-highlight');
+          if (focusHighlightNode.current === target) focusHighlightNode.current = null;
+        }, 2200);
+      }
+      return;
+    }
+    if (current.firstId && !node.querySelector(`[data-message-id="${CSS.escape(current.firstId)}"]`)) return;
+    const saved = readingPositions.current.get(current.conversationId);
+    if (pendingReadingRestore.current === current.conversationId) {
+      nearBottom.current = saved?.following ?? true;
+      pendingReadingRestore.current = null;
+      if (saved && !nearBottom.current) restoreReadingPosition(node, saved);
+    }
+    if (nearBottom.current) node.scrollTop = node.scrollHeight;
+    if (node.scrollHeight <= node.clientHeight + 1) nearBottom.current = true;
+    scrollGeometry.current = { conversationId: current.conversationId, top: node.scrollTop,
+      height: node.scrollHeight, client: node.clientHeight };
+    setShowLatest(!nearBottom.current);
+    rememberReadingPosition();
+  }, [rememberReadingPosition]);
+  const cancelPendingMessageFocus = useCallback(() => {
+    const request = readingState.current.focusRequest;
+    if (request?.id) appliedFocus.current = `${request.serial}:${request.id}`;
+  }, []);
+  const noteReaderScroll = useCallback(() => {
+    readerScrollIntent.current = true;
+    cancelPendingMessageFocus();
+    // User input wins over an in-flight restoration. Scroll events run before
+    // animation frames; an inner code block's wheel must not leave a stale flag.
+    pendingReadingRestore.current = null;
+    requestAnimationFrame(() => { readerScrollIntent.current = false; reconcileReadingPosition(); });
+  }, [cancelPendingMessageFocus, reconcileReadingPosition]);
+  const canSteer = state.canSteerAgent === true && state.requestInCurrent && !state.agentInteraction && !stagedImage;
+  const canSend = state.ready && (!state.busy || canSteer) && !state.historyLoading && !imagePreparing && !pending && Boolean(draft.trim() || stagedImage);
   const findIds = useMemo(() => {
     const query = findQuery.trim().toLocaleLowerCase();
     return findOpen && query ? state.messages.filter((message) =>
-      message.content.toLocaleLowerCase().includes(query)).map((message) => message.id) : [];
+      message.content.toLocaleLowerCase().includes(query)).map((message) => message.id) : EMPTY_FIND_RESULTS;
   }, [findOpen, findQuery, state.messages]);
   const findMatches = useMemo(() => new Set(findIds), [findIds]);
   const findIndex = Math.min(findPosition, Math.max(0, findIds.length - 1));
   const findMatchId = findIds[findIndex];
+  const displayedError = useMemo<DisplayedErrorBinding | undefined>(() =>
+    state.ready && state.error && state.errorConversationId === state.conversationId && state.errorMessageId
+      ? { conversationId: state.errorConversationId, messageId: state.errorMessageId, error: state.error,
+        retryStatus: state.errorAction === 'retry' ? state.errorRetryStatus || '' : '' }
+      : undefined,
+  [state.ready, state.error, state.errorConversationId, state.conversationId, state.errorMessageId,
+    state.errorAction, state.errorRetryStatus]);
   const hostContext = useMemo(() => ({ dispatch, conversationId: state.conversationId,
-    busy: state.busy, canBudget: state.canBudget, focusRequest: state.focusRequest, findMatches, findMatchId }),
-  [dispatch, state.conversationId, state.busy, state.canBudget, state.focusRequest, findMatches, findMatchId]);
+    busy: state.busy, canBudget: state.canBudget, focusRequest: state.focusRequest, findMatches, findMatchId, displayedError }),
+  [dispatch, state.conversationId, state.busy, state.canBudget, state.focusRequest, findMatches, findMatchId, displayedError]);
   const moveFind = useCallback((direction: number) => {
     if (!findIds.length) return;
     setFindPosition((value) => (Math.min(value, findIds.length - 1) + direction + findIds.length) % findIds.length);
     setFindNavigation((value) => value + 1);
   }, [findIds.length]);
   const openFind = useCallback(() => {
+    cancelPendingMessageFocus();
     setFindOpen(true); setRowMenu(null); setSidebarOpen(false);
     requestAnimationFrame(() => { findInput.current?.focus(); findInput.current?.select(); });
-  }, []);
+  }, [cancelPendingMessageFocus]);
   const closeFind = useCallback(() => { setFindOpen(false); editor.current?.focus(); }, []);
   useEffect(() => {
     setFindOpen(false); setFindQuery(''); setFindPosition(0);
@@ -437,6 +624,7 @@ export function App() {
     const frame = requestAnimationFrame(() => {
       const node = viewport.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(findMatchId)}"]`);
       if (node) {
+        pendingReadingRestore.current = null;
         nearBottom.current = false;
         node.scrollIntoView({ block: 'center', behavior: 'instant' });
       }
@@ -454,62 +642,135 @@ export function App() {
       // Refresh history before announcing readiness, rather than relying on a
       // delayed empty search caused by the bridge callback changing identity.
       dispatch('search', { query: '' });
-      dispatch('ready');
+      dispatch('ready', { draftDocument: state.draftDocument });
     }
-  }, [state.ready, state.drafts, dispatch]);
+  }, [state.ready, state.drafts, state.draftDocument, dispatch]);
+
+  useEffect(() => {
+    if (!state.ready) return;
+    setDrafts((previous) => {
+      let next = previous;
+      for (const [cid, epoch] of Object.entries(state.draftEpochs)) {
+        const changedEpoch = draftEpochs.current[cid] !== epoch;
+        const version = state.draftVersions[cid] || 0;
+        const acknowledged = state.draftSequences[cid] || 0;
+        const localSequence = draftSequences.current[cid] || 0;
+        // An older state snapshot must not erase a later input event still
+        // travelling through WebChannel. An explicit clear rotates the epoch.
+        if (changedEpoch || version > (draftVersions.current[cid] || 0) && acknowledged >= localSequence) {
+          const text = state.drafts[cid] || '';
+          if ((next[cid] || '') !== text) next = { ...next, [cid]: text };
+          draftVersions.current[cid] = version;
+        }
+        if (changedEpoch) {
+          draftEpochs.current[cid] = epoch;
+          draftSequences.current[cid] = acknowledged;
+        }
+      }
+      return next;
+    });
+  }, [state.ready, state.drafts, state.draftEpochs, state.draftVersions, state.draftSequences]);
 
   const submitMessage = useCallback(async (text: string) => {
-    if ((!text && !stagedImage) || state.busy || state.historyLoading || state.imagePreparing || pending) return;
-    const record = { conversationId: state.conversationId, text };
+    if ((!text && !stagedImage) || state.busy && !canSteer || state.historyLoading || imagePreparing
+        || imageInput.current?.preparingCurrent() || pending) return;
+    const sequence = draftSequences.current[state.conversationId] || state.draftSequences[state.conversationId] || 0;
+    const record = { conversationId: state.conversationId, text, draftSequence: sequence };
     setPending(record);
+    cancelPendingMessageFocus();
+    pendingReadingRestore.current = null;
     nearBottom.current = true;
     await new Promise<void>((resolve) => {
-      dispatch('send', { text, conversationId: state.conversationId, agentMode: state.agentMode }, (result) => {
-        if (result.ok) setDrafts((value) => value[record.conversationId]?.trim() === text ? { ...value, [record.conversationId]: '' } : value);
+      dispatch(state.busy ? 'steerAgent' : 'send', { text, conversationId: state.conversationId,
+        draftEpoch: state.draftEpochs[state.conversationId], draftSequence: sequence,
+        draftBaseVersion: draftVersions.current[state.conversationId] || state.draftVersions[state.conversationId] || 1,
+        draftDocument: state.draftDocument,
+        ...(!state.busy ? { agentMode: state.agentMode } : {}) }, (result) => {
+        if (result.ok) setDrafts((value) => value[record.conversationId]?.trim() === text
+          && (draftSequences.current[record.conversationId] || 0) === record.draftSequence
+          ? { ...value, [record.conversationId]: '' } : value);
         setPending(null);
         resolve();
       });
     });
-  }, [state.busy, state.historyLoading, state.imagePreparing, state.conversationId, state.agentMode, stagedImage, pending, dispatch]);
+  }, [state.busy, state.historyLoading, imagePreparing, state.conversationId, state.agentMode,
+    state.draftEpochs, state.draftSequences, state.draftVersions, state.draftDocument, stagedImage, pending, dispatch, canSteer, cancelPendingMessageFocus]);
   const onNew = useCallback((message: AppendMessage) => submitMessage(message.content
     .filter((part) => part.type === 'text').map((part) => part.text).join('\n').trim()), [submitMessage]);
 
-  const runtimeMessages = useMemo(() => {
-    const messages = state.messages.filter((item) => item.role === 'user' || item.role === 'assistant');
+  const convertedMessageCache = useRef(new WeakMap<ChatMessage, {
+    execution: ExecutionTrace | undefined; message: ThreadMessageLike;
+  }>());
+  const historyMessages = useMemo(() => {
+    const messages: ChatMessage[] = state.messages.filter((item) => item.role === 'user' || item.role === 'assistant');
     const traces = new Map(messages.filter((item) => item.metadata?.execution).map((item) => [item.id, item.metadata!.execution!]));
-    // A completed turn belongs immediately before its assistant reply. Failed
-    // and active turns remain visible even if no assistant message exists yet.
-    messages.forEach((item, index) => {
-      const trace = traces.get(item.id);
-      if (item.role !== 'user' || !trace || !['completed', 'needs_user'].includes(trace.state)) return;
-      for (const next of messages.slice(index + 1)) {
-        if (next.role === 'user') break;
-        if (next.role === 'assistant' && (!next.source || next.source === 'assistant')) {
-          if (!traces.has(next.id)) traces.set(next.id, trace);
-          break;
-        }
+    const users = new Set(messages.filter((item) => item.role === 'user' &&
+      (!item.source || item.source === 'user')).map((item) => item.id));
+    const replies = messages.filter((item) => item.role === 'assistant' && (!item.source || item.source === 'assistant'));
+    const requests = new Map(Array.from(users, (id) => [id, id]));
+    const linkedUsers = new Set<string>();
+    replies.forEach((item) => {
+      const target = item.metadata?.reply_to;
+      if (typeof target === 'string' && users.has(target)) {
+        requests.set(item.id, target);
+        linkedUsers.add(target);
       }
     });
+    // Explicit request links survive queued reply order. Only an absent link
+    // may inherit the first ordinary reply within a legacy adjacent turn.
+    let legacyRequest: string | undefined;
+    messages.forEach((item) => {
+      if (item.role === 'user') {
+        legacyRequest = users.has(item.id) && !linkedUsers.has(item.id) ? item.id : undefined;
+      } else if ((!item.source || item.source === 'assistant') && legacyRequest !== undefined && item.metadata?.reply_to === undefined) {
+        requests.set(item.id, legacyRequest);
+        legacyRequest = undefined;
+      }
+    });
+    replies.forEach((item) => {
+      const trace = traces.get(requests.get(item.id) || '');
+      if (trace && ['completed', 'needs_user'].includes(trace.state) && !traces.has(item.id)) traces.set(item.id, trace);
+    });
     const owners = new Map<string, string>();
+    const executionKeys = new Map<string, string>();
     messages.forEach((item) => {
       const trace = traces.get(item.id);
       if (!trace) return;
-      const key = trace.started_at || item.id;
+      const key = JSON.stringify([requests.get(item.id) ?? item.id, trace.started_at || item.id]);
+      executionKeys.set(item.id, key);
       if (!owners.has(key) || item.role === 'assistant') owners.set(key, item.id);
     });
-    return messages.map((item): ThreadMessageLike => ({
-    id: String(item.id), role: item.role,
-    content: [{ type: 'text', text: String(item.content ?? '') }],
-    metadata: { custom: { source: item.source, screen_event: item.screen_event, request_status: item.metadata?.request_status,
-      agent_error_code: item.metadata?.agent_error_code, agent_error: item.metadata?.agent_error,
-      selection_context: item.metadata?.selection_context,
-      image_id: item.metadata?.image_id, image_error: item.metadata?.image_error,
-      image_unavailable: item.metadata?.image_unavailable,
-      image_thumbnail: item.metadata?.image_thumbnail, image_thumbnail_error: item.metadata?.image_thumbnail_error,
-      execution: owners.get(traces.get(item.id)?.started_at || item.id) === item.id ? traces.get(item.id) : undefined,
-      retryAvailable: item.retryAvailable, retryStatus: item.retryStatus } },
-    }));
+    return messages.map((item): ThreadMessageLike => {
+      const execution = owners.get(executionKeys.get(item.id) || '') === item.id ? traces.get(item.id) : undefined;
+      const cached = convertedMessageCache.current.get(item);
+      if (cached && cached.execution === execution) return cached.message;
+      const converted: ThreadMessageLike = {
+        id: String(item.id), role: item.role,
+        content: [{ type: 'text', text: String(item.content ?? '') }],
+        metadata: { custom: { source: item.source, screen_event: item.screen_event, request_status: item.metadata?.request_status,
+          agent_error_code: item.metadata?.agent_error_code, agent_error: item.metadata?.agent_error,
+          streaming_status: item.metadata?.streaming_status,
+          selection_context: item.metadata?.selection_context,
+          image_id: item.metadata?.image_id, image_revision: item.metadata?.image_revision, image_error: item.metadata?.image_error,
+          image_unavailable: item.metadata?.image_unavailable,
+          image_thumbnail: item.metadata?.image_thumbnail, image_thumbnail_error: item.metadata?.image_thumbnail_error,
+          execution,
+          retryAvailable: item.retryAvailable, retryStatus: item.retryStatus } },
+      };
+      convertedMessageCache.current.set(item, { execution, message: converted });
+      return converted;
+    });
   }, [state.messages]);
+
+  const runtimeMessages = useMemo<ThreadMessageLike[]>(() => {
+    const preview = state.streamingReply;
+    if (!preview || preview.conversationId !== state.conversationId || !preview.text) return historyMessages;
+    return [...historyMessages, {
+      id: `stream-${preview.requestId}`, role: 'assistant',
+      content: [{ type: 'text', text: preview.text }],
+      metadata: { custom: { source: 'stream_preview', streaming_status: preview.state } },
+    }];
+  }, [historyMessages, state.streamingReply, state.conversationId]);
 
   const runtime = useExternalStoreRuntime({
     messages: runtimeMessages,
@@ -547,7 +808,18 @@ export function App() {
     if (input.style.height !== height) input.style.height = height;
   }, []);
 
-  useLayoutEffect(resizeEditor, [draft, resizeEditor]);
+  useLayoutEffect(resizeEditor, [draft, state.chatFontSize, resizeEditor]);
+
+  useEffect(() => {
+    // A restored draft may precede the final font metrics. Keep measuring the
+    // hidden mirror; never collapse the live input or move its selection.
+    let mounted = true;
+    const fonts = document.fonts;
+    if (!fonts) return;
+    void fonts.ready.then(() => { if (mounted) resizeEditor(); });
+    fonts.addEventListener('loadingdone', resizeEditor);
+    return () => { mounted = false; fonts.removeEventListener('loadingdone', resizeEditor); };
+  }, [resizeEditor]);
 
   useEffect(() => {
     let previousWidth = 0;
@@ -560,23 +832,30 @@ export function App() {
   }, [resizeEditor]);
 
   useLayoutEffect(() => {
-    const node = viewport.current;
-    if (!node) return;
-    if (previousConversation.current !== state.conversationId || nearBottom.current) {
-      node.scrollTop = node.scrollHeight;
-      nearBottom.current = true;
-      setShowLatest(false);
+    if (state.historyLoading) {
+      pendingReadingRestore.current = state.conversationId;
+      return;
     }
+    if (previousConversation.current !== state.conversationId) pendingReadingRestore.current = state.conversationId;
     previousConversation.current = state.conversationId;
-  }, [state.messages, state.conversationId, state.historyLoading]);
+    reconcileReadingPosition();
+    const frame = requestAnimationFrame(reconcileReadingPosition);
+    return () => cancelAnimationFrame(frame);
+  }, [state.messages, state.conversationId, state.historyLoading, reconcileReadingPosition]);
 
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      if (nearBottom.current && viewport.current) viewport.current.scrollTop = viewport.current.scrollHeight;
+    const observer = new ResizeObserver(reconcileReadingPosition);
+    const contentReady = new MutationObserver(() => {
+      const request = readingState.current.focusRequest;
+      if (pendingReadingRestore.current || request?.id && appliedFocus.current !== `${request.serial}:${request.id}`) {
+        reconcileReadingPosition();
+      }
     });
     if (readingColumn.current) observer.observe(readingColumn.current);
-    return () => observer.disconnect();
-  }, []);
+    if (viewport.current) observer.observe(viewport.current);
+    if (readingColumn.current) contentReady.observe(readingColumn.current, { childList: true, subtree: true });
+    return () => { observer.disconnect(); contentReady.disconnect(); };
+  }, [reconcileReadingPosition]);
 
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => setComposerHeight(entry.borderBoxSize[0]?.blockSize || entry.contentRect.height));
@@ -593,30 +872,10 @@ export function App() {
 
   useEffect(() => {
     if (!state.focusRequest?.id) return;
-    const request = state.focusRequest;
-    const key = `${request.serial}:${request.id}`;
-    if (appliedFocus.current === key) return;
-    const frame = requestAnimationFrame(() => {
-      const node = viewport.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(request.id)}"]`);
-      if (node) {
-        clearTimeout(focusHighlightTimer.current);
-        focusHighlightNode.current?.classList.remove('message-highlight');
-        focusHighlightNode.current = node;
-        appliedFocus.current = key;
-        nearBottom.current = false;
-        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        node.classList.add('message-highlight');
-        focusHighlightTimer.current = setTimeout(() => {
-          node.classList.remove('message-highlight');
-          if (focusHighlightNode.current === node) focusHighlightNode.current = null;
-        }, 2200);
-      }
-    });
-    // A host snapshot may replace the messages array without changing this focus
-    // request. Its cleanup only cancels a pending lookup; the highlight owns its
-    // timer independently, while appliedFocus keeps scrolling one-shot.
+    reconcileReadingPosition();
+    const frame = requestAnimationFrame(reconcileReadingPosition);
     return () => cancelAnimationFrame(frame);
-  }, [state.focusRequest?.id, state.focusRequest?.serial, state.messages]);
+  }, [state.focusRequest?.id, state.focusRequest?.serial, state.messages, reconcileReadingPosition]);
 
   const openSearch = useCallback(() => {
     cancelConversationAction();
@@ -647,10 +906,15 @@ export function App() {
       if (document.querySelector('dialog[open]')) return;
       if (event.key === 'Escape') {
         event.preventDefault(); event.stopImmediatePropagation();
+        if (gamePicker.current?.open) {
+          gamePicker.current.open = false;
+          gamePicker.current.querySelector('summary')?.focus();
+          return;
+        }
         cancelConversationAction(); setSidebarOpen(false); setRowMenu(null); return;
       }
       if (event.key !== 'Tab') return;
-      const items = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href]'),
+      const items = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href], summary'),
         ...document.querySelectorAll<HTMLElement>('.row-popover button:not(:disabled)')].filter((item) => item.getClientRects().length > 0);
       const current = items.indexOf(document.activeElement as HTMLElement);
       if (!items.length) { event.preventDefault(); return; }
@@ -743,8 +1007,9 @@ export function App() {
 
   const send = (event?: FormEvent) => {
     event?.preventDefault();
-    if (!canSend || composition.current) return;
-    if (!draft.trim() && stagedImage) void submitMessage('');
+    if (!canSend || composition.current || imageInput.current?.preparingCurrent()) return;
+    if (state.busy && canSteer) void submitMessage(draft.trim());
+    else if (!draft.trim() && stagedImage) void submitMessage('');
     else runtime.thread.append({ role: 'user', content: [{ type: 'text', text: draft.trim() }] });
     editor.current?.focus();
   };
@@ -764,7 +1029,23 @@ export function App() {
     // A modal dialog rejects background focus until React removes it.
     requestAnimationFrame(() => editor.current?.focus());
   };
-  const goLatest = () => { viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' }); nearBottom.current = true; setShowLatest(false); };
+  const goLatest = () => {
+    cancelPendingMessageFocus();
+    pendingReadingRestore.current = null; nearBottom.current = true;
+    viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' }); setShowLatest(false);
+  };
+  const navigateMessage = useCallback((id: string) => {
+    const node = viewport.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
+    if (!node) return;
+    nearBottom.current = false;
+    clearTimeout(focusHighlightTimer.current);
+    focusHighlightNode.current?.classList.remove('message-highlight');
+    focusHighlightNode.current = null;
+    node.scrollIntoView({ block: 'start', behavior: 'instant' });
+    const scroller = viewport.current!;
+    nearBottom.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 72;
+    setShowLatest(!nearBottom.current);
+  }, []);
 
   const recoveryLabel = ({ settings: '打开 API 设置', history: '重新读取', retry: '重试回复' } as Record<string, string>)[state.errorAction];
   const headerAction = (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, action: string) => {
@@ -787,14 +1068,14 @@ export function App() {
       {sidebarOpen && <button className="sidebar-backdrop" tabIndex={-1} aria-label="关闭历史会话" onClick={() => setSidebarOpen(false)} />}
       <aside ref={sidebar} className="sidebar" data-testid="sidebar" aria-label="历史会话" role={sidebarOpen && narrow ? 'dialog' : undefined} aria-modal={sidebarOpen && narrow || undefined}>
         <div className="sidebar-top" onPointerDown={(event) => headerAction(event, 'windowMove')} onDoubleClick={(event) => headerAction(event, 'windowToggleMaximize')}>
-          <span className="wordmark">AURA</span>
+          <span className="wordmark">鲸伴</span>
           <div className="sidebar-controls"><IconButton label="搜索会话 · Ctrl+F" onClick={openSearch}><Search size={17} /></IconButton><IconButton className="close-sidebar" label="收起历史会话" onClick={() => { setSidebarOpen(false); setDesktopSidebar(false); }}><PanelLeftClose size={18} /></IconButton></div>
         </div>
         <button type="button" className="new-conversation" title="新对话 · Ctrl+N" disabled={!state.ready || state.historyLoading} onClick={() => { cancelConversationAction(); dispatch('new'); setSidebarOpen(false); }}><Plus size={17} /><span>新对话</span></button>
         {searching && <div className="search-field"><Search size={15} /><input data-testid="conversation-search" ref={searchInput} value={search} onChange={(event) => { cancelConversationAction(); setSearch(event.target.value); }} placeholder="搜索对话" aria-label="搜索历史会话" /><IconButton label="关闭搜索" onClick={() => { setSearching(false); setSearch(''); }}><X size={14} /></IconButton></div>}
         <nav className="conversation-list" aria-label="会话列表">
           {state.conversations.map((item) => <div key={item.id} data-conversation-id={item.id} className={`conversation-row ${item.id === state.conversationId ? 'selected' : ''} ${rowMenu === item.id ? 'menu-active' : ''}`}>
-            <button type="button" className="conversation-link" title={item.title || '新对话'} aria-current={item.id === state.conversationId ? 'page' : undefined} disabled={state.historyLoading} onClick={() => { cancelConversationAction(); dispatch('open', { id: item.id }); setSidebarOpen(false); setRowMenu(null); }}>
+            <button type="button" className="conversation-link" title={item.title || '新对话'} aria-current={item.id === state.conversationId ? 'page' : undefined} disabled={state.historyLoading} onClick={() => { rememberReadingPosition(); cancelPendingMessageFocus(); cancelConversationAction(); dispatch('open', { id: item.id }); setSidebarOpen(false); setRowMenu(null); }}>
               <span className="conversation-title">{item.title || '新对话'}</span>
             </button>
             <div className="row-actions" data-popover><IconButton label={`管理会话：${item.title || '新对话'}`} onClick={(event) => {
@@ -815,13 +1096,40 @@ export function App() {
           </div>)}
           {state.ready && !state.conversations.length && <p className="list-empty">{search ? '没有找到相关对话' : '新对话会保存在这里'}</p>}
         </nav>
-        <div className="sidebar-bottom">{state.canSettings && <button className="sidebar-setting" onClick={() => { cancelConversationAction(); dispatch('openSettings'); }}><Settings2 size={16} /><span>设置</span></button>}</div>
+        <div className="sidebar-bottom">
+          {(state.canXiangqi || state.canGomoku) && <details className="sidebar-games" ref={gamePicker} onKeyDown={(event) => {
+            if (event.key === 'Escape' && gamePicker.current?.open) {
+              event.preventDefault(); event.stopPropagation();
+              gamePicker.current.open = false;
+              gamePicker.current.querySelector('summary')?.focus();
+            }
+          }}>
+            <summary className="sidebar-setting" data-testid="open-games"><Gamepad2 size={16} /><span>和鲸鱼娘玩耍</span><ChevronDown size={14} className="sidebar-game-chevron" aria-hidden="true" /></summary>
+            <div className="sidebar-game-choices">
+              {state.canXiangqi && <button className="sidebar-game-choice" data-testid="open-xiangqi" aria-label="和鲸鱼娘下象棋" onClick={() => {
+                if (gamePicker.current) {
+                  gamePicker.current.open = false;
+                  gamePicker.current.querySelector('summary')?.focus({ preventScroll: true });
+                }
+                cancelConversationAction(); dispatch('openXiangqi');
+              }}>象棋</button>}
+              {state.canGomoku && <button className="sidebar-game-choice" data-testid="open-gomoku" aria-label="和鲸鱼娘下五子棋" onClick={() => {
+                if (gamePicker.current) {
+                  gamePicker.current.open = false;
+                  gamePicker.current.querySelector('summary')?.focus({ preventScroll: true });
+                }
+                cancelConversationAction(); dispatch('openGomoku');
+              }}>五子棋</button>}
+            </div>
+          </details>}
+          {state.canSettings && <button className="sidebar-setting" onClick={() => { cancelConversationAction(); dispatch('openSettings'); }}><Settings2 size={16} /><span>设置</span></button>}
+        </div>
       </aside>
 
-      <main ref={main} className="main-panel" id="conversation">
+      <main ref={main} className="main-panel" id="conversation" onDrop={dropImage}>
         <header className="chat-header" onPointerDown={(event) => headerAction(event, 'windowMove')} onDoubleClick={(event) => headerAction(event, 'windowToggleMaximize')}>
           <IconButton data-testid="history-toggle" className="show-sidebar" label="展开历史会话" onClick={() => { setSidebarOpen(true); setDesktopSidebar(true); }}><Menu size={20} /></IconButton>
-          <div className="header-title" title={state.title || 'AURA'}>{state.title || 'AURA'}</div>
+          <div className="header-title" title={state.title || '鲸伴'}>{state.title || '鲸伴'}</div>
         </header>
         {findOpen && <div className="message-find" role="search" aria-label="查找当前对话">
           <Search size={15} /><input ref={findInput} data-testid="message-search" aria-label="在当前对话中查找" placeholder="查找当前对话…" value={findQuery}
@@ -835,19 +1143,49 @@ export function App() {
           <IconButton label="关闭对话内查找" onClick={() => { cancelConversationAction(); closeFind(); }}><X size={16} /></IconButton>
         </div>}
         <ThreadPrimitive.Root className="thread">
-          <div ref={viewport} className="thread-viewport" onScroll={() => {
+          <ConversationRail key={state.conversationId} messages={state.messages} conversationId={state.conversationId}
+            viewportRef={viewport} contentRef={readingColumn} bottomInset={composerHeight + 8} onNavigate={navigateMessage}
+            disabled={!state.ready || state.historyLoading || findOpen || Boolean(modal) || Boolean(rowMenu) || (narrow && sidebarOpen)} />
+          <div ref={viewport} className="thread-viewport" onWheel={noteReaderScroll} onTouchStart={noteReaderScroll}
+            onPointerDown={noteReaderScroll} onKeyDownCapture={(event) => {
+              if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) noteReaderScroll();
+            }} onScroll={() => {
             const node = viewport.current!;
-            nearBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 72;
+            const current = readingState.current, previous = scrollGeometry.current;
+            if (current.loading || pendingReadingRestore.current) return;
+            const atBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 72;
+            const sameGeometry = previous?.conversationId === current.conversationId
+              && previous.height === node.scrollHeight && previous.client === node.clientHeight;
+            // Appending a bubble can dispatch a delayed scroll event while the
+            // content is growing. Geometry alone must not cancel Send's intent.
+            if (atBottom) nearBottom.current = true;
+            else if (readerScrollIntent.current || sameGeometry && node.scrollTop < previous!.top - 1) nearBottom.current = false;
+            scrollGeometry.current = { conversationId: current.conversationId, top: node.scrollTop,
+              height: node.scrollHeight, client: node.clientHeight };
             setShowLatest(!nearBottom.current);
+            rememberReadingPosition();
           }}>
             <div className="reading-column" ref={readingColumn}>
               {!state.ready ? <div className="empty-state">{connectionError ? <><h1>暂时无法连接</h1><p>{connectionError}</p></> : <><h1>正在连接</h1><p className="loading-text"><LoaderCircle size={16} className="spin" />正在读取对话</p></>}</div> : state.historyLoading ? <div className="history-loading" role="status"><LoaderCircle size={19} className="spin" />正在读取对话…</div> : !state.messages.length ? <div className="empty-state"><h1>今天想聊些什么？</h1></div> : <ThreadPrimitive.Messages components={{ UserMessage: ChatMessageView, AssistantMessage: ChatMessageView }} />}
+              {!!state.agentArtifacts?.length && <AgentArtifactCards key={state.conversationId} artifacts={state.agentArtifacts}
+                conversationId={state.conversationId} enabled={state.canExportArtifact === true} dispatch={dispatch} />}
+              {state.agentInteraction && <AgentInteractionCard key={`${state.conversationId}:${state.agentInteraction.id}`}
+                interaction={state.agentInteraction} dispatch={dispatch} />}
             </div>
           </div>
           {showLatest && <button className="latest-button" style={{ bottom: composerHeight + 12 }} type="button" onClick={goLatest}><ArrowDown size={16} />回到最新</button>}
           <div className="composer-area" ref={composerArea}>
             <div className="composer-column">
-              {(state.error || connectionError) && state.ready && <div className="error-banner" role="alert"><span>{state.error || connectionError}{state.errorRetryStatus && <small className="retry-explanation">{state.errorRetryStatus}</small>}</span>{state.error && recoveryLabel && <button type="button" disabled={state.busy || state.historyLoading || (state.errorAction === 'retry' && state.errorRetryAvailable === false)} onClick={recover}>{recoveryLabel}</button>}</div>}
+              {(state.error || connectionError) && state.ready && <div className="error-banner" role="alert">
+                <span>{state.error || connectionError}
+                  {state.errorAction === 'retry' && state.errorRetryStatus
+                    && !(state.error || connectionError).includes(state.errorRetryStatus)
+                    && <small className="retry-explanation">{state.errorRetryStatus}</small>}
+                </span>
+                {state.error && recoveryLabel && <button type="button"
+                  disabled={state.busy || state.historyLoading || (state.errorAction === 'retry' && state.errorRetryAvailable === false)}
+                  onClick={recover}>{recoveryLabel}</button>}
+              </div>}
               {state.exportStatus && <p className="export-status" role="status">{state.exportStatus}</p>}
               {state.canAgentMode && <div className="chat-mode-row">
                 <div className="chat-mode-selector" role="group" aria-label="对话模式">
@@ -861,28 +1199,34 @@ export function App() {
               </div>}
               <GlassSurface className="glass-composer" radius={27} intensity={18}>
               <form className={`composer ${state.busy ? 'composer-busy' : ''}`} onSubmit={send}>
-                {(stagedImage || state.imagePreparing) && <div className="composer-attachment" data-testid="composer-attachment">
+                {(stagedImage || imagePreparing) && <div className="composer-attachment" data-testid="composer-attachment">
                   {stagedImage?.thumbnail ? <img src={stagedImage.thumbnail.src} alt="待发送图片" draggable={false} />
                     : <span className="composer-attachment-placeholder" aria-hidden="true"><Plus size={20} /></span>}
-                  <div className="composer-attachment-details"><strong>{stagedImage?.filename || '正在准备图片…'}</strong>
-                    <span>{state.imagePreparing ? '正在准备，完成后可发送' : '待发送 · 可以添加问题，也可直接发送'}</span></div>
+                  <div className="composer-attachment-details"><strong title={stagedImage?.filename}>{stagedImage?.filename || '正在准备图片…'}</strong>
+                    <span>{imagePreparing ? '正在准备，完成后可发送' : '待发送 · 可以添加问题，也可直接发送'}</span></div>
                   {stagedImage && <IconButton label="移除待发送图片" data-testid="remove-composer-image"
-                    disabled={state.imagePreparing || Boolean(pending) || state.busy}
+                    disabled={imagePreparing || Boolean(pending) || state.busy}
                     onClick={() => dispatch('removeStagedImage', { conversationId: state.conversationId })}><X size={17} /></IconButton>}
                 </div>}
-                {state.imageError && <p className="composer-image-error" role="alert" data-testid="composer-image-error">{state.imageError}</p>}
-                <label htmlFor="message-input" className="sr-only">发送给 AURA 的消息</label>
-                <textarea id="message-input" data-testid="message-input" ref={editor} rows={1} value={draft} placeholder={state.historyLoading ? '正在读取对话…' : state.agentMode ? '告诉电脑 Agent 下一步…' : '发消息…'} disabled={!state.ready || state.historyLoading} onChange={(event) => {
+                {(imageInputError || state.imageError) && <p className="composer-image-error" role="alert" data-testid="composer-image-error">{imageInputError || state.imageError}</p>}
+                <label htmlFor="message-input" className="sr-only">发送给鲸伴的消息</label>
+                <textarea id="message-input" data-testid="message-input" ref={editor} rows={1} value={draft} placeholder={state.historyLoading ? '正在读取对话…' : canSteer ? '补充当前任务…' : state.agentMode ? '告诉电脑 Agent 下一步…' : '发消息…'} disabled={!state.ready || state.historyLoading} onChange={(event) => {
                   const text = event.target.value;
                   setDrafts((value) => ({ ...value, [state.conversationId]: text }));
-                  dispatch('draft', { conversationId: state.conversationId, text });
-                }} onKeyDown={keyDown} onCompositionStart={() => { composition.current = true; }} onCompositionEnd={() => { composition.current = false; }} />
+                  const sequence = Math.max(draftSequences.current[state.conversationId] || 0,
+                    state.draftSequences[state.conversationId] || 0) + 1;
+                  draftSequences.current[state.conversationId] = sequence;
+                  dispatch('draft', { conversationId: state.conversationId, text,
+                    draftEpoch: state.draftEpochs[state.conversationId], draftSequence: sequence,
+                    draftBaseVersion: draftVersions.current[state.conversationId] || state.draftVersions[state.conversationId] || 1,
+                    draftDocument: state.draftDocument });
+                }} onPaste={pasteImage} onKeyDown={keyDown} onCompositionStart={() => { composition.current = true; }} onCompositionEnd={() => { composition.current = false; }} />
                 <textarea ref={editorMeasure} className="composer-measure" aria-hidden="true" tabIndex={-1}
                   rows={1} value={draft} readOnly />
                 <div className="composer-toolbar"><IconButton label="添加图片" data-testid="composer-image-picker"
-                  disabled={!state.ready || state.historyLoading || state.imagePreparing || state.busy || Boolean(pending)}
-                  onClick={() => dispatch('selectImage', { conversationId: state.conversationId })}><Plus size={18} /></IconButton>
-                  {(state.busy || pending) && !hasRunningProcess && <div className="composer-state" role="status"><LoaderCircle size={13} className="spin" aria-hidden="true" /><span>{state.status || (state.agentMode ? '电脑 Agent 正在执行…' : '正在回复…')}</span></div>}<div className="composer-actions">{state.canStop && <button type="button" data-testid="stop-button" className="stop-button" onClick={() => dispatch('stop', { conversationId: state.requestConversationId })} title={state.agentMode ? '停止当前电脑任务' : '停止等待本次回复；服务端可能已收到请求'}><Square size={12} aria-hidden="true" />{state.agentMode ? '停止任务' : '停止生成'}</button>}<button data-testid="send-button" className="send-button" type="submit" disabled={!canSend} aria-label={state.busy ? '正在回复，请稍候' : '发送消息'} title="发送消息 · Enter"><ArrowUp size={19} strokeWidth={2.4} /></button></div></div>
+                  disabled={!state.ready || state.historyLoading || state.imageImportBusy || imageInputState.busy || state.busy || Boolean(pending)}
+                  onClick={() => { if (!imageInput.current?.busy()) dispatch('selectImage', { conversationId: state.conversationId }); }}><Plus size={18} /></IconButton>
+                  {(state.busy || pending) && !hasRunningProcess && <div className="composer-state" role="status"><LoaderCircle size={13} className="spin" aria-hidden="true" /><span>{state.status || (state.agentMode ? '电脑 Agent 正在执行…' : '正在回复…')}</span></div>}<div className="composer-actions">{state.canStop && <button type="button" data-testid="stop-button" className="stop-button" onClick={() => dispatch('stop', { conversationId: state.requestConversationId })} title={state.agentMode ? '停止当前电脑任务' : '停止等待本次回复；服务端可能已收到请求'}><Square size={12} aria-hidden="true" />{state.agentMode ? '停止任务' : '停止生成'}</button>}<button data-testid="send-button" className="send-button" type="submit" disabled={!canSend} aria-label={canSteer ? '补充指令' : state.busy ? '正在回复，请稍候' : '发送消息'} title={canSteer ? '补充当前任务 · Enter' : '发送消息 · Enter'}><ArrowUp size={19} strokeWidth={2.4} /></button></div></div>
               </form>
               </GlassSurface>
             </div>

@@ -24,6 +24,8 @@ from uuid import uuid4
 from agent_backend.nanobot.session_history import (
     MAX_HISTORY_BYTES, bounded_history, close_interrupted_tools, conversation_uuid, text_record,
 )
+from agent_backend.nanobot.context_store import ObservationStore, namespace_for
+from agent_backend.nanobot.redaction import redact_text
 
 
 SCHEMA_VERSION = 2
@@ -51,8 +53,8 @@ def _now():
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
-def scope_fingerprint(settings, api, *, secrets=(), generation=""):
-    """Bind replay to permissions, workspace, endpoints, models and account.
+def scope_fingerprint(settings, api, *, secrets=(), generation="", permissions=None):
+    """Bind facts to permissions/workspace/account, independently of model route.
 
     The digest is the only persisted identity. Keys are hashed as part of this
     high-entropy identity rather than retained as separate credential fields.
@@ -65,21 +67,45 @@ def scope_fingerprint(settings, api, *, secrets=(), generation=""):
     public = asdict(settings) if is_dataclass(settings) else dict(settings)
     api = asdict(api) if is_dataclass(api) else dict(api)
     source = {
-        "version": 1,
+        "version": 2,
         "workspace": os.path.normcase(str(Path(public.get("workspace") or ".").resolve())),
         "backend": public.get("backend"),
         "tools_enabled": public.get("tools_enabled"),
         "computer_enabled": public.get("computer_enabled"),
-        "gui_provider": public.get("gui_provider"),
-        "gui_coordinate_profile": public.get("gui_coordinate_profile"),
         "gui_base_url": str(public.get("gui_base_url", "")).rstrip("/"),
-        "gui_model": public.get("gui_model"),
         "api_base_url": str(api.get("base_url", "")).rstrip("/"),
-        "api_model": api.get("model"),
         "conversation_generation": generation or "",
+        "resource_permissions": permissions,
         "credential_identities": [hashlib.sha256(value.encode("utf-8")).hexdigest()
                                   for value in secrets if isinstance(value, str) and value],
     }
+    execution_identity = api.get("project_execution_identity", "")
+    if (not isinstance(execution_identity, str) or execution_identity
+            and re.fullmatch(r"[a-f0-9]{64}", execution_identity) is None):
+        raise ValueError("invalid project execution identity")
+    if execution_identity:
+        source["project_execution_identity"] = execution_identity
+    return hashlib.sha256(json.dumps(source, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def legacy_scope_fingerprint(settings, api, *, secrets=(), generation=""):
+    """Exact pre-upgrade identity, only for a same-configuration migration.
+
+    The host may supply this to load; changing key/endpoint/permissions still
+    makes the old digest differ. Unknown old routes are never guessed.
+    """
+    public = asdict(settings) if is_dataclass(settings) else dict(settings)
+    api = asdict(api) if is_dataclass(api) else dict(api)
+    source = {"version": 1,
+              "workspace": os.path.normcase(str(Path(public.get("workspace") or ".").resolve())),
+              "backend": public.get("backend"), "tools_enabled": public.get("tools_enabled"),
+              "computer_enabled": public.get("computer_enabled"), "gui_provider": public.get("gui_provider"),
+              "gui_coordinate_profile": public.get("gui_coordinate_profile"),
+              "gui_base_url": str(public.get("gui_base_url", "")).rstrip("/"), "gui_model": public.get("gui_model"),
+              "api_base_url": str(api.get("base_url", "")).rstrip("/"), "api_model": api.get("model"),
+              "conversation_generation": generation or "",
+              "credential_identities": [hashlib.sha256(value.encode("utf-8")).hexdigest()
+                                        for value in secrets if isinstance(value, str) and value]}
     return hashlib.sha256(json.dumps(source, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
@@ -90,8 +116,7 @@ def _project_records(messages, secrets=()):
 
     def clean(value):
         if isinstance(value, str):
-            for secret in sorted({s for s in secrets if isinstance(s, str) and s}, key=len, reverse=True):
-                value = value.replace(secret, "[redacted]")
+            value = redact_text(value, secrets, "[redacted]")
             return _IMAGE.sub("[Image payload not retained.]", value)
         if isinstance(value, dict):
             return {key: clean(item) for key, item in value.items()}
@@ -102,9 +127,9 @@ def _project_records(messages, secrets=()):
     return [text_record(clean(value), secrets) for value in messages]
 
 
-def sanitized_history(messages, secrets=()):
+def sanitized_history(messages, secrets=(), *, store=None):
     """Drop non-replay fields and binary data before a single SQLite write."""
-    return bounded_history(close_interrupted_tools(_project_records(messages, secrets)))
+    return bounded_history(close_interrupted_tools(_project_records(messages, secrets)), store=store)
 
 
 def durable_frontier(messages, history, secrets=()):
@@ -163,6 +188,14 @@ class CheckpointStore:
         self.path = Path(path)
         self.owner = uuid4().hex
         self._lock = threading.RLock()
+
+    @property
+    def context_root(self):
+        return self.path.parent / "agent_context"
+
+    def observation_store(self, conversation_id, scope_hash, *, secrets=()):
+        self._identity(conversation_id, scope_hash)
+        return ObservationStore(self.context_root, namespace_for(conversation_id, scope_hash), secrets=secrets)
 
     @property
     def _deletion_directory(self):
@@ -249,6 +282,7 @@ class CheckpointStore:
                 # or a later task begins. Rollback leaves the marker in place.
                 applied_deletions = self._pending_deletions()
                 for _, conversation_id in applied_deletions:
+                    ObservationStore.clear_conversation(self.context_root, conversation_id)
                     if conversation_id is None:
                         connection.execute("DELETE FROM agent_checkpoints")
                     else:
@@ -278,12 +312,17 @@ class CheckpointStore:
         if task_id is not None and (not isinstance(task_id, str) or not re.fullmatch(r"[a-f0-9]{32}", task_id)):
             raise ValueError("invalid task id")
 
-    def load(self, conversation_id, scope_hash, *, secrets=()):
+    def load(self, conversation_id, scope_hash, *, secrets=(), legacy_scope_hash=None):
         self._identity(conversation_id, scope_hash)
         with self._connect() as db:
             row = db.execute("SELECT * FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if row is None:
                 return None
+            if row["scope_hash"] != scope_hash and row["scope_hash"] == legacy_scope_hash:
+                # Trusted host computed the exact prior scope using the same
+                # credentials/permissions; no model-provided migration token.
+                db.execute("UPDATE agent_checkpoints SET scope_hash=? WHERE conversation_id=?", (scope_hash, conversation_id))
+                row = db.execute("SELECT * FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if row["scope_hash"] != scope_hash:
                 return {"history": [], "status": "scope_changed", "scope_matches": False,
                         "goal_verified": False, "recovered_running": False}
@@ -298,7 +337,7 @@ class CheckpointStore:
                         or not isinstance(row["frontier_json"], str)):
                     raise ValueError("invalid checkpoint row")
                 raw = json.loads(row["history_json"])
-                history = sanitized_history(raw, secrets)
+                history = sanitized_history(raw, secrets, store=self.observation_store(conversation_id, scope_hash, secrets=secrets))
                 if len(row["frontier_json"].encode("utf-8")) > MAX_FRONTIER_BYTES:
                     raise ValueError("invalid frontier")
                 frontier = json.loads(row["frontier_json"])
@@ -338,11 +377,13 @@ class CheckpointStore:
 
     def begin(self, conversation_id, scope_hash, task_id, history, *, secrets=()):
         self._identity(conversation_id, scope_hash, task_id)
-        safe_history = sanitized_history(history, secrets)
-        encoded = json.dumps(safe_history, ensure_ascii=False)
-        frontier = json.dumps(durable_frontier(history, safe_history, secrets), ensure_ascii=False)
         now = _now()
         with self._connect() as db:
+            observations = self.observation_store(conversation_id, scope_hash, secrets=secrets)
+            observations.activate()
+            safe_history = sanitized_history(history, secrets, store=observations)
+            encoded = json.dumps(safe_history, ensure_ascii=False)
+            frontier = json.dumps(durable_frontier(history, safe_history, secrets), ensure_ascii=False)
             previous = db.execute("SELECT scope_hash,task_id,status FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if previous is not None and previous["scope_hash"] != scope_hash:
                 db.execute("DELETE FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,))
@@ -370,7 +411,7 @@ class CheckpointStore:
             raise ValueError("invalid barrier")
         if goal_verified and status not in {"verified", "completed"}:
             raise ValueError("invalid verification status")
-        safe_history = sanitized_history(history, secrets)
+        safe_history = sanitized_history(history, secrets, store=self.observation_store(conversation_id, scope_hash, secrets=secrets))
         encoded = json.dumps(safe_history, ensure_ascii=False)
         frontier_data = durable_frontier(history, safe_history, secrets)
         frontier = json.dumps(frontier_data, ensure_ascii=False)

@@ -18,7 +18,8 @@ from tests.test_perception_integration import AdjustableClock, SyntheticScene
 
 class MemorySettings:
     def __init__(self):
-        self.settings = PerceptionSettings(enabled=True, allow_remote=True)
+        self.settings = PerceptionSettings(enabled=True, allow_remote=True,
+                                           speech_cooldown_seconds=180, max_speeches_per_hour=6)
         self.saves = 0
 
     def load_perception_settings(self):

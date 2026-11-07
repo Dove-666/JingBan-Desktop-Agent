@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QWidget
 from .bubble_placement import place_bubble
 from .placement import screen_for_point
 from .windows_work_area import work_area
+from .ui.theme import color, current_theme, theme_manager
 
 
 BASE_FONT_POINTS = 14.0
@@ -18,6 +19,10 @@ LINE_SPACING = 1.18
 TAIL_MARGIN = 12
 TAIL_HALF_WIDTH = 5
 CORNER_RADIUS = 11
+LINKED_PREVIEW_MAX_CHARS = 220
+LINKED_PREVIEW_MAX_PAGES = 2
+LONG_REPLY_NOTICE = "回复较长，点击查看完整对话。"
+MAX_VISIBLE_MS = 60_000
 
 
 class SpeechBubble(QWidget):
@@ -38,6 +43,7 @@ class SpeechBubble(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._text = ""
+        self._source_text = ""
         self._conversation_link = None
         self._scale = 1.0
         self._character_scale = 1.0
@@ -47,6 +53,8 @@ class SpeechBubble(QWidget):
         self._paused_page_ms = 0
         self._previous_page_rect = QRectF()
         self._next_page_rect = QRectF()
+        self._close_rect = QRectF()
+        self._header_height = 0.0
         self._layout = QTextLayout()
         self._text_rect = QRectF()
         self._body_rect = QRectF()
@@ -76,8 +84,28 @@ class SpeechBubble(QWidget):
         self.hide_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.hide_timer.setSingleShot(True)
         self.hide_timer.timeout.connect(self.dismiss)
+        # Unlike the reading timer this deadline never pauses on hover or
+        # restarts on page changes, movement, reflow, or theme changes.
+        self._deadline_timer = QTimer(self)
+        self._deadline_timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self._deadline_timer.setSingleShot(True)
+        self._deadline_timer.timeout.connect(self.dismiss)
         self.set_font_points(int(BASE_FONT_POINTS))
+        manager = theme_manager()
+        if manager is not None:
+            manager.theme_changed.connect(self._theme_changed)
         self.hide()
+
+    def _theme_changed(self, _theme):
+        # Repaint the glyph cache only. Keep the reader's page, placement and
+        # remaining display timers intact when the application theme changes.
+        self._text_layer_key = None
+        self._text_layer = QImage()
+        self.update()
+
+    @staticmethod
+    def _theme_color(light, role):
+        return color(role) if current_theme() == "dark" else light
 
     def say(self, text: str, duration_ms: int, *, conversation_link=None) -> None:
         clickable = bool(conversation_link and conversation_link.get("conversation_id")
@@ -89,14 +117,17 @@ class SpeechBubble(QWidget):
             self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, not clickable)
             self.setCursor(Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor)
         self._conversation_link = dict(conversation_link) if clickable else None
-        self.setToolTip("悬停暂停阅读；页脚可前后翻页；点击正文查看对话" if clickable else "")
-        self._text = text
-        self.setAccessibleDescription(text)
+        self.setToolTip("点击正文查看完整对话；点击 × 关闭；最多显示 60 秒" if clickable else "")
+        self._source_text = text
+        self._text = (LONG_REPLY_NOTICE if clickable and len(text) > LINKED_PREVIEW_MAX_CHARS else text)
+        self.setAccessibleDescription(self._text)
         self._speech_sequence += 1
         self._placement = None
         self._page_index = 0
         self._layout_key = None
         self._page_timer.stop()
+        self.hide_timer.stop()
+        self._deadline_timer.stop()
         self._hover_paused = False
         self._paused_hide_ms = self._paused_page_ms = 0
         self.reposition()
@@ -107,10 +138,15 @@ class SpeechBubble(QWidget):
         self.update()
         duration = max(duration_ms, self._reading_time() if len(self._pages) > 1 else duration_ms)
         self.hide_timer.start(duration)
+        self._deadline_timer.start(MAX_VISIBLE_MS)
         self._schedule_page()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self._conversation_link:
+            if self._close_rect.contains(event.position()):
+                self.dismiss()
+                event.accept()
+                return
             if self._previous_page_rect.contains(event.position()):
                 self._previous_page()
                 event.accept()
@@ -121,6 +157,7 @@ class SpeechBubble(QWidget):
                 return
             link = self._conversation_link
             self.conversation_requested.emit(link["conversation_id"], link["message_id"])
+            self.dismiss()
             event.accept()
             return
         super().mouseReleaseEvent(event)
@@ -153,12 +190,14 @@ class SpeechBubble(QWidget):
     def dismiss(self) -> None:
         self._page_timer.stop()
         self.hide_timer.stop()
+        self._deadline_timer.stop()
         self._hover_paused = False
         self.hide()
 
     def hideEvent(self, event) -> None:
         self._page_timer.stop()
         self.hide_timer.stop()
+        self._deadline_timer.stop()
         super().hideEvent(event)
 
     def set_scale(self, factor: float) -> None:
@@ -268,6 +307,7 @@ class SpeechBubble(QWidget):
             width = min(maximum_width, math.ceil(max(64 * scale, min(MAX_TEXT_WIDTH * scale, natural_width + 48 * scale))))
             self._tail_margin = min(TAIL_MARGIN * scale, width * .16, maximum_height * .16)
             self._padding = min(12 * scale, width * .12, maximum_height * .12)
+            self._header_height = min(24 * scale, maximum_height * .24) if self._conversation_link else 0.0
             # An unusually short work area still needs room for a text line
             # and the page hint. Reduce decoration before clipping either one.
             vertical_budget = max(0.0, (maximum_height - 2 * metrics.height()) / 2 - .5)
@@ -278,7 +318,7 @@ class SpeechBubble(QWidget):
                 self._padding *= ratio
             inset = 2 * (self._padding + self._tail_margin)
             text_width = max(1.0, width - inset)
-            text_height = max(1.0, maximum_height - inset)
+            text_height = max(1.0, maximum_height - inset - self._header_height)
             full = self._make_layout(self._text, text_width)
             previous_pages = self._pages
             reading_offset = sum(len(page) for page in previous_pages[:self._page_index])
@@ -287,6 +327,15 @@ class SpeechBubble(QWidget):
                 self._pages = self._paginate(full, text_width, text_height)
             else:
                 self._pages = [self._text]
+            if (self._conversation_link and len(self._pages) > LINKED_PREVIEW_MAX_PAGES
+                    and self._text != LONG_REPLY_NOTICE):
+                # Only the small preview changes. The stored chat message is
+                # still reached through its original conversation/message IDs.
+                self._text = LONG_REPLY_NOTICE
+                self.setAccessibleDescription(self._text)
+                self._page_index = 0
+                self._layout_key = None
+                return self._relayout(available)
             pages_changed = self._pages != previous_pages
             # Reflow can change page lengths. Keep the current reading position
             # in view rather than reusing a page number that may skip sentences.
@@ -301,7 +350,8 @@ class SpeechBubble(QWidget):
             self._footer_height = metrics.height() if len(self._pages) > 1 else 0.0
             # Keep the card still as pages advance, even when the final page is short.
             content_height = max([metrics.height()] + [item.boundingRect().height() for item in self._page_layouts])
-            self.resize(width, min(maximum_height, math.ceil(content_height + inset + self._footer_height)))
+            self.resize(width, min(maximum_height, math.ceil(content_height + inset
+                                                          + self._header_height + self._footer_height)))
         page_key = (key, self._page_index)
         if page_key == self._page_layout_key:
             return pages_changed
@@ -332,8 +382,13 @@ class SpeechBubble(QWidget):
             self.move(position)
         margin = self._tail_margin
         self._body_rect = QRectF(self.rect()).adjusted(margin, margin, -margin, -margin)
-        self._text_rect = self._body_rect.adjusted(self._padding, self._padding, -self._padding,
+        self._text_rect = self._body_rect.adjusted(self._padding, self._padding + self._header_height, -self._padding,
                                                   -self._padding - self._footer_height)
+        self._close_rect = QRectF()
+        if self._conversation_link:
+            side = self._header_height
+            self._close_rect = QRectF(self._text_rect.right() - side,
+                                       self._body_rect.top() + self._padding, side, side)
         self._previous_page_rect = self._next_page_rect = QRectF()
         if len(self._pages) > 1 and self._conversation_link:
             footer_y = self._text_rect.bottom()
@@ -443,7 +498,7 @@ class SpeechBubble(QWidget):
 
     def _ensure_text_layer(self) -> None:
         key = (self._page_layout_key, self.size().width(), self.size().height(), self._device_key(),
-               self._text_rect, len(self._pages), self._page_index, bool(self._conversation_link))
+               self._text_rect, len(self._pages), self._page_index, bool(self._conversation_link), current_theme())
         if key == self._text_layer_key and not self._text_layer.isNull():
             return
         ratio = self.devicePixelRatioF()
@@ -460,10 +515,13 @@ class SpeechBubble(QWidget):
         text = QPainter(layer)
         text.setRenderHint(QPainter.RenderHint.TextAntialiasing)
         text.setFont(self.font())
-        text.setPen(QColor("#243449"))
+        text.setPen(QColor(self._theme_color("#243449", "text")))
         self._layout.draw(text, self._text_origin())
+        if not self._close_rect.isEmpty():
+            text.setPen(QColor(self._theme_color("#415d78", "accent")))
+            self._draw_footer_text(text, "×", self._close_rect)
         if len(self._pages) > 1:
-            text.setPen(QColor("#65788d"))
+            text.setPen(QColor(self._theme_color("#65788d", "muted")))
             footer = QRectF(self._text_rect.left(), self._text_rect.bottom(),
                             self._text_rect.width(), self._footer_height)
             self._draw_footer_text(text, f"{self._page_index + 1} / {len(self._pages)}", footer,
@@ -471,7 +529,8 @@ class SpeechBubble(QWidget):
             if self._conversation_link:
                 for rectangle, label, enabled in ((self._previous_page_rect, "‹ 上页", self._page_index > 0),
                         (self._next_page_rect, "下页 ›", self._page_index + 1 < len(self._pages))):
-                    text.setPen(QColor("#415d78") if enabled else QColor("#a4afba"))
+                    text.setPen(QColor(self._theme_color("#415d78", "accent") if enabled
+                                       else self._theme_color("#a4afba", "muted")))
                     self._draw_footer_text(text, label, rectangle)
         text.end()
         self._text_layer, self._text_layer_key = layer, key
@@ -494,14 +553,19 @@ class SpeechBubble(QWidget):
         painter.translate(0, self._scale)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         for spread, alpha in ((5, 4), (3.5, 6), (2, 9)):
-            pen = QPen(QColor(28, 49, 72, alpha), spread * self._scale)
+            shadow = QColor(0, 0, 0, alpha * 3) if current_theme() == "dark" else QColor(28, 49, 72, alpha)
+            pen = QPen(shadow, spread * self._scale)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
             painter.drawPath(outline)
         painter.restore()
-        painter.setPen(QPen(QColor("#d7e3ee"), max(.55, .85 * self._scale)))
-        painter.setBrush(QColor("#fcfdff"))
+        painter.setPen(QPen(QColor(self._theme_color("#d7e3ee", "border")), max(.55, .85 * self._scale)))
+        painter.setBrush(QColor(self._theme_color("#fcfdff", "surface")))
         painter.drawPath(outline)
+        if not self._close_rect.isEmpty():
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(self._theme_color("#e8eff6", "border")))
+            painter.drawEllipse(self._close_rect)
         self._ensure_text_layer()
         painter.drawImage(QPointF(0, 0), self._text_layer)
 

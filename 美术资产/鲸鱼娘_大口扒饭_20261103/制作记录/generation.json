@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "action": "idle_eating_rice",
+  "display_name": "待机 · 大口扒饭",
+  "authorized_by": "User explicitly requested this additional dynamic idle using the previous AI-pai method, with no GIF generation.",
+  "created_at": "2026-11-03T10:29:01.561656+00:00",
+  "model": "MiniMax-H3",
+  "resolution": "1440P",
+  "aspect_ratio": "1:1",
+  "duration_seconds": 5,
+  "outputs": 1,
+  "maximum_submissions": 1,
+  "submissions_used": 1,
+  "automatic_retries": false,
+  "status": "generated_downloaded",
+  "prompt": "prompts/idle_eating_rice.txt",
+  "prompt_sha256": "348c6046979272cec9d68701666c6a5e34ac0f233fb26bf7a149418920be5f16",
+  "reference": "reference/neutral_white_1440.png",
+  "reference_sha256": "386976bd7046c74df80266013c5556a050fde5b1e4ad84f8cfa980ceda682993",
+  "generate_gif": false,
+  "reserved_at": "2026-11-03T10:31:09.645614+00:00",
+  "observed_price_cny": 1.5,
+  "dispatch_returned_at": "2026-11-03T10:31:10.003554+00:00",
+  "video": "inputs/idle_eating_rice.mp4",
+  "video_sha256": "9a00b351e074e7865bb02d704e108e399afe7d2bcc38c46925cb2b4c1ffc7f78",
+  "video_bytes": 4078602,
+  "video_metadata": {
+    "width": 1440,
+    "height": 1440,
+    "r_frame_rate": "24/1",
+    "duration": "5.166667",
+    "nb_frames": "124",
+    "nb_read_frames": "124"
+  },
+  "observed_download_host": "1b60e84f0948d5c0ae5bab1edad35332.r2.cloudflarestorage.com",
+  "matched_observed_video_variants": 2,
+  "source_visual_review": {
+    "source_storyboard_viewed": true,
+    "original_character_retained": true,
+    "dynamic_action_observed": true,
+    "full_character_visible": true,
+    "requires_independent_prop_mask_review": true,
+    "neutral_final_frame_requires_actual_native_check": true,
+    "generated_pastel_flower_background_to_remove": true
+  },
+  "ui_balance_observed_before_submission_cny": 11.42,
+  "displayed_price_cny": 1.5,
+  "allocated_charge_cny": 1.5,
+  "group_balance_verification": {
+    "ui_balance_before_both_submissions_cny": 11.42,
+    "ui_balance_after_both_submissions_cny": 8.42,
+    "observed_group_charge_cny": 3.0,
+    "actions": [
+      "idle_typing_work",
+      "idle_eating_rice"
+    ],
+    "successful_submissions_each": 1,
+    "displayed_price_per_action_cny": 1.5,
+    "note": "Both queued submissions saw a cached 11.42 balance before the website refreshed; no independent intermediate balance was observed. Each verified submission displayed 1.50, and the final shared balance drop is exactly 3.00."
+  }
+}

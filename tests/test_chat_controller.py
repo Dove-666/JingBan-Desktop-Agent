@@ -21,7 +21,7 @@ KEY = "local-only-controller-token"
 
 class MemorySettings:
     def __init__(self, settings=None, key=KEY):
-        self.settings = settings or ApiSettings(model="test-model")
+        self.settings = settings or ApiSettings(base_url="http://127.0.0.1:1/v1", model="test-model")
         self.key = key
         self.credential_error = False
 
@@ -65,7 +65,7 @@ class ChatControllerTests(unittest.TestCase):
         self.spin_until(lambda: QThreadPool.globalInstance().activeThreadCount() == 0)
 
     def make_controller(self, settings=None, client=None):
-        controller = ChatController(settings or MemorySettings(), client)
+        controller = ChatController(settings or MemorySettings(), client, metadata_client_factory=lambda: None)
         self.controllers.append(controller)
         return controller
 

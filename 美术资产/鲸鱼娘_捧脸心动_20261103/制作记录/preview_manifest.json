@@ -1,0 +1,59 @@
+{
+  "runtime_canvas": [
+    1024,
+    1024
+  ],
+  "runtime_frame_count": 68,
+  "runtime_fps": 12,
+  "runtime_duration_ms": 5667,
+  "preview_fixed_crop_from_full_sequence_union": [
+    166,
+    261,
+    894,
+    989
+  ],
+  "preview_dimensions": [
+    480,
+    480
+  ],
+  "per_frame_crop_or_scale": false,
+  "runtime_art_changed": false,
+  "source_is_real_generated_video": true,
+  "gif_palette": {
+    "method": "one stable global palette trained from every frame plus mouth focus",
+    "runtime_mouth_focus": [
+      420,
+      550,
+      515,
+      615
+    ],
+    "preview_mouth_focus": [
+      167,
+      190,
+      231,
+      234
+    ]
+  },
+  "files": [
+    {
+      "name": "heart_cheeks_rgba.png",
+      "bytes": 478198,
+      "sha256": "0c4d196d00ebf27d3c59bd2575851e1408137e270ae3606a33ef95a09a69a0ae"
+    },
+    {
+      "name": "idle_heart_cheeks.apng",
+      "bytes": 30424016,
+      "sha256": "7a8b7d0bd5afc7b58373fd7ba7ac51ef16d154e208968a0e4cbce39f0c7a1114"
+    },
+    {
+      "name": "idle_heart_cheeks_dark.gif",
+      "bytes": 5224385,
+      "sha256": "59a375efe8ebd05df6d88fead9cc5afab835bd7b2ee07c056e3041a043432829"
+    },
+    {
+      "name": "idle_heart_cheeks_light.gif",
+      "bytes": 5618715,
+      "sha256": "c80fc6c4db68641a0aca8b8453ed8ac90f4f29af4e453e3b5e98d4a3ef2b0a89"
+    }
+  ]
+}

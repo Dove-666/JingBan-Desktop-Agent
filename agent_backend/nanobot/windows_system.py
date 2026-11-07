@@ -1,8 +1,9 @@
 """Read-only Windows observations for a planning agent, without GUI or a shell.
 
-All directory walks inspect local metadata only. They never follow reparse
-points (including cloud placeholders), open file contents, clean files, or
-activate a program. Partial measurements are lower bounds, never freeable-byte
+Directory walks inspect local metadata and reject observed reparse/offline
+markers, including cloud placeholders. Path checks and directory opens are not
+atomic against concurrent changes. They never open file contents, clean files,
+or activate a program. Partial measurements are lower bounds, never freeable-byte
 promises. Per-call budgets bound enumerated work; task cancellation remains
 owned by the worker host even when the whole task has no duration limit.
 """
@@ -128,8 +129,8 @@ class WindowsSystem:
             stop.set()
             raise
 
-    async def inspect_disk_usage(self, drive=""):
-        return await self._call(self._inspect_disk_usage, drive=drive)
+    async def inspect_disk_usage(self, drive="", category="all"):
+        return await self._call(self._inspect_disk_usage, drive=drive, category=category)
 
     async def inspect_directory(self, path, limit=80):
         return await self._call(self._inspect_directory, path=path, limit=limit)
@@ -265,10 +266,14 @@ class WindowsSystem:
                 "denied_entries": denied, "unavailable_entries": unavailable,
                 "incomplete_reasons": sorted(reasons)}
 
-    def _inspect_disk_usage(self, drive, *, budget):
-        result = self._base()
+    def _inspect_disk_usage(self, drive, category="all", *, budget):
+        result = {**self._base(), "used_category": None, "available_categories": []}
         try:
             root = self._drive(drive)
+            definitions = list(self.categories_provider(root))
+            result["available_categories"] = [item["category"] for item in definitions]
+            if not isinstance(category, str) or category not in ["all", *result["available_categories"]]:
+                raise ObservationUnavailable("invalid_category")
             usage = self.disk_usage(root)
         except ObservationUnavailable as error:
             return {**result, "status": "unavailable", "error": error.code, "disk": None, "categories": []}
@@ -278,8 +283,11 @@ class WindowsSystem:
                       categories=[], reclaimable_bytes=None,
                       measurement="logical_file_sizes_lower_bound_not_disk_allocation_or_guaranteed_reclaimable_space",
                       scope="known_review_locations_only_not_full_drive_scan")
+        result["used_category"] = category
+        if category != "all":
+            definitions = [item for item in definitions if item["category"] == category]
         cutoff = self.wall_clock() - _WEEK
-        for definition in self.categories_provider(root):
+        for definition in definitions:
             item = {**definition, "measured_bytes": None, "older_than_7_days_bytes": None,
                     "scan_status": "not_scanned", "reclaimable_bytes": None}
             if reason := budget.reason():
@@ -312,7 +320,10 @@ class WindowsSystem:
             return {**result, "status": "unavailable", "error": "invalid_limit"}
         try:
             directory = self._path(path)
-            if not stat.S_ISDIR(self.lstat(directory).st_mode):
+            info = self.lstat(directory)
+            if _blocked_metadata(info):
+                raise ObservationUnavailable("reparse_or_offline_path")
+            if not stat.S_ISDIR(info.st_mode):
                 raise ObservationUnavailable("not_a_directory")
             reasons = set()
             with self.scandir(directory) as entries:

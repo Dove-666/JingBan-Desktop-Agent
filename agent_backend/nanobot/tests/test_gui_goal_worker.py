@@ -21,15 +21,21 @@ from test_worker import Client, PYTHON
 
 FIXTURE = r'''
 import asyncio, json, sys
+from pathlib import Path
 sys.path.insert(0, BACKEND_PATH)
 import worker
 import desktop_controls
 import windows_apps
 from gui_verification import report
-STATE = {"checked": False, "actions": 0}
+STATE = {"checked": False, "actions": 0, "parent_judges": 0}
+FIRST_PARENT_JUDGE_FAILURE = FIRST_PARENT_JUDGE_FAILURE_VALUE
+AUDIT = Path(__file__).with_name("fixture_audit.json")
+def record(value):
+    values = json.loads(AUDIT.read_text()) if AUDIT.exists() else []
+    values.append(value); AUDIT.write_text(json.dumps(values))
 class Controls:
     def invalidate(self): pass
-    async def observe(self):
+    async def observe(self, query="", offset=0, limit=120, window_ref=None):
         return json.dumps({"status":"observed","controls":[{"ref":"fixture-ref","name":"Example checkbox","state":{"checked":STATE["checked"]}}]})
     async def act(self, ref, action, value=""):
         STATE["actions"] += 1
@@ -43,23 +49,38 @@ class Bridge:
         self.config, self.options = config, options
         self.called, self.failed, self.failure_code = False, False, None
         self.last_status, self.verification = "completed", None
-        self.cached = None
+        self.cached = {}
+        self.pending_effect = False
+        self.verification_scope = "parent"
     async def close(self): pass
+    async def pause_current(self, action_id=None): return {"paused": False}
+    def resolve_uncertainty(self, verification):
+        if verification and verification["status"] == "verified": self.pending_effect = False; return True
+        return False
     def record_failure(self, code): self.failed, self.failure_code = True, code
-    async def run(self, task):
-        if self.cached is not None: return self.cached
+    async def run(self, task, *, action_id=None, subtask=None, verify_only=False):
+        key = action_id or "legacy"
+        if key in self.cached: return self.cached[key]
         self.called = True
-        passed = self.options.get("verify_only") is True and STATE["checked"]
+        self.verification_scope = "subgoal" if subtask and subtask != task else "parent"
+        record({"parent": task, "subtask": subtask, "action_id": action_id, "verify_only": verify_only})
+        if not verify_only and subtask == "repair checkbox": STATE["checked"] = True
+        passed = STATE["checked"] and (self.verification_scope == "subgoal" or "关联标签" not in task)
+        if verify_only:
+            STATE["parent_judges"] += 1
+            if FIRST_PARENT_JUDGE_FAILURE and STATE["parent_judges"] == 1: passed = False
         self.last_status = "completed" if passed else "needs_user"
         self.verification = report("verified" if passed else "failed")
-        self.cached = json.dumps({"status":self.last_status,"summary":"fixture observed result","verification":self.verification,"steps":1})
-        return self.cached
+        self.cached[key] = json.dumps({"status":self.last_status,"summary":"fixture observed result","verification":self.verification,"verification_scope": self.verification_scope,"effect_state": "confirmed", "steps":1})
+        return self.cached[key]
 class UncertainLaunch:
     def __init__(self, *args, **kwargs):
-        self.called, self.last_result = False, None
+        self.called, self.last_result, self.pending_effect = False, None, False
+    def resolve_uncertainty(self, verification): return False
     async def run(self, **kwargs):
         self.called = True
-        self.last_result = {"status":"needs_user","verified":False,"dispatched":True,"summary":"fixture unknown launch"}
+        self.pending_effect = True
+        self.last_result = {"status":"needs_user","verified":False,"dispatched":True,"effect_state":"uncertain","summary":"fixture unknown launch"}
         return json.dumps(self.last_result)
 worker.GuiBridge = Bridge
 desktop_controls.DesktopControls = Controls
@@ -70,7 +91,7 @@ asyncio.run(worker.main())
 
 @unittest.skipUnless(PYTHON.is_file() and os.name == "nt", "Windows backend environment required")
 class GuiGoalWorkerTests(unittest.TestCase):
-    def run_case(self, steps, *, task="将当前窗口里的 Example checkbox 设为勾选，并确认勾选状态。"):
+    def run_case(self, steps, *, task="将当前窗口里的 Example checkbox 设为勾选，并确认勾选状态。", first_parent_judge_failure=False):
         root = REPO / "agent_workspace"
         root.mkdir(exist_ok=True)
         workspace = Path(tempfile.mkdtemp(prefix="gui-goal-offline-", dir=root))
@@ -78,7 +99,7 @@ class GuiGoalWorkerTests(unittest.TestCase):
         client = None
         try:
             script = workspace / "fixture_worker.py"
-            script.write_text(FIXTURE.replace("BACKEND_PATH", repr(str(BACKEND))), encoding="utf-8")
+            script.write_text(FIXTURE.replace("BACKEND_PATH", repr(str(BACKEND))).replace("FIRST_PARENT_JUDGE_FAILURE_VALUE", repr(first_parent_judge_failure)), encoding="utf-8")
             client = Client(worker_path=script)
             client.send({"type": "run", "id": "gui-goal-fixture", "kind": "agent",
                 "task": task,
@@ -90,6 +111,7 @@ class GuiGoalWorkerTests(unittest.TestCase):
             self.assertEqual(result["type"], "final", result)
             self.assertEqual(model.errors, [])
             self.assertEqual(len(model.calls), len(steps))
+            self.last_audit = json.loads((workspace / "fixture_audit.json").read_text()) if (workspace / "fixture_audit.json").exists() else []
             return result, list(model.calls)
         finally:
             if client is not None:
@@ -112,7 +134,7 @@ class GuiGoalWorkerTests(unittest.TestCase):
         result, _ = self.run_case([tool("desktop_observe"),
             tool("desktop_act", ref="fixture-ref", action="check"),
             tool("desktop_verify_state", ref="fixture-ref", property="checked", expected=True),
-            tool("finish_task", status="completed"), "全部完成。"])
+            tool("finish_task", status="completed"), "全部完成。"], task="将 Example checkbox 设为勾选，并将关联标签设为 Ready。")
         self.assertEqual(result["status"], "needs_user")
         self.assertFalse(result["gui_goal_verified"])
 
@@ -148,6 +170,8 @@ class GuiGoalWorkerTests(unittest.TestCase):
     def test_explanation_still_needs_no_desktop_tools(self):
         result, _ = self.run_case(["电脑操控会先观察界面，再操作并检查结果。"], task="解释一下电脑操控原理")
         self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["completion_scope"], "answer")
+        self.assertIn("电脑操控会先观察界面", result["reply"])
         self.assertFalse(result["gui_used"])
 
     def test_uncertain_native_launch_cannot_fall_through_to_new_input(self):
@@ -156,9 +180,59 @@ class GuiGoalWorkerTests(unittest.TestCase):
             tool("desktop_observe"), tool("finish_task", status="completed"), "全部完成。"])
         self.assertEqual(result["status"], "needs_user")
         observations = [m for m in calls[-1]["messages"] if m.get("role") == "tool"]
-        self.assertTrue(any("GUI_NATIVE_LAUNCH_UNCONFIRMED" in m["content"] for m in observations))
+        self.assertTrue(any("ACTION_OUTCOME_UNCERTAIN" in m["content"] for m in observations))
         snapshots = [json.loads(m["content"]) for m in observations if m.get("name") == "desktop_observe"]
         self.assertFalse(snapshots[-1]["controls"][0]["state"]["checked"])
+
+    def test_clean_failed_goal_returns_to_planner_and_new_repair_can_complete(self):
+        result, _ = self.run_case([tool("computer_use", task="first observed attempt"),
+            tool("desktop_observe"), tool("computer_use", task="repair checkbox"),
+            tool("verify_desktop_goal"), tool("finish_task", status="completed"), "已核对完成。"])
+        self.assertEqual(result["status"], "completed", result)
+        dispatched = [call for call in self.last_audit if not call["verify_only"]]
+        self.assertEqual(len(dispatched), 2)
+        self.assertNotEqual(dispatched[0]["action_id"], dispatched[1]["action_id"])
+        self.assertEqual(dispatched[0]["parent"], dispatched[1]["parent"])
+        self.assertEqual(dispatched[1]["subtask"], "repair checkbox")
+
+    def test_subgoal_pass_never_replaces_fresh_whole_parent_verification(self):
+        result, calls = self.run_case([tool("computer_use", task="repair checkbox"),
+            tool("finish_task", status="completed"), "全部完成。"],
+            task="将 Example checkbox 设为勾选，并将关联标签设为 Ready。")
+        first = json.loads(next(item["content"] for item in calls[1]["messages"] if item.get("name") == "computer_use"))
+        self.assertEqual(first["verification"]["status"], "verified")
+        self.assertEqual(first["verification_scope"], "subgoal")
+        self.assertEqual(result["status"], "needs_user")
+        self.assertFalse(result["gui_goal_verified"])
+        self.assertTrue(any(call["verify_only"] and call["subtask"] is None for call in self.last_audit))
+
+    def test_failed_parent_judge_then_finish_auto_parent_pass_can_complete(self):
+        result, calls = self.run_case([tool("desktop_observe"),
+            tool("desktop_act", ref="fixture-ref", action="check"), tool("verify_desktop_goal"),
+            tool("desktop_observe"), tool("finish_task", status="completed"), "已保存并确认目标。"],
+            first_parent_judge_failure=True)
+        failed = next(json.loads(item["content"]) for item in calls[3]["messages"] if item.get("name") == "verify_desktop_goal")
+        self.assertEqual(failed["verification"]["status"], "failed")
+        finished = next(json.loads(item["content"]) for item in calls[-1]["messages"] if item.get("name") == "finish_task")
+        self.assertTrue(finished["accepted"], finished)
+        self.assertTrue(finished["passed"], finished)
+        self.assertEqual(result["status"], "completed", result)
+        self.assertTrue(result["gui_goal_verified"])
+        observations = [call for call in self.last_audit if call["verify_only"]]
+        self.assertEqual(len(observations), 2)
+        self.assertNotEqual(observations[0]["action_id"], observations[1]["action_id"])
+
+    def test_fresh_parent_pass_does_not_clear_unrelated_required_file_failure(self):
+        result, calls = self.run_case([tool("desktop_observe"),
+            tool("desktop_act", ref="fixture-ref", action="check"), tool("verify_desktop_goal"),
+            tool("write_file", path="../must-not-be-written-by-judge.txt", content="not authorized"),
+            tool("finish_task", status="completed"), "全部完成。"], first_parent_judge_failure=True)
+        finished = next(json.loads(item["content"]) for item in calls[-1]["messages"] if item.get("name") == "finish_task")
+        self.assertFalse(finished["accepted"], finished)
+        self.assertIn("UNRESOLVED_TOOL_FAILURE", finished["issues"])
+        self.assertIn("write_file", finished["failed_tools"])
+        self.assertNotIn("verify_desktop_goal", finished["failed_tools"])
+        self.assertEqual(result["status"], "needs_user", result)
 
 
 if __name__ == "__main__":

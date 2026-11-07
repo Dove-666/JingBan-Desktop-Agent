@@ -10,6 +10,8 @@ import re
 from PySide6.QtCore import QBuffer, QIODevice
 
 from ..api_client import ApiClient, ApiError, redact_secret
+from ..character_cards import CharacterCard
+from ..character_prompts import CHARACTER_EXPRESSION_POLICY, character_identity_prompt
 from ..emotion_policy import EMOTION_CONTEXT_PROMPT, EMOTIONS, normalize_emotion
 from .screen_observer import Observation
 from .settings import COMMENTARY_MODES
@@ -128,11 +130,14 @@ class ContextAnalyzer:
         self.client = api_client if api_client is not None else ApiClient()
 
     def analyze(self, observation: Observation, settings, api_key: str,
-                *, commentary_mode: str = "companion", requested_comment: bool = False) -> ContextEvent:
+                *, commentary_mode: str = "companion", requested_comment: bool = False,
+                character_card: CharacterCard | None = None) -> ContextEvent:
         if not isinstance(commentary_mode, str) or commentary_mode not in COMMENTARY_MODES:
             raise ApiError("configuration", "主动评论模式无效，未发起请求。")
         if not isinstance(requested_comment, bool):
             raise ApiError("configuration", "评论请求标志无效，未发起请求。")
+        if character_card is not None and not isinstance(character_card, CharacterCard):
+            raise ApiError("configuration", "角色资料无效，未发起请求。")
         if observation.blocked_reason or observation.image is None or observation.image.isNull():
             raise ApiError("privacy", "没有允许分析的画面，未发起请求。")
         buffer = QBuffer()
@@ -158,6 +163,9 @@ class ContextAnalyzer:
             prompt += COMMENTARY_PROMPTS[commentary_mode]
         if requested_comment and not camera:
             prompt += REQUESTED_COMMENT_PROMPT
+        if character_card is not None:
+            prompt = (character_identity_prompt(character_card) + CHARACTER_EXPRESSION_POLICY
+                      + prompt.replace("鲸鱼娘", "当前角色"))
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": [

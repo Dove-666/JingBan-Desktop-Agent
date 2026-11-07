@@ -11,7 +11,7 @@ import math
 from pathlib import Path
 import sys
 
-from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtCore import QBuffer, QIODevice, QObject, Signal, Qt
 from PySide6.QtGui import QImage, QImageReader, QPainter
 
 from .animation_controller import AnimationState
@@ -30,7 +30,12 @@ ANIMATIONS = {
     "idle_tail_blanket": "待机 · 尾巴小毯子",
     "idle_balloon_float": "待机 · 气球轻飘",
     "idle_proud_pose": "待机 · 得意挺胸",
-    "idle_tsundere": "待机 · 傲娇抱臂",
+    "idle_tsundere": "待机 · 傲娇",
+    "idle_sleepy": "待机 · 困倦",
+    "idle_hands_on_hips": "待机 · 叉腰小得意",
+    "idle_heart_cheeks": "待机 · 捧脸心动",
+    "idle_typing_work": "待机 · 认真打字",
+    "idle_eating_rice": "待机 · 大口扒饭",
 }
 MAX_FRAMES = 96  # At most 384 MiB of clip pixels, plus two bounded optional bridges.
 MAX_TRANSITION_MS = 1000
@@ -51,6 +56,7 @@ class ClipManifest:
     anchor: tuple[float, float]
     transition_ms: int = 0
     static_pose_idle: bool = False
+    return_transition: str = "crossfade"
 
     @property
     def duration(self) -> float:
@@ -98,6 +104,9 @@ def read_manifest(directory: Path, name: str) -> ClipManifest:
         transition_ms = data.get("transition_ms", 0)
         if type(transition_ms) is not int or not 0 <= transition_ms <= MAX_TRANSITION_MS:
             raise ValueError
+        return_transition = data.get("return_transition", "crossfade")
+        if return_transition not in {"crossfade", "fade"}:
+            raise ValueError
         anchor = data.get("anchor", {"x": .5, "y": .9375})
         values = (anchor["x"], anchor["y"])
         if any(type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 1 for v in values):
@@ -127,7 +136,7 @@ def read_manifest(directory: Path, name: str) -> ClipManifest:
                 raise FrameAssetError("动画帧不完整，尚未就绪；请补齐 manifest 列出的 PNG。")
             paths.append(frame)
         return ClipManifest(name, tuple(paths), float(fps), loop, completion, values, transition_ms,
-                            origin.get("kind") == "static_pose_idle")
+                            origin.get("kind") == "static_pose_idle", return_transition)
     except FrameAssetError:
         raise
     except (OSError, ValueError, TypeError, KeyError, OverflowError):
@@ -137,11 +146,35 @@ def read_manifest(directory: Path, name: str) -> ClipManifest:
 def load_clip(directory: Path, name: str) -> LoadedClip:
     manifest = read_manifest(directory, name)
     images = []
+    images_by_payload = {}
+    payload_limit = 1024 * 1024 * 4
+    cached_payload_bytes = 0
     for path in manifest.paths:
-        reader = QImageReader(str(path), b"png")
-        if reader.size().width() != 1024 or reader.size().height() != 1024:
-            raise FrameAssetError("动画帧必须统一为 1024 × 1024，不能逐帧裁切。")
-        image = reader.read()
+        payload = None
+        try:
+            if "@" not in str(path) and path.stat().st_size <= payload_limit:
+                with path.open("rb") as stream:
+                    payload = stream.read(payload_limit + 1)
+                if len(payload) > payload_limit:
+                    payload = None
+        except OSError:
+            pass  # Keep the original reader's size/decode failure behavior.
+        buffer = QBuffer()
+        if payload is not None:
+            buffer.setData(payload)
+            buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+            reader = QImageReader(buffer, b"png")
+        else:
+            reader = QImageReader(str(path), b"png")
+        try:
+            if reader.size().width() != 1024 or reader.size().height() != 1024:
+                raise FrameAssetError("动画帧必须统一为 1024 × 1024，不能逐帧裁切。")
+            if payload is not None and payload in images_by_payload:
+                image = QImage(images_by_payload[payload])
+            else:
+                image = reader.read()
+        finally:
+            buffer.close()
         if image.isNull() or not image.hasAlphaChannel():
             raise FrameAssetError("动画 PNG 无法读取或缺少透明通道，尚未就绪。")
         if any(image.pixelColor(x, y).alpha() != 0 for x, y in ((0, 0), (1023, 0), (0, 1023), (1023, 1023))):
@@ -149,6 +182,10 @@ def load_clip(directory: Path, name: str) -> LoadedClip:
         image = image.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
         if not any(image.constBits()[3 if sys.byteorder == "little" else 0::4]):
             raise FrameAssetError("动画帧完全透明，没有可显示的角色。")
+        if (payload is not None and payload not in images_by_payload
+                and cached_payload_bytes + len(payload) <= payload_limit):
+            images_by_payload[payload] = QImage(image)
+            cached_payload_bytes += len(payload)
         images.append(image)
     return LoadedClip(manifest, tuple(images))
 
@@ -207,6 +244,69 @@ def prepare_transitions(clip: LoadedClip, source: QImage) -> LoadedClip:
     return replace(clip, static_frame=baseline,
                    entry_frames=(() if baseline == clip.frames[0] else
                                  transition_frames(baseline, clip.frames[0], clip.manifest.transition_ms)))
+
+
+def prepare_idle_duration(clip: LoadedClip, seconds: float) -> LoadedClip:
+    """Fit a full automatic idle, including its bridges, to a shared duration.
+
+    Static poses gain shared references to their held image. Real footage keeps
+    every original frame and changes only its playback clock, so its final
+    action is retained. This operates on detached runtime metadata only.
+    """
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds):
+        raise ValueError("待机时长必须是有限秒数。")
+    manifest = clip.manifest
+    bridge_seconds = manifest.transition_ms / 1000
+    entry_seconds = bridge_seconds if clip.entry_frames else 0.0
+    exit_seconds = (bridge_seconds if clip.static_frame is not None
+                    and clip.frames[-1] != clip.static_frame else 0.0)
+    content_seconds = seconds - entry_seconds - exit_seconds
+    if content_seconds <= 0:
+        raise ValueError("待机时长必须大于进入和恢复过渡的总时长。")
+    frames, paths = clip.frames, manifest.paths
+    if manifest.static_pose_idle and content_seconds > manifest.duration:
+        extra_count = math.ceil((content_seconds - manifest.duration) * manifest.fps)
+        midpoint = len(frames) // 2
+        frames = frames[:midpoint] + (frames[midpoint],) * extra_count + frames[midpoint:]
+        paths = paths[:midpoint] + (paths[midpoint],) * extra_count + paths[midpoint:]
+    return replace(clip, frames=frames, manifest=replace(
+        manifest, paths=paths, fps=len(frames) / content_seconds,
+    ))
+
+
+def checked_loop_segment(segment: tuple[int, int], count: int) -> tuple[int, int]:
+    """Validate a zero-based, half-open loop range before replacing playback."""
+    if (not isinstance(segment, tuple) or len(segment) != 2
+            or any(type(value) is not int for value in segment)):
+        raise FrameAssetError("循环范围必须提供两个整数帧位置。")
+    start, stop = segment
+    if not 0 <= start < stop <= count or stop - start < 2:
+        raise FrameAssetError("循环范围必须位于素材内，并且至少包含两帧。")
+    return start, stop
+
+
+def prepare_loop_segment(clip: LoadedClip, segment: tuple[int, int]) -> LoadedClip:
+    """Cache a persistent action's middle section and a short closing blend.
+
+    Entry and stop transitions are prepared separately. The loop contains only
+    the selected action frames, so props remain present between cycles.
+    """
+    start, stop = checked_loop_segment(segment, len(clip.frames))
+    manifest = clip.manifest
+    frames, paths = clip.frames[start:stop], manifest.paths[start:stop]
+    if manifest.transition_ms and frames[-1] != frames[0]:
+        count = max(1, round(manifest.transition_ms * manifest.fps / 1000))
+        if len(frames) + count > MAX_FRAMES:
+            raise FrameAssetError("循环帧与衔接帧过多，请缩小循环范围。")
+        bridge = transition_frames(frames[-1], frames[0], manifest.transition_ms)
+        seam = tuple(bridge[round(index * (len(bridge) - 1) / (count + 1))]
+                     for index in range(1, count + 1))
+        frames += seam
+        # Runtime blend slots retain a trusted source reference, matching the
+        # existing static-pose smoothing convention. No frame files are written.
+        paths += (paths[0],) * len(seam)
+    return replace(clip, manifest=replace(manifest, paths=paths, loop=True, completion="idle"),
+                   frames=frames, entry_frames=(), static_frame=None)
 
 
 class ClipClock:
@@ -298,8 +398,15 @@ class FrameAnimationPlayer(QObject):
         self.name, self.status = name, text
         self.status_changed.emit(name, text)
 
-    def play(self, name: str, *, once: bool = False) -> bool:
+    def play(self, name: str, *, once: bool = False, duration_seconds: float | None = None,
+             loop_segment: tuple[int, int] | None = None) -> bool:
         if self._closed:
+            return False
+        if duration_seconds is not None and (
+                not once or isinstance(duration_seconds, bool)
+                or not isinstance(duration_seconds, (int, float))
+                or not math.isfinite(duration_seconds) or duration_seconds <= 0):
+            self._status(self.name, "统一待机时长仅用于单次播放，且必须为正的有限秒数。")
             return False
         if self._loading:
             self._status(self.name, "上一组素材仍在后台验证，请稍候重试；不会重复排队占用内存。")
@@ -308,9 +415,16 @@ class FrameAnimationPlayer(QObject):
             self._status(self.name, "正在拖动或平滑恢复，素材播放保持暂停；角色恢复后可重试。")
             return False
         try:
-            read_manifest(self.directory, name)
+            manifest = read_manifest(self.directory, name)
+            if loop_segment is not None:
+                if once or duration_seconds is not None:
+                    raise FrameAssetError("持续循环与单次定时播放不能同时选择。")
+                checked_loop_segment(loop_segment, len(manifest.paths))
         except FrameAssetError as exc:
             self._status(name, str(exc))
+            return False
+        if duration_seconds is not None and duration_seconds <= 2 * manifest.transition_ms / 1000:
+            self._status(self.name, "待机时长需要为进入和恢复过渡预留足够时间。")
             return False
         self.stop()
         self._generation += 1
@@ -323,12 +437,19 @@ class FrameAnimationPlayer(QObject):
         source = self.pet._source.toImage().copy()
 
         def prepare():
-            clip = smooth_static_idle(load_clip(self.directory, name))
+            clip = load_clip(self.directory, name)
+            if loop_segment is not None:
+                clip = prepare_loop_segment(clip, loop_segment)
+            else:
+                clip = smooth_static_idle(clip)
             if once:
                 # Automatic idle actions finish once, without rewriting the
                 # original loop/hold settings used by manual asset previews.
                 clip = replace(clip, manifest=replace(clip.manifest, loop=False, completion="idle"))
-            return prepare_transitions(clip, source)
+            clip = prepare_transitions(clip, source)
+            if duration_seconds is not None:
+                clip = prepare_idle_duration(clip, duration_seconds)
+            return clip
 
         self.runner.submit(prepare, lambda result, error: self._loaded(generation, name, result, error))
         return True
@@ -422,7 +543,13 @@ class FrameAnimationPlayer(QObject):
             at_static = (self._clip.static_frame is not None
                          and self._active_frames[self._shown_index] == self._clip.static_frame
                          and (self.pet.pos() - self.pet.frame_home_position).manhattanLength() <= 1)
+            overflow = max(0.0, self._clock.elapsed - self._clip.manifest.duration)
             self.stop(smooth=bool(self._clip.manifest.transition_ms) and not at_static)
+            if self._phase == "exit" and overflow:
+                # A delayed tick can cross both the clip and exit boundary.
+                # Keep the same elapsed-time budget instead of extending the
+                # idle by another refresh interval.
+                self.advance(overflow)
         elif self._clock.finished and "末帧" not in self.status:
             self._status(self.name, "动画已结束，保持末帧；点击停止可恢复静态角色。")
 
@@ -468,7 +595,8 @@ class FrameAnimationPlayer(QObject):
             current = self._active_frames[self._shown_index]
             self._exit_home_index = None
             self._exit_home_moved = False
-            if self.pet.pos() != self.pet.frame_home_position:
+            needs_relocation = self.pet.pos() != self.pet.frame_home_position
+            if needs_relocation or self._clip.manifest.return_transition == "fade":
                 # Interrupting an edge-avoiding pose must not drag its restored
                 # static destination across the desktop. Fade out where it is,
                 # relocate while fully transparent, then fade in at its home.
@@ -479,7 +607,9 @@ class FrameAnimationPlayer(QObject):
                 fade_in = transition_frames(blank, self._clip.static_frame,
                                              self._clip.manifest.transition_ms-half)
                 self._active_frames = fade_out + fade_in[1:]
-                self._exit_home_index = len(fade_out)-1
+                # A large pose change may opt into a simple fade-through even
+                # at home. Relocate only when clearance actually moved the pet.
+                self._exit_home_index = len(fade_out)-1 if needs_relocation else None
             else:
                 self._active_frames = transition_frames(current, self._clip.static_frame,
                                                         self._clip.manifest.transition_ms)

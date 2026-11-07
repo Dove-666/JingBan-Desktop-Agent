@@ -1,0 +1,8989 @@
+{
+  "source_video_sha256": "1beb638dea177f0adec6436ca755dc4f0c0feb8b99f28b8927f3fa9b95d65071",
+  "all_visible_rgb_exact_source": true,
+  "initial_sam2_preserved": "E:\\github\\AURA-Desktop-Agent\\artifacts\\idle_hands_on_hips_20261103\\pipeline\\run_v1",
+  "native_frames": [
+    {
+      "native_index": 0,
+      "alpha_increased_pixels": 6811,
+      "alpha_decreased_pixels": 5318,
+      "stocking_components": [
+        [
+          20,
+          5192,
+          626.9140986132511,
+          1247.038713405239
+        ],
+        [
+          21,
+          5086,
+          697.9752261108927,
+          1247.904443570586
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 262
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 415
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 252
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8653
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8713
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 1,
+      "alpha_increased_pixels": 4440,
+      "alpha_decreased_pixels": 4204,
+      "stocking_components": [
+        [
+          21,
+          5197,
+          626.9694054262075,
+          1247.053107562055
+        ],
+        [
+          22,
+          5088,
+          698.0062893081761,
+          1247.8938679245284
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 265
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 414
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 253
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8648
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8717
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 2,
+      "alpha_increased_pixels": 4304,
+      "alpha_decreased_pixels": 4096,
+      "stocking_components": [
+        [
+          21,
+          5195,
+          626.9905678537054,
+          1247.0217516843118
+        ],
+        [
+          22,
+          5092,
+          698.0166928515318,
+          1247.8175569520818
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 411
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8654
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8711
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 3,
+      "alpha_increased_pixels": 4572,
+      "alpha_decreased_pixels": 4110,
+      "stocking_components": [
+        [
+          21,
+          5192,
+          626.9888289676426,
+          1247.0404468412944
+        ],
+        [
+          22,
+          5090,
+          698.009626719057,
+          1247.786836935167
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8655
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8711
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 4,
+      "alpha_increased_pixels": 4503,
+      "alpha_decreased_pixels": 4121,
+      "stocking_components": [
+        [
+          21,
+          5190,
+          627.0163776493256,
+          1247.0761078998073
+        ],
+        [
+          22,
+          5086,
+          697.9929217459694,
+          1247.7467558002359
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8655
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8710
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 5,
+      "alpha_increased_pixels": 3832,
+      "alpha_decreased_pixels": 4168,
+      "stocking_components": [
+        [
+          20,
+          5185,
+          627.0032786885246,
+          1247.1313404050145
+        ],
+        [
+          21,
+          5080,
+          697.9374015748032,
+          1247.7992125984251
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8656
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8710
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 6,
+      "alpha_increased_pixels": 3397,
+      "alpha_decreased_pixels": 4180,
+      "stocking_components": [
+        [
+          20,
+          5175,
+          627.0202898550724,
+          1247.199033816425
+        ],
+        [
+          21,
+          5077,
+          697.9229860153634,
+          1247.8436084301752
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1088
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8656
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8704
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 7,
+      "alpha_increased_pixels": 3673,
+      "alpha_decreased_pixels": 4088,
+      "stocking_components": [
+        [
+          20,
+          5180,
+          627.0260617760617,
+          1247.172972972973
+        ],
+        [
+          21,
+          5076,
+          697.9355791962175,
+          1247.828802206462
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8662
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8700
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 8,
+      "alpha_increased_pixels": 3822,
+      "alpha_decreased_pixels": 4085,
+      "stocking_components": [
+        [
+          20,
+          5181,
+          627.0306890561668,
+          1247.1829762594093
+        ],
+        [
+          25,
+          5075,
+          697.9400985221675,
+          1247.8206896551724
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8664
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8693
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 9,
+      "alpha_increased_pixels": 3938,
+      "alpha_decreased_pixels": 4057,
+      "stocking_components": [
+        [
+          21,
+          5179,
+          627.0229774087661,
+          1247.203514191929
+        ],
+        [
+          22,
+          5078,
+          697.9086254430879,
+          1247.7900748326113
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8672
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8689
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 10,
+      "alpha_increased_pixels": 3662,
+      "alpha_decreased_pixels": 4118,
+      "stocking_components": [
+        [
+          21,
+          5175,
+          627.032657004831,
+          1247.2459903381643
+        ],
+        [
+          22,
+          5085,
+          697.8782694198624,
+          1247.7612586037365
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8677
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8677
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 11,
+      "alpha_increased_pixels": 3755,
+      "alpha_decreased_pixels": 4033,
+      "stocking_components": [
+        [
+          21,
+          5175,
+          627.032657004831,
+          1247.2459903381643
+        ],
+        [
+          22,
+          5086,
+          697.8580416830515,
+          1247.7544239087692
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8679
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8673
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 12,
+      "alpha_increased_pixels": 3775,
+      "alpha_decreased_pixels": 4025,
+      "stocking_components": [
+        [
+          20,
+          5174,
+          627.0469655972169,
+          1247.243138770777
+        ],
+        [
+          21,
+          5084,
+          697.838512981904,
+          1247.7435090479937
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 415
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8686
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8669
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 13,
+      "alpha_increased_pixels": 4535,
+      "alpha_decreased_pixels": 4184,
+      "stocking_components": [
+        [
+          22,
+          5179,
+          627.1517667503379,
+          1247.2114307781426
+        ],
+        [
+          23,
+          5078,
+          697.6994879873967,
+          1247.7589602205592
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 264
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1089
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8685
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8645
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 14,
+      "alpha_increased_pixels": 4793,
+      "alpha_decreased_pixels": 4150,
+      "stocking_components": [
+        [
+          22,
+          5175,
+          627.2233816425121,
+          1247.2127536231883
+        ],
+        [
+          23,
+          5068,
+          697.5980662983425,
+          1247.7677584846092
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            403,
+            931
+          ],
+          "component_pixels": 259
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 410
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1050,
+            338,
+            1089
+          ],
+          "component_pixels": 253
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8740
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8634
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 15,
+      "alpha_increased_pixels": 5287,
+      "alpha_decreased_pixels": 4054,
+      "stocking_components": [
+        [
+          18,
+          5092,
+          697.3383739198744,
+          1247.4734878240376
+        ],
+        [
+          21,
+          5157,
+          627.3567965871631,
+          1247.367073880163
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            402,
+            932
+          ],
+          "component_pixels": 259
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 408
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1050,
+            339,
+            1089
+          ],
+          "component_pixels": 251
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8777
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8617
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 16,
+      "alpha_increased_pixels": 5669,
+      "alpha_decreased_pixels": 3651,
+      "stocking_components": [
+        [
+          19,
+          5068,
+          627.922454617206,
+          1248.1379242304656
+        ],
+        [
+          21,
+          4999,
+          696.370874174835,
+          1248.365073014603
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            894,
+            403,
+            935
+          ],
+          "component_pixels": 252
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            971,
+            909
+          ],
+          "component_pixels": 419
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            323,
+            1053,
+            339,
+            1092
+          ],
+          "component_pixels": 250
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9088
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8222
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 17,
+      "alpha_increased_pixels": 4918,
+      "alpha_decreased_pixels": 3424,
+      "stocking_components": [
+        [
+          12,
+          5035,
+          694.9569016881827,
+          1248.2472691161868
+        ],
+        [
+          18,
+          4986,
+          628.5383072603289,
+          1249.0675892498998
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            896,
+            404,
+            937
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            856,
+            972,
+            910
+          ],
+          "component_pixels": 427
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            324,
+            1055,
+            340,
+            1094
+          ],
+          "component_pixels": 248
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9413
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7798
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 18,
+      "alpha_increased_pixels": 4345,
+      "alpha_decreased_pixels": 3323,
+      "stocking_components": [
+        [
+          5,
+          5152,
+          694.1092779503106,
+          1246.913043478261
+        ],
+        [
+          8,
+          5038,
+          628.988090512108,
+          1248.659388646288
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            389,
+            898,
+            405,
+            940
+          ],
+          "component_pixels": 263
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            857,
+            972,
+            911
+          ],
+          "component_pixels": 428
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            325,
+            1057,
+            341,
+            1097
+          ],
+          "component_pixels": 254
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9664
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7284
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 19,
+      "alpha_increased_pixels": 3207,
+      "alpha_decreased_pixels": 3010,
+      "stocking_components": [
+        [
+          8,
+          4996,
+          692.8951160928743,
+          1248.1126901521218
+        ],
+        [
+          11,
+          4873,
+          629.6098912374307,
+          1250.1690950133388
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            389,
+            900,
+            405,
+            942
+          ],
+          "component_pixels": 267
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            859,
+            972,
+            912
+          ],
+          "component_pixels": 427
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            326,
+            1059,
+            342,
+            1099
+          ],
+          "component_pixels": 271
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9876
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6962
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 20,
+      "alpha_increased_pixels": 1129,
+      "alpha_decreased_pixels": 2862,
+      "stocking_components": [
+        [
+          11,
+          9482,
+          661.1851929972579,
+          1250.7433031006117
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            389,
+            902,
+            405,
+            944
+          ],
+          "component_pixels": 269
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            863,
+            972,
+            917
+          ],
+          "component_pixels": 443
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            327,
+            1063,
+            343,
+            1104
+          ],
+          "component_pixels": 270
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10277
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6268
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 21,
+      "alpha_increased_pixels": 51,
+      "alpha_decreased_pixels": 2748,
+      "stocking_components": [
+        [
+          11,
+          9245,
+          660.9328285559762,
+          1251.7693888588426
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            903,
+            405,
+            945
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            865,
+            971,
+            919
+          ],
+          "component_pixels": 444
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            327,
+            1064,
+            344,
+            1105
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10481
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 5953
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 22,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2782,
+      "stocking_components": [
+        [
+          11,
+          9077,
+          661.0795416987992,
+          1252.476038338658
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            903,
+            403,
+            945
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            869,
+            969,
+            922
+          ],
+          "component_pixels": 446
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            327,
+            1065,
+            344,
+            1107
+          ],
+          "component_pixels": 293
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10648
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 5763
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 23,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2816,
+      "stocking_components": [
+        [
+          10,
+          8953,
+          661.0982910756171,
+          1252.989835809226
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            903,
+            401,
+            944
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            872,
+            967,
+            925
+          ],
+          "component_pixels": 449
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            326,
+            1065,
+            343,
+            1107
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10738
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 5716
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 24,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2866,
+      "stocking_components": [
+        [
+          11,
+          8923,
+          661.0610781127424,
+          1253.0759834136502
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            383,
+            900,
+            400,
+            942
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            945,
+            873,
+            964,
+            928
+          ],
+          "component_pixels": 444
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            324,
+            1065,
+            340,
+            1106
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10746
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 5840
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 25,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2818,
+      "stocking_components": [
+        [
+          9,
+          8952,
+          661.1064566577302,
+          1252.96972743521
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            381,
+            898,
+            398,
+            940
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            876,
+            962,
+            929
+          ],
+          "component_pixels": 440
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            320,
+            1063,
+            336,
+            1104
+          ],
+          "component_pixels": 287
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10681
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6084
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 26,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2861,
+      "stocking_components": [
+        [
+          9,
+          9029,
+          661.2205116845719,
+          1252.6260936980839
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            895,
+            396,
+            937
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            876,
+            960,
+            929
+          ],
+          "component_pixels": 441
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            317,
+            1061,
+            332,
+            1101
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10541
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6504
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 27,
+      "alpha_increased_pixels": 0,
+      "alpha_decreased_pixels": 2982,
+      "stocking_components": [
+        [
+          7,
+          9199,
+          661.2927492118708,
+          1251.8830307642136
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            378,
+            892,
+            395,
+            934
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            876,
+            959,
+            926
+          ],
+          "component_pixels": 422
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1056,
+            330,
+            1096
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10355
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7035
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 28,
+      "alpha_increased_pixels": 241,
+      "alpha_decreased_pixels": 2875,
+      "stocking_components": [
+        [
+          10,
+          9441,
+          661.3941319775447,
+          1250.7971613176571
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            886,
+            396,
+            929
+          ],
+          "component_pixels": 285
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            874,
+            959,
+            917
+          ],
+          "component_pixels": 353
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            309,
+            1051,
+            325,
+            1090
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 10026
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7826
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 29,
+      "alpha_increased_pixels": 459,
+      "alpha_decreased_pixels": 3199,
+      "stocking_components": [
+        [
+          11,
+          9641,
+          661.4537911005083,
+          1249.7610206410122
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            883,
+            396,
+            926
+          ],
+          "component_pixels": 298
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            943,
+            873,
+            959,
+            911
+          ],
+          "component_pixels": 299
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            306,
+            1045,
+            324,
+            1085
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9711
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8647
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 30,
+      "alpha_increased_pixels": 1690,
+      "alpha_decreased_pixels": 3622,
+      "stocking_components": [
+        [
+          6,
+          9858,
+          661.6637248934875,
+          1248.5414891458713
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            378,
+            881,
+            397,
+            924
+          ],
+          "component_pixels": 297
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            870,
+            961,
+            905
+          ],
+          "component_pixels": 258
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            303,
+            1041,
+            321,
+            1080
+          ],
+          "component_pixels": 275
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9407
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9504
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 31,
+      "alpha_increased_pixels": 3400,
+      "alpha_decreased_pixels": 3648,
+      "stocking_components": [
+        [
+          3,
+          5190,
+          694.9362235067438,
+          1245.899421965318
+        ],
+        [
+          5,
+          4976,
+          628.4959807073955,
+          1248.209807073955
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            879,
+            398,
+            922
+          ],
+          "component_pixels": 295
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            946,
+            867,
+            963,
+            897
+          ],
+          "component_pixels": 216
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            302,
+            1035,
+            321,
+            1075
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9089
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10329
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 32,
+      "alpha_increased_pixels": 3698,
+      "alpha_decreased_pixels": 3594,
+      "stocking_components": [
+        [
+          3,
+          5316,
+          696.3037998495109,
+          1244.5927389014296
+        ],
+        [
+          6,
+          4966,
+          627.9309303262182,
+          1248.4935561820378
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            381,
+            877,
+            400,
+            920
+          ],
+          "component_pixels": 296
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            865,
+            965,
+            893
+          ],
+          "component_pixels": 190
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            302,
+            1031,
+            322,
+            1071
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8763
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 11023
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 33,
+      "alpha_increased_pixels": 2355,
+      "alpha_decreased_pixels": 4559,
+      "stocking_components": [
+        [
+          3,
+          5454,
+          697.4902823615695,
+          1243.2390905757243
+        ],
+        [
+          5,
+          5073,
+          627.0975753991721,
+          1247.5570668243643
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            383,
+            876,
+            401,
+            919
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            862,
+            967,
+            889
+          ],
+          "component_pixels": 181
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            303,
+            1028,
+            324,
+            1069
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8437
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 11595
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 34,
+      "alpha_increased_pixels": 1429,
+      "alpha_decreased_pixels": 4534,
+      "stocking_components": [
+        [
+          4,
+          5538,
+          698.1719032141567,
+          1242.411339833875
+        ],
+        [
+          9,
+          5122,
+          626.2020695041,
+          1247.1483795392426
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            875,
+            403,
+            918
+          ],
+          "component_pixels": 293
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            858,
+            970,
+            885
+          ],
+          "component_pixels": 183
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            306,
+            1026,
+            327,
+            1066
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8119
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 12005
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 35,
+      "alpha_increased_pixels": 1756,
+      "alpha_decreased_pixels": 4129,
+      "stocking_components": [
+        [
+          3,
+          5712,
+          699.6790966386554,
+          1240.550245098039
+        ],
+        [
+          9,
+          5157,
+          625.2819468683343,
+          1246.6957533449681
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            875,
+            405,
+            918
+          ],
+          "component_pixels": 294
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            955,
+            855,
+            973,
+            883
+          ],
+          "component_pixels": 196
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            309,
+            1026,
+            330,
+            1065
+          ],
+          "component_pixels": 290
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7959
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 12202
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 36,
+      "alpha_increased_pixels": 1671,
+      "alpha_decreased_pixels": 4278,
+      "stocking_components": [
+        [
+          3,
+          5795,
+          700.2624676445212,
+          1239.648662640207
+        ],
+        [
+          7,
+          5232,
+          624.3551223241591,
+          1246.0907874617737
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            389,
+            876,
+            406,
+            918
+          ],
+          "component_pixels": 290
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            957,
+            853,
+            976,
+            887
+          ],
+          "component_pixels": 261
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1026,
+            334,
+            1066
+          ],
+          "component_pixels": 298
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7971
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 12166
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 37,
+      "alpha_increased_pixels": 1484,
+      "alpha_decreased_pixels": 4588,
+      "stocking_components": [
+        [
+          3,
+          5854,
+          700.9989750597881,
+          1239.1593782029381
+        ],
+        [
+          6,
+          5238,
+          623.8297059946544,
+          1245.958571974036
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            391,
+            876,
+            408,
+            919
+          ],
+          "component_pixels": 291
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            958,
+            852,
+            978,
+            891
+          ],
+          "component_pixels": 337
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            319,
+            1029,
+            339,
+            1069
+          ],
+          "component_pixels": 288
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8099
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 11896
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 38,
+      "alpha_increased_pixels": 1695,
+      "alpha_decreased_pixels": 4699,
+      "stocking_components": [
+        [
+          3,
+          5853,
+          701.4136340338288,
+          1239.3827097215103
+        ],
+        [
+          6,
+          5244,
+          623.6104118993135,
+          1245.95823798627
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            877,
+            409,
+            921
+          ],
+          "component_pixels": 296
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            958,
+            851,
+            979,
+            895
+          ],
+          "component_pixels": 393
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            323,
+            1032,
+            343,
+            1073
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8246
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 11475
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 39,
+      "alpha_increased_pixels": 2947,
+      "alpha_decreased_pixels": 4624,
+      "stocking_components": [
+        [
+          3,
+          5799,
+          701.5718227280565,
+          1239.66097603035
+        ],
+        [
+          6,
+          5252,
+          623.5889185072353,
+          1245.8471058644327
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            879,
+            408,
+            922
+          ],
+          "component_pixels": 288
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            958,
+            850,
+            979,
+            899
+          ],
+          "component_pixels": 424
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            327,
+            1037,
+            346,
+            1077
+          ],
+          "component_pixels": 275
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8467
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10860
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 40,
+      "alpha_increased_pixels": 2518,
+      "alpha_decreased_pixels": 4691,
+      "stocking_components": [
+        [
+          3,
+          5831,
+          701.7792831418282,
+          1239.3316755273538
+        ],
+        [
+          6,
+          5248,
+          623.5905106707316,
+          1245.8027820121952
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            879,
+            408,
+            922
+          ],
+          "component_pixels": 290
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            957,
+            850,
+            978,
+            901
+          ],
+          "component_pixels": 438
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            331,
+            1042,
+            348,
+            1082
+          ],
+          "component_pixels": 288
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8597
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10228
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 41,
+      "alpha_increased_pixels": 2147,
+      "alpha_decreased_pixels": 4754,
+      "stocking_components": [
+        [
+          3,
+          5802,
+          701.7511203033437,
+          1239.5177524991382
+        ],
+        [
+          6,
+          5247,
+          623.589289117591,
+          1245.7672955974842
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            391,
+            879,
+            407,
+            922
+          ],
+          "component_pixels": 293
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            955,
+            850,
+            976,
+            903
+          ],
+          "component_pixels": 442
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            334,
+            1045,
+            350,
+            1085
+          ],
+          "component_pixels": 276
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8708
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9662
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 42,
+      "alpha_increased_pixels": 1997,
+      "alpha_decreased_pixels": 4754,
+      "stocking_components": [
+        [
+          3,
+          5803,
+          701.7546096846459,
+          1239.4861278648975
+        ],
+        [
+          6,
+          5241,
+          623.5684029765312,
+          1245.8017553901927
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            877,
+            406,
+            922
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            852,
+            975,
+            905
+          ],
+          "component_pixels": 453
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            336,
+            1047,
+            351,
+            1088
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8753
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9138
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 43,
+      "alpha_increased_pixels": 1554,
+      "alpha_decreased_pixels": 4781,
+      "stocking_components": [
+        [
+          3,
+          5839,
+          701.8518581948964,
+          1239.1996917280355
+        ],
+        [
+          6,
+          5245,
+          623.5653002859866,
+          1245.7597712106767
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            877,
+            404,
+            921
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            853,
+            972,
+            906
+          ],
+          "component_pixels": 454
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            336,
+            1049,
+            350,
+            1090
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8743
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8645
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 44,
+      "alpha_increased_pixels": 1364,
+      "alpha_decreased_pixels": 4794,
+      "stocking_components": [
+        [
+          3,
+          5831,
+          701.8578288458241,
+          1239.2754244554965
+        ],
+        [
+          5,
+          5245,
+          623.5559580552907,
+          1245.7483317445185
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            878,
+            400,
+            920
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            949,
+            854,
+            970,
+            907
+          ],
+          "component_pixels": 451
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            334,
+            1049,
+            349,
+            1091
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8668
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8305
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 45,
+      "alpha_increased_pixels": 1141,
+      "alpha_decreased_pixels": 4758,
+      "stocking_components": [
+        [
+          3,
+          5819,
+          701.8049493040041,
+          1239.396288021997
+        ],
+        [
+          5,
+          5245,
+          623.559199237369,
+          1245.726596758818
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            874,
+            399,
+            918
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            946,
+            856,
+            967,
+            909
+          ],
+          "component_pixels": 442
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            331,
+            1049,
+            345,
+            1091
+          ],
+          "component_pixels": 292
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8530
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8029
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 46,
+      "alpha_increased_pixels": 1454,
+      "alpha_decreased_pixels": 4704,
+      "stocking_components": [
+        [
+          3,
+          5795,
+          701.7765314926661,
+          1239.497842968076
+        ],
+        [
+          5,
+          5245,
+          623.5599618684462,
+          1245.701620591039
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            873,
+            396,
+            917
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            857,
+            964,
+            911
+          ],
+          "component_pixels": 439
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            326,
+            1047,
+            341,
+            1090
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8353
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7864
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 47,
+      "alpha_increased_pixels": 1743,
+      "alpha_decreased_pixels": 4710,
+      "stocking_components": [
+        [
+          3,
+          5823,
+          701.8516228748068,
+          1239.2900566718185
+        ],
+        [
+          5,
+          5242,
+          623.5814574589851,
+          1245.7203357497137
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            873,
+            393,
+            914
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            859,
+            961,
+            912
+          ],
+          "component_pixels": 430
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1048,
+            335,
+            1089
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8143
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7756
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 48,
+      "alpha_increased_pixels": 1611,
+      "alpha_decreased_pixels": 4700,
+      "stocking_components": [
+        [
+          3,
+          5817,
+          701.8745057589823,
+          1239.3653085783048
+        ],
+        [
+          6,
+          5238,
+          623.5956471935854,
+          1245.7382588774342
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            374,
+            871,
+            391,
+            912
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            941,
+            860,
+            959,
+            914
+          ],
+          "component_pixels": 426
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            317,
+            1045,
+            330,
+            1086
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7980
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7804
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 49,
+      "alpha_increased_pixels": 1787,
+      "alpha_decreased_pixels": 4645,
+      "stocking_components": [
+        [
+          3,
+          5812,
+          701.8109084652443,
+          1239.4205092911218
+        ],
+        [
+          5,
+          5235,
+          623.6017191977078,
+          1245.7505253104107
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            373,
+            868,
+            391,
+            910
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            940,
+            861,
+            958,
+            915
+          ],
+          "component_pixels": 422
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            311,
+            1042,
+            325,
+            1081
+          ],
+          "component_pixels": 272
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7831
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8041
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 50,
+      "alpha_increased_pixels": 3034,
+      "alpha_decreased_pixels": 4528,
+      "stocking_components": [
+        [
+          3,
+          5800,
+          701.7486206896551,
+          1239.5222413793103
+        ],
+        [
+          5,
+          5233,
+          623.6216319510797,
+          1245.7571182877891
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            371,
+            866,
+            391,
+            909
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            939,
+            861,
+            957,
+            916
+          ],
+          "component_pixels": 419
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            306,
+            1038,
+            320,
+            1078
+          ],
+          "component_pixels": 257
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7722
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8307
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 51,
+      "alpha_increased_pixels": 2327,
+      "alpha_decreased_pixels": 4555,
+      "stocking_components": [
+        [
+          3,
+          5785,
+          701.6342264477096,
+          1239.7571305099395
+        ],
+        [
+          5,
+          5229,
+          623.6571046089118,
+          1245.7412507171543
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            371,
+            865,
+            390,
+            908
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            940,
+            862,
+            957,
+            916
+          ],
+          "component_pixels": 414
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            301,
+            1034,
+            316,
+            1074
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7690
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8517
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 52,
+      "alpha_increased_pixels": 1894,
+      "alpha_decreased_pixels": 4594,
+      "stocking_components": [
+        [
+          3,
+          5773,
+          701.5627923090248,
+          1239.8834228304174
+        ],
+        [
+          5,
+          5231,
+          623.6119288854903,
+          1245.6765436818964
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            371,
+            864,
+            390,
+            907
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            940,
+            862,
+            957,
+            916
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            297,
+            1030,
+            313,
+            1070
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7658
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8608
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 53,
+      "alpha_increased_pixels": 2098,
+      "alpha_decreased_pixels": 4598,
+      "stocking_components": [
+        [
+          3,
+          5749,
+          701.5054792137763,
+          1240.1094103322316
+        ],
+        [
+          6,
+          5225,
+          623.6288995215311,
+          1245.6824880382776
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            371,
+            864,
+            391,
+            906
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            941,
+            861,
+            957,
+            915
+          ],
+          "component_pixels": 405
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            295,
+            1025,
+            312,
+            1065
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7652
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8661
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 54,
+      "alpha_increased_pixels": 2061,
+      "alpha_decreased_pixels": 4580,
+      "stocking_components": [
+        [
+          3,
+          5731,
+          701.4210434479148,
+          1240.3144302913977
+        ],
+        [
+          6,
+          5225,
+          623.6380861244019,
+          1245.6824880382776
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            373,
+            864,
+            393,
+            906
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            861,
+            959,
+            915
+          ],
+          "component_pixels": 401
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            293,
+            1021,
+            311,
+            1061
+          ],
+          "component_pixels": 287
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7647
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8675
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 55,
+      "alpha_increased_pixels": 2492,
+      "alpha_decreased_pixels": 4528,
+      "stocking_components": [
+        [
+          3,
+          5746,
+          701.4707622694048,
+          1240.1707274625826
+        ],
+        [
+          6,
+          5226,
+          623.6649445082281,
+          1245.6706850363566
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            375,
+            865,
+            394,
+            908
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            860,
+            961,
+            913
+          ],
+          "component_pixels": 389
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            294,
+            1020,
+            312,
+            1059
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7654
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8646
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 56,
+      "alpha_increased_pixels": 3147,
+      "alpha_decreased_pixels": 4531,
+      "stocking_components": [
+        [
+          3,
+          5689,
+          701.3508525224117,
+          1240.6971348215855
+        ],
+        [
+          6,
+          5221,
+          623.702164336334,
+          1245.7125071825321
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            867,
+            395,
+            908
+          ],
+          "component_pixels": 268
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            946,
+            859,
+            963,
+            912
+          ],
+          "component_pixels": 399
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            294,
+            1019,
+            314,
+            1058
+          ],
+          "component_pixels": 292
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7678
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8582
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 57,
+      "alpha_increased_pixels": 3389,
+      "alpha_decreased_pixels": 4555,
+      "stocking_components": [
+        [
+          3,
+          5700,
+          701.2243859649122,
+          1240.620701754386
+        ],
+        [
+          6,
+          5220,
+          623.6925287356322,
+          1245.692528735632
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            868,
+            398,
+            910
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            858,
+            965,
+            911
+          ],
+          "component_pixels": 407
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            297,
+            1019,
+            316,
+            1057
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7730
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8564
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 58,
+      "alpha_increased_pixels": 3218,
+      "alpha_decreased_pixels": 4554,
+      "stocking_components": [
+        [
+          3,
+          5671,
+          701.1765120789984,
+          1240.8626344560043
+        ],
+        [
+          6,
+          5217,
+          623.6925436074372,
+          1245.6975273145486
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            870,
+            400,
+            911
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            857,
+            968,
+            911
+          ],
+          "component_pixels": 409
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            302,
+            1019,
+            322,
+            1057
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7852
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8525
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 59,
+      "alpha_increased_pixels": 2962,
+      "alpha_decreased_pixels": 4630,
+      "stocking_components": [
+        [
+          3,
+          5654,
+          701.1264591439689,
+          1241.0560665015919
+        ],
+        [
+          7,
+          5219,
+          623.6999425177237,
+          1245.6842306955355
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            871,
+            403,
+            914
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            909
+          ],
+          "component_pixels": 425
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            306,
+            1022,
+            326,
+            1059
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7996
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8483
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 60,
+      "alpha_increased_pixels": 3336,
+      "alpha_decreased_pixels": 4659,
+      "stocking_components": [
+        [
+          3,
+          5669,
+          701.1173046392662,
+          1240.9100370435704
+        ],
+        [
+          7,
+          5218,
+          623.7094672288233,
+          1245.6970103487927
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            873,
+            404,
+            916
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            854,
+            972,
+            908
+          ],
+          "component_pixels": 432
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            310,
+            1024,
+            330,
+            1063
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8129
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8440
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 61,
+      "alpha_increased_pixels": 3938,
+      "alpha_decreased_pixels": 4558,
+      "stocking_components": [
+        [
+          3,
+          5664,
+          701.1046963276837,
+          1240.9585098870057
+        ],
+        [
+          6,
+          5219,
+          623.702625023951,
+          1245.6943858976815
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            874,
+            406,
+            917
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            955,
+            853,
+            973,
+            907
+          ],
+          "component_pixels": 425
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            314,
+            1026,
+            334,
+            1066
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8234
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8410
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 62,
+      "alpha_increased_pixels": 4175,
+      "alpha_decreased_pixels": 4602,
+      "stocking_components": [
+        [
+          3,
+          5669,
+          701.119068618804,
+          1240.8839301464104
+        ],
+        [
+          5,
+          5210,
+          623.6998080614203,
+          1245.7662188099807
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            876,
+            407,
+            919
+          ],
+          "component_pixels": 288
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            956,
+            852,
+            975,
+            906
+          ],
+          "component_pixels": 430
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            320,
+            1032,
+            340,
+            1071
+          ],
+          "component_pixels": 273
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8431
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8274
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 63,
+      "alpha_increased_pixels": 3692,
+      "alpha_decreased_pixels": 4565,
+      "stocking_components": [
+        [
+          3,
+          5671,
+          701.132075471698,
+          1240.854875683301
+        ],
+        [
+          5,
+          5215,
+          623.7096836049856,
+          1245.723489932886
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            875,
+            408,
+            920
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            956,
+            852,
+            976,
+            905
+          ],
+          "component_pixels": 436
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1033,
+            341,
+            1073
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8495
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8257
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 64,
+      "alpha_increased_pixels": 3883,
+      "alpha_decreased_pixels": 4549,
+      "stocking_components": [
+        [
+          3,
+          5601,
+          700.8830565970362,
+          1241.5281199785752
+        ],
+        [
+          8,
+          5217,
+          623.7132451600537,
+          1245.7042361510446
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            391,
+            878,
+            407,
+            922
+          ],
+          "component_pixels": 285
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            956,
+            851,
+            975,
+            905
+          ],
+          "component_pixels": 433
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            327,
+            1040,
+            343,
+            1078
+          ],
+          "component_pixels": 271
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8630
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8117
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 65,
+      "alpha_increased_pixels": 3739,
+      "alpha_decreased_pixels": 4600,
+      "stocking_components": [
+        [
+          3,
+          5588,
+          700.882605583393,
+          1241.651216893343
+        ],
+        [
+          7,
+          5215,
+          623.7261744966443,
+          1245.7181208053692
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            391,
+            878,
+            407,
+            922
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            955,
+            851,
+            975,
+            905
+          ],
+          "component_pixels": 430
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            330,
+            1043,
+            346,
+            1081
+          ],
+          "component_pixels": 268
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8694
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8050
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 66,
+      "alpha_increased_pixels": 4468,
+      "alpha_decreased_pixels": 4602,
+      "stocking_components": [
+        [
+          8,
+          5214,
+          623.7215189873418,
+          1245.728423475259
+        ],
+        [
+          11,
+          5109,
+          700.3354863965551,
+          1246.8502642395772
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            877,
+            407,
+            922
+          ],
+          "component_pixels": 292
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            955,
+            852,
+            974,
+            905
+          ],
+          "component_pixels": 430
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            333,
+            1047,
+            348,
+            1084
+          ],
+          "component_pixels": 263
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8712
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7979
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 67,
+      "alpha_increased_pixels": 4120,
+      "alpha_decreased_pixels": 4591,
+      "stocking_components": [
+        [
+          8,
+          5213,
+          623.7226165355842,
+          1245.7389219259544
+        ],
+        [
+          11,
+          5119,
+          700.3106075405353,
+          1246.862473139285
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            878,
+            405,
+            922
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            852,
+            973,
+            905
+          ],
+          "component_pixels": 426
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            334,
+            1049,
+            348,
+            1087
+          ],
+          "component_pixels": 265
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8707
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7946
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 68,
+      "alpha_increased_pixels": 3990,
+      "alpha_decreased_pixels": 4618,
+      "stocking_components": [
+        [
+          6,
+          5217,
+          623.7186122292505,
+          1245.7400805060379
+        ],
+        [
+          7,
+          5124,
+          700.2771272443404,
+          1246.8188914910227
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            878,
+            403,
+            921
+          ],
+          "component_pixels": 287
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            853,
+            971,
+            906
+          ],
+          "component_pixels": 423
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            334,
+            1048,
+            350,
+            1089
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8565
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7846
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 69,
+      "alpha_increased_pixels": 3461,
+      "alpha_decreased_pixels": 4612,
+      "stocking_components": [
+        [
+          9,
+          5217,
+          623.6894767107533,
+          1245.764040636381
+        ],
+        [
+          12,
+          5125,
+          700.229268292683,
+          1246.8815609756098
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            876,
+            402,
+            921
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            854,
+            969,
+            906
+          ],
+          "component_pixels": 420
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            333,
+            1049,
+            348,
+            1090
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8399
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7843
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 70,
+      "alpha_increased_pixels": 3731,
+      "alpha_decreased_pixels": 4648,
+      "stocking_components": [
+        [
+          11,
+          5212,
+          623.6864927091327,
+          1245.7891404451266
+        ],
+        [
+          14,
+          5128,
+          700.1778471138846,
+          1246.9128315132605
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            383,
+            877,
+            398,
+            919
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            947,
+            856,
+            966,
+            908
+          ],
+          "component_pixels": 421
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            329,
+            1048,
+            344,
+            1089
+          ],
+          "component_pixels": 287
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8217
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7951
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 71,
+      "alpha_increased_pixels": 3656,
+      "alpha_decreased_pixels": 4620,
+      "stocking_components": [
+        [
+          10,
+          5219,
+          623.7035830618893,
+          1245.7558919333205
+        ],
+        [
+          12,
+          5128,
+          700.1805772230889,
+          1246.9377925117005
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            875,
+            398,
+            918
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            947,
+            856,
+            966,
+            908
+          ],
+          "component_pixels": 418
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            328,
+            1048,
+            342,
+            1089
+          ],
+          "component_pixels": 291
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8143
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7968
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 72,
+      "alpha_increased_pixels": 3581,
+      "alpha_decreased_pixels": 4783,
+      "stocking_components": [
+        [
+          9,
+          5215,
+          623.7296260786194,
+          1245.7267497603068
+        ],
+        [
+          11,
+          5122,
+          700.1757126122609,
+          1246.9919953143303
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            874,
+            395,
+            916
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            945,
+            858,
+            963,
+            910
+          ],
+          "component_pixels": 415
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1046,
+            337,
+            1086
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7945
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8166
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 73,
+      "alpha_increased_pixels": 3529,
+      "alpha_decreased_pixels": 4777,
+      "stocking_components": [
+        [
+          10,
+          5226,
+          623.7225411404515,
+          1245.684653654803
+        ],
+        [
+          13,
+          5121,
+          700.165983206405,
+          1247.024214020699
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            872,
+            394,
+            914
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            860,
+            962,
+            911
+          ],
+          "component_pixels": 414
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            319,
+            1044,
+            333,
+            1085
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7829
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8330
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 74,
+      "alpha_increased_pixels": 3376,
+      "alpha_decreased_pixels": 4805,
+      "stocking_components": [
+        [
+          9,
+          5217,
+          623.7329883074564,
+          1245.7788000766725
+        ],
+        [
+          12,
+          5112,
+          700.1517996870109,
+          1247.0543818466354
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            375,
+            870,
+            393,
+            912
+          ],
+          "component_pixels": 289
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            860,
+            961,
+            912
+          ],
+          "component_pixels": 410
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            314,
+            1041,
+            328,
+            1081
+          ],
+          "component_pixels": 273
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7706
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8693
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 75,
+      "alpha_increased_pixels": 2620,
+      "alpha_decreased_pixels": 4778,
+      "stocking_components": [
+        [
+          9,
+          5220,
+          623.7241379310344,
+          1245.767816091954
+        ],
+        [
+          12,
+          5116,
+          700.1510946051603,
+          1247.0224784988272
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            375,
+            870,
+            392,
+            912
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            942,
+            860,
+            960,
+            913
+          ],
+          "component_pixels": 417
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            311,
+            1037,
+            326,
+            1078
+          ],
+          "component_pixels": 288
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7663
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8939
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 76,
+      "alpha_increased_pixels": 1886,
+      "alpha_decreased_pixels": 4821,
+      "stocking_components": [
+        [
+          9,
+          5215,
+          623.7346116970278,
+          1245.7825503355705
+        ],
+        [
+          11,
+          5115,
+          700.1517106549364,
+          1247.032258064516
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            374,
+            869,
+            392,
+            911
+          ],
+          "component_pixels": 276
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            943,
+            862,
+            960,
+            913
+          ],
+          "component_pixels": 410
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            307,
+            1033,
+            324,
+            1075
+          ],
+          "component_pixels": 285
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7641
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9314
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 77,
+      "alpha_increased_pixels": 2070,
+      "alpha_decreased_pixels": 4882,
+      "stocking_components": [
+        [
+          9,
+          5218,
+          623.7031429666539,
+          1245.8039478727483
+        ],
+        [
+          11,
+          5110,
+          700.1416829745597,
+          1247.1093933463796
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            374,
+            867,
+            393,
+            910
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            943,
+            862,
+            960,
+            912
+          ],
+          "component_pixels": 410
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            304,
+            1030,
+            321,
+            1071
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7633
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9662
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 78,
+      "alpha_increased_pixels": 1977,
+      "alpha_decreased_pixels": 4901,
+      "stocking_components": [
+        [
+          8,
+          5217,
+          623.7027027027027,
+          1245.8035269311865
+        ],
+        [
+          10,
+          5109,
+          700.1636328048542,
+          1247.137991779213
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            374,
+            867,
+            393,
+            909
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            943,
+            861,
+            960,
+            912
+          ],
+          "component_pixels": 399
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            302,
+            1027,
+            320,
+            1069
+          ],
+          "component_pixels": 283
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7640
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9936
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 79,
+      "alpha_increased_pixels": 1498,
+      "alpha_decreased_pixels": 4953,
+      "stocking_components": [
+        [
+          9,
+          5221,
+          623.7354912851944,
+          1245.7965906914385
+        ],
+        [
+          11,
+          5111,
+          700.1011543729212,
+          1247.1395030326746
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            375,
+            867,
+            394,
+            909
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            944,
+            861,
+            962,
+            912
+          ],
+          "component_pixels": 402
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            301,
+            1026,
+            318,
+            1066
+          ],
+          "component_pixels": 273
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7659
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10206
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 80,
+      "alpha_increased_pixels": 1841,
+      "alpha_decreased_pixels": 4892,
+      "stocking_components": [
+        [
+          3,
+          5511,
+          700.4808564688805,
+          1242.7450553438578
+        ],
+        [
+          8,
+          5224,
+          623.7995788667688,
+          1245.7752679938744
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            377,
+            869,
+            395,
+            911
+          ],
+          "component_pixels": 286
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            946,
+            860,
+            964,
+            911
+          ],
+          "component_pixels": 404
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            300,
+            1024,
+            318,
+            1064
+          ],
+          "component_pixels": 274
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7725
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10617
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 81,
+      "alpha_increased_pixels": 1485,
+      "alpha_decreased_pixels": 4789,
+      "stocking_components": [
+        [
+          8,
+          5212,
+          623.9259401381428,
+          1245.9038756715272
+        ],
+        [
+          9,
+          5153,
+          700.0622938094314,
+          1246.6446730060159
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            379,
+            870,
+            397,
+            911
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            860,
+            966,
+            911
+          ],
+          "component_pixels": 401
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            301,
+            1024,
+            319,
+            1064
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 7826
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10843
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 82,
+      "alpha_increased_pixels": 1512,
+      "alpha_decreased_pixels": 4706,
+      "stocking_components": [
+        [
+          3,
+          5507,
+          700.2157254403487,
+          1242.5641910295988
+        ],
+        [
+          6,
+          5200,
+          624.1209615384615,
+          1245.8551923076923
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            380,
+            870,
+            399,
+            912
+          ],
+          "component_pixels": 285
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            860,
+            967,
+            911
+          ],
+          "component_pixels": 404
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            302,
+            1024,
+            322,
+            1064
+          ],
+          "component_pixels": 285
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8000
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10943
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 83,
+      "alpha_increased_pixels": 1266,
+      "alpha_decreased_pixels": 4534,
+      "stocking_components": [
+        [
+          3,
+          5502,
+          699.6581243184296,
+          1242.6697564521992
+        ],
+        [
+          8,
+          5202,
+          624.7179930795847,
+          1246.0307574009996
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            870,
+            402,
+            914
+          ],
+          "component_pixels": 290
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            859,
+            969,
+            910
+          ],
+          "component_pixels": 405
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            305,
+            1025,
+            324,
+            1065
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8148
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10948
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 84,
+      "alpha_increased_pixels": 2124,
+      "alpha_decreased_pixels": 4327,
+      "stocking_components": [
+        [
+          3,
+          5401,
+          698.3654878726162,
+          1243.5847065358266
+        ],
+        [
+          12,
+          5127,
+          625.7183538131461,
+          1246.634874195436
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            876,
+            404,
+            919
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            858,
+            973,
+            910
+          ],
+          "component_pixels": 418
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            310,
+            1030,
+            329,
+            1069
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8406
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10729
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 85,
+      "alpha_increased_pixels": 1916,
+      "alpha_decreased_pixels": 4055,
+      "stocking_components": [
+        [
+          8,
+          5124,
+          626.671350507416,
+          1246.9357923497269
+        ],
+        [
+          10,
+          5050,
+          696.8047524752475,
+          1247.6625742574258
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            879,
+            405,
+            922
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            956,
+            858,
+            974,
+            910
+          ],
+          "component_pixels": 426
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1034,
+            332,
+            1072
+          ],
+          "component_pixels": 275
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8565
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 10411
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 86,
+      "alpha_increased_pixels": 935,
+      "alpha_decreased_pixels": 3846,
+      "stocking_components": [
+        [
+          4,
+          5306,
+          696.0295891443649,
+          1244.9263098379192
+        ],
+        [
+          10,
+          5053,
+          627.5218681971106,
+          1247.7951711854344
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            389,
+            882,
+            407,
+            926
+          ],
+          "component_pixels": 282
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            957,
+            858,
+            976,
+            910
+          ],
+          "component_pixels": 421
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            317,
+            1038,
+            336,
+            1076
+          ],
+          "component_pixels": 273
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8706
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9958
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 87,
+      "alpha_increased_pixels": 1156,
+      "alpha_decreased_pixels": 3681,
+      "stocking_components": [
+        [
+          11,
+          5023,
+          627.7453712920566,
+          1248.0005972526378
+        ],
+        [
+          12,
+          5050,
+          694.9229702970297,
+          1247.8350495049506
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            886,
+            406,
+            928
+          ],
+          "component_pixels": 268
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            957,
+            857,
+            976,
+            910
+          ],
+          "component_pixels": 429
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            319,
+            1040,
+            337,
+            1078
+          ],
+          "component_pixels": 272
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8752
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9773
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 88,
+      "alpha_increased_pixels": 1693,
+      "alpha_decreased_pixels": 3514,
+      "stocking_components": [
+        [
+          8,
+          4883,
+          628.6272783125128,
+          1249.31804218718
+        ],
+        [
+          10,
+          4949,
+          693.6472014548393,
+          1248.6160840573853
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            891,
+            409,
+            934
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            958,
+            857,
+            977,
+            909
+          ],
+          "component_pixels": 425
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            326,
+            1048,
+            344,
+            1088
+          ],
+          "component_pixels": 284
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8999
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8777
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 89,
+      "alpha_increased_pixels": 2264,
+      "alpha_decreased_pixels": 3371,
+      "stocking_components": [
+        [
+          10,
+          9749,
+          661.4140937532054,
+          1249.2653605497999
+        ],
+        [
+          15,
+          502,
+          688.9521912350598,
+          1317.7988047808765
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            894,
+            408,
+            936
+          ],
+          "component_pixels": 272
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            958,
+            856,
+            978,
+            909
+          ],
+          "component_pixels": 434
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            329,
+            1052,
+            347,
+            1093
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9149
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8289
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 90,
+      "alpha_increased_pixels": 1357,
+      "alpha_decreased_pixels": 3353,
+      "stocking_components": [
+        [
+          12,
+          9771,
+          661.6249104492887,
+          1249.079316344284
+        ],
+        [
+          18,
+          500,
+          688.906,
+          1317.8220000000001
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            896,
+            408,
+            939
+          ],
+          "component_pixels": 272
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            957,
+            856,
+            977,
+            909
+          ],
+          "component_pixels": 442
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            332,
+            1057,
+            349,
+            1097
+          ],
+          "component_pixels": 273
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9290
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7748
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 91,
+      "alpha_increased_pixels": 840,
+      "alpha_decreased_pixels": 3315,
+      "stocking_components": [
+        [
+          11,
+          9796,
+          661.6449571253573,
+          1248.977541853818
+        ],
+        [
+          17,
+          500,
+          688.906,
+          1317.8220000000001
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            392,
+            896,
+            408,
+            939
+          ],
+          "component_pixels": 268
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            956,
+            855,
+            977,
+            909
+          ],
+          "component_pixels": 439
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            333,
+            1058,
+            350,
+            1099
+          ],
+          "component_pixels": 277
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9278
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7699
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 92,
+      "alpha_increased_pixels": 993,
+      "alpha_decreased_pixels": 3426,
+      "stocking_components": [
+        [
+          10,
+          9814,
+          661.7177501528429,
+          1248.8969839005501
+        ],
+        [
+          16,
+          500,
+          688.906,
+          1317.8220000000001
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            391,
+            898,
+            406,
+            939
+          ],
+          "component_pixels": 262
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            975,
+            908
+          ],
+          "component_pixels": 435
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            335,
+            1062,
+            350,
+            1103
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9257
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7222
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 93,
+      "alpha_increased_pixels": 1640,
+      "alpha_decreased_pixels": 3434,
+      "stocking_components": [
+        [
+          7,
+          9868,
+          661.7865828942035,
+          1248.6885893798135
+        ],
+        [
+          14,
+          501,
+          688.9201596806388,
+          1317.8063872255489
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            390,
+            898,
+            405,
+            939
+          ],
+          "component_pixels": 260
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            855,
+            973,
+            908
+          ],
+          "component_pixels": 440
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            335,
+            1062,
+            350,
+            1104
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9183
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7109
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 94,
+      "alpha_increased_pixels": 3325,
+      "alpha_decreased_pixels": 3425,
+      "stocking_components": [
+        [
+          6,
+          9871,
+          661.8331476040928,
+          1248.5785634687468
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": true,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            388,
+            897,
+            403,
+            939
+          ],
+          "component_pixels": 271
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            855,
+            971,
+            908
+          ],
+          "component_pixels": 438
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            334,
+            1062,
+            349,
+            1104
+          ],
+          "component_pixels": 281
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 9100
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6970
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 95,
+      "alpha_increased_pixels": 4374,
+      "alpha_decreased_pixels": 3447,
+      "stocking_components": [
+        [
+          7,
+          4999,
+          694.4136827365473,
+          1247.9259851970394
+        ],
+        [
+          9,
+          4907,
+          628.914611779091,
+          1248.926431628286
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            896,
+            402,
+            937
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            855,
+            969,
+            908
+          ],
+          "component_pixels": 429
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            333,
+            1061,
+            348,
+            1103
+          ],
+          "component_pixels": 276
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8971
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 6975
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 96,
+      "alpha_increased_pixels": 4010,
+      "alpha_decreased_pixels": 3641,
+      "stocking_components": [
+        [
+          9,
+          4978,
+          628.3539574126155,
+          1248.3473282442749
+        ],
+        [
+          10,
+          4973,
+          695.4110195053288,
+          1248.014478182184
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            893,
+            401,
+            935
+          ],
+          "component_pixels": 264
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            949,
+            855,
+            967,
+            908
+          ],
+          "component_pixels": 418
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            329,
+            1059,
+            344,
+            1101
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8826
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7162
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 97,
+      "alpha_increased_pixels": 2850,
+      "alpha_decreased_pixels": 3749,
+      "stocking_components": [
+        [
+          8,
+          5050,
+          627.8659405940595,
+          1247.7865346534654
+        ],
+        [
+          9,
+          4983,
+          696.3525988360425,
+          1248.0218743728678
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            384,
+            892,
+            400,
+            933
+          ],
+          "component_pixels": 267
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            855,
+            966,
+            908
+          ],
+          "component_pixels": 426
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            326,
+            1058,
+            341,
+            1099
+          ],
+          "component_pixels": 276
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8684
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7376
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 98,
+      "alpha_increased_pixels": 4457,
+      "alpha_decreased_pixels": 3816,
+      "stocking_components": [
+        [
+          8,
+          5072,
+          627.5703864353312,
+          1247.4716088328075
+        ],
+        [
+          9,
+          5005,
+          697.0929070929071,
+          1248.0231768231768
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            383,
+            890,
+            399,
+            932
+          ],
+          "component_pixels": 268
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            947,
+            855,
+            965,
+            908
+          ],
+          "component_pixels": 407
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1056,
+            338,
+            1096
+          ],
+          "component_pixels": 269
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8592
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7623
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 99,
+      "alpha_increased_pixels": 3582,
+      "alpha_decreased_pixels": 3882,
+      "stocking_components": [
+        [
+          8,
+          5108,
+          627.3864526233359,
+          1247.1846123727487
+        ],
+        [
+          10,
+          5025,
+          697.4449751243781,
+          1247.854129353234
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            889,
+            398,
+            931
+          ],
+          "component_pixels": 270
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            855,
+            965,
+            908
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            320,
+            1054,
+            335,
+            1093
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8540
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 7858
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 100,
+      "alpha_increased_pixels": 3184,
+      "alpha_decreased_pixels": 4014,
+      "stocking_components": [
+        [
+          7,
+          5137,
+          627.2378820323146,
+          1246.9739147362275
+        ],
+        [
+          9,
+          5052,
+          697.7781076801267,
+          1247.7028899445763
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            887,
+            399,
+            929
+          ],
+          "component_pixels": 279
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            855,
+            965,
+            908
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            318,
+            1050,
+            333,
+            1091
+          ],
+          "component_pixels": 263
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8536
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8147
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 101,
+      "alpha_increased_pixels": 2964,
+      "alpha_decreased_pixels": 4044,
+      "stocking_components": [
+        [
+          9,
+          5151,
+          627.1949136090079,
+          1246.835760046593
+        ],
+        [
+          10,
+          5060,
+          698.0302371541502,
+          1247.6308300395258
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            886,
+            399,
+            929
+          ],
+          "component_pixels": 280
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            948,
+            855,
+            966,
+            908
+          ],
+          "component_pixels": 418
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            315,
+            1049,
+            331,
+            1088
+          ],
+          "component_pixels": 269
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8525
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8414
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 102,
+      "alpha_increased_pixels": 3572,
+      "alpha_decreased_pixels": 4097,
+      "stocking_components": [
+        [
+          8,
+          5159,
+          627.0488466757123,
+          1246.7106028300059
+        ],
+        [
+          9,
+          5075,
+          698.1089655172414,
+          1247.5934975369457
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            886,
+            399,
+            928
+          ],
+          "component_pixels": 278
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            949,
+            856,
+            966,
+            909
+          ],
+          "component_pixels": 412
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1046,
+            330,
+            1086
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8503
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8672
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 103,
+      "alpha_increased_pixels": 3311,
+      "alpha_decreased_pixels": 4032,
+      "stocking_components": [
+        [
+          10,
+          5172,
+          627.015467904099,
+          1246.6332173240526
+        ],
+        [
+          11,
+          5090,
+          698.1056974459725,
+          1247.4909626719057
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            382,
+            887,
+            399,
+            928
+          ],
+          "component_pixels": 270
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            949,
+            856,
+            967,
+            909
+          ],
+          "component_pixels": 419
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1046,
+            329,
+            1084
+          ],
+          "component_pixels": 253
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8473
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8870
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 104,
+      "alpha_increased_pixels": 2778,
+      "alpha_decreased_pixels": 4155,
+      "stocking_components": [
+        [
+          11,
+          5176,
+          627.0372874806801,
+          1246.5809505409584
+        ],
+        [
+          12,
+          5085,
+          698.1396263520157,
+          1247.482005899705
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            383,
+            887,
+            400,
+            929
+          ],
+          "component_pixels": 272
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            950,
+            856,
+            968,
+            908
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1044,
+            330,
+            1084
+          ],
+          "component_pixels": 258
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8480
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9162
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 105,
+      "alpha_increased_pixels": 2190,
+      "alpha_decreased_pixels": 4181,
+      "stocking_components": [
+        [
+          5,
+          5300,
+          698.405283018868,
+          1245.2324528301888
+        ],
+        [
+          11,
+          5188,
+          627.0431765612952,
+          1246.5065535851966
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            384,
+            888,
+            400,
+            929
+          ],
+          "component_pixels": 265
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            951,
+            856,
+            968,
+            909
+          ],
+          "component_pixels": 409
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            313,
+            1045,
+            330,
+            1083
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8475
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9255
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 106,
+      "alpha_increased_pixels": 3071,
+      "alpha_decreased_pixels": 4248,
+      "stocking_components": [
+        [
+          11,
+          5181,
+          627.0694846554719,
+          1246.5010615711253
+        ],
+        [
+          12,
+          5104,
+          698.1132445141066,
+          1247.287421630094
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            385,
+            888,
+            401,
+            929
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            969,
+            909
+          ],
+          "component_pixels": 413
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            314,
+            1045,
+            331,
+            1084
+          ],
+          "component_pixels": 264
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8496
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9310
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 107,
+      "alpha_increased_pixels": 2721,
+      "alpha_decreased_pixels": 4237,
+      "stocking_components": [
+        [
+          4,
+          5430,
+          626.5186003683241,
+          1244.0543278084715
+        ],
+        [
+          9,
+          5163,
+          698.3226806120473,
+          1246.7241913616115
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            890,
+            401,
+            930
+          ],
+          "component_pixels": 261
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            855,
+            970,
+            908
+          ],
+          "component_pixels": 405
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            316,
+            1046,
+            332,
+            1085
+          ],
+          "component_pixels": 251
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8519
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9316
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 108,
+      "alpha_increased_pixels": 2532,
+      "alpha_decreased_pixels": 4251,
+      "stocking_components": [
+        [
+          4,
+          5463,
+          626.2597473915431,
+          1243.75141863445
+        ],
+        [
+          11,
+          5145,
+          698.2448979591836,
+          1246.9255587949465
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            930
+          ],
+          "component_pixels": 262
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            971,
+            907
+          ],
+          "component_pixels": 408
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            318,
+            1047,
+            335,
+            1086
+          ],
+          "component_pixels": 250
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8534
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9220
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 109,
+      "alpha_increased_pixels": 2471,
+      "alpha_decreased_pixels": 4211,
+      "stocking_components": [
+        [
+          4,
+          5463,
+          626.2667032765879,
+          1243.7715540911588
+        ],
+        [
+          11,
+          5140,
+          698.2400778210117,
+          1246.9620622568093
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            403,
+            931
+          ],
+          "component_pixels": 265
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            971,
+            907
+          ],
+          "component_pixels": 399
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            320,
+            1048,
+            336,
+            1087
+          ],
+          "component_pixels": 258
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8540
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9170
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 110,
+      "alpha_increased_pixels": 2356,
+      "alpha_decreased_pixels": 4213,
+      "stocking_components": [
+        [
+          4,
+          5431,
+          626.4895967593445,
+          1244.0939053581292
+        ],
+        [
+          12,
+          5139,
+          698.2389569955244,
+          1246.9717843938508
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            403,
+            931
+          ],
+          "component_pixels": 260
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            972,
+            907
+          ],
+          "component_pixels": 408
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1048,
+            338,
+            1087
+          ],
+          "component_pixels": 259
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8546
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 9107
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 111,
+      "alpha_increased_pixels": 2212,
+      "alpha_decreased_pixels": 4231,
+      "stocking_components": [
+        [
+          4,
+          5424,
+          626.554203539823,
+          1244.164454277286
+        ],
+        [
+          13,
+          5146,
+          698.2273610571317,
+          1246.9249902837155
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            403,
+            931
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            972,
+            907
+          ],
+          "component_pixels": 404
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1049,
+            338,
+            1088
+          ],
+          "component_pixels": 251
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8555
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8967
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 112,
+      "alpha_increased_pixels": 2312,
+      "alpha_decreased_pixels": 4124,
+      "stocking_components": [
+        [
+          4,
+          5433,
+          626.4861034419289,
+          1244.0395729799375
+        ],
+        [
+          17,
+          5110,
+          698.1279843444227,
+          1247.2988258317025
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            403,
+            931
+          ],
+          "component_pixels": 256
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            972,
+            907
+          ],
+          "component_pixels": 404
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            323,
+            1050,
+            339,
+            1090
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8558
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8802
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 113,
+      "alpha_increased_pixels": 1564,
+      "alpha_decreased_pixels": 4116,
+      "stocking_components": [
+        [
+          17,
+          5187,
+          627.0713321765953,
+          1246.527279737806
+        ],
+        [
+          18,
+          5107,
+          698.1343254356765,
+          1247.3193655766595
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            403,
+            931
+          ],
+          "component_pixels": 260
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            954,
+            855,
+            971,
+            907
+          ],
+          "component_pixels": 396
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            324,
+            1050,
+            340,
+            1091
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8557
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8691
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 114,
+      "alpha_increased_pixels": 1041,
+      "alpha_decreased_pixels": 4145,
+      "stocking_components": [
+        [
+          16,
+          5184,
+          627.0590277777778,
+          1246.5368441358025
+        ],
+        [
+          17,
+          5108,
+          698.1350822239624,
+          1247.319498825372
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            403,
+            931
+          ],
+          "component_pixels": 263
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            854,
+            971,
+            907
+          ],
+          "component_pixels": 403
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            324,
+            1051,
+            340,
+            1091
+          ],
+          "component_pixels": 259
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8584
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8602
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 115,
+      "alpha_increased_pixels": 2537,
+      "alpha_decreased_pixels": 4131,
+      "stocking_components": [
+        [
+          16,
+          5186,
+          627.0690320092557,
+          1246.53220208253
+        ],
+        [
+          17,
+          5107,
+          698.1302134325435,
+          1247.3138829058155
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            891,
+            402,
+            931
+          ],
+          "component_pixels": 261
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            855,
+            971,
+            907
+          ],
+          "component_pixels": 407
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            324,
+            1050,
+            340,
+            1091
+          ],
+          "component_pixels": 253
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8565
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8561
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 116,
+      "alpha_increased_pixels": 2517,
+      "alpha_decreased_pixels": 4224,
+      "stocking_components": [
+        [
+          4,
+          5430,
+          626.497605893186,
+          1244.0696132596686
+        ],
+        [
+          12,
+          5148,
+          698.238344988345,
+          1246.892773892774
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 265
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            855,
+            971,
+            907
+          ],
+          "component_pixels": 402
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            323,
+            1051,
+            339,
+            1090
+          ],
+          "component_pixels": 247
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8564
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8543
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 117,
+      "alpha_increased_pixels": 2296,
+      "alpha_decreased_pixels": 4258,
+      "stocking_components": [
+        [
+          4,
+          5429,
+          626.4953030023945,
+          1244.0762571375944
+        ],
+        [
+          12,
+          5148,
+          698.2365967365968,
+          1246.8861693861693
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            387,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 254
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            953,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 400
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            323,
+            1050,
+            339,
+            1090
+          ],
+          "component_pixels": 252
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8564
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8565
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 118,
+      "alpha_increased_pixels": 2479,
+      "alpha_decreased_pixels": 4266,
+      "stocking_components": [
+        [
+          4,
+          5425,
+          626.4960368663594,
+          1244.0884792626728
+        ],
+        [
+          12,
+          5144,
+          698.2206454121306,
+          1246.9088258164852
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            890,
+            402,
+            931
+          ],
+          "component_pixels": 266
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 402
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1050,
+            338,
+            1090
+          ],
+          "component_pixels": 255
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8564
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8612
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 119,
+      "alpha_increased_pixels": 3232,
+      "alpha_decreased_pixels": 4207,
+      "stocking_components": [
+        [
+          12,
+          5149,
+          698.2361623616237,
+          1246.884055156341
+        ],
+        [
+          16,
+          5197,
+          627.111987685203,
+          1246.4389070617665
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            889,
+            402,
+            931
+          ],
+          "component_pixels": 261
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 406
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            322,
+            1050,
+            337,
+            1089
+          ],
+          "component_pixels": 247
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8564
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8662
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 120,
+      "alpha_increased_pixels": 2169,
+      "alpha_decreased_pixels": 4297,
+      "stocking_components": [
+        [
+          4,
+          5431,
+          626.4988031670042,
+          1244.0600257779415
+        ],
+        [
+          12,
+          5151,
+          698.2514074936905,
+          1246.8945835760046
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            889,
+            402,
+            931
+          ],
+          "component_pixels": 262
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 401
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1051,
+            336,
+            1089
+          ],
+          "component_pixels": 254
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8560
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8742
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 121,
+      "alpha_increased_pixels": 2020,
+      "alpha_decreased_pixels": 4278,
+      "stocking_components": [
+        [
+          4,
+          5430,
+          626.4965009208104,
+          1244.0668508287292
+        ],
+        [
+          12,
+          5150,
+          698.2366990291262,
+          1246.8893203883495
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            889,
+            402,
+            931
+          ],
+          "component_pixels": 262
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 404
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1050,
+            336,
+            1088
+          ],
+          "component_pixels": 248
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8561
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8804
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 122,
+      "alpha_increased_pixels": 3167,
+      "alpha_decreased_pixels": 4306,
+      "stocking_components": [
+        [
+          4,
+          5428,
+          626.4845246868091,
+          1244.0759027266029
+        ],
+        [
+          12,
+          5149,
+          698.2414060982715,
+          1246.8850262186832
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            889,
+            402,
+            931
+          ],
+          "component_pixels": 264
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 405
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1050,
+            336,
+            1088
+          ],
+          "component_pixels": 247
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8561
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8824
+        }
+      ],
+      "visible_rgb_exact_source": true
+    },
+    {
+      "native_index": 123,
+      "alpha_increased_pixels": 3024,
+      "alpha_decreased_pixels": 4309,
+      "stocking_components": [
+        [
+          4,
+          5428,
+          626.4845246868091,
+          1244.0759027266029
+        ],
+        [
+          12,
+          5149,
+          698.2414060982715,
+          1246.8850262186832
+        ]
+      ],
+      "real_stocking_component_joined_at_garters": false,
+      "hair_background_components": [
+        {
+          "name": "left_upper_curl",
+          "bbox": [
+            386,
+            889,
+            402,
+            931
+          ],
+          "component_pixels": 263
+        },
+        {
+          "name": "right_upper_curl",
+          "bbox": [
+            952,
+            855,
+            970,
+            907
+          ],
+          "component_pixels": 405
+        },
+        {
+          "name": "left_lower_curl",
+          "bbox": [
+            321,
+            1050,
+            336,
+            1088
+          ],
+          "component_pixels": 250
+        },
+        {
+          "name": "tuft_below_arc",
+          "roi": [
+            460,
+            405,
+            625,
+            505
+          ],
+          "source_external_component_pixels_in_roi": 8561
+        },
+        {
+          "name": "right_lower_open_curl",
+          "roi": [
+            945,
+            1165,
+            1100,
+            1260
+          ],
+          "source_external_component_pixels_in_roi": 8831
+        }
+      ],
+      "visible_rgb_exact_source": true
+    }
+  ],
+  "total_alpha_increased_pixels": 327247,
+  "total_alpha_decreased_pixels": 516129
+}

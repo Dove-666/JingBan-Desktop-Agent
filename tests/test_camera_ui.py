@@ -8,12 +8,12 @@ from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from desktop_pet.perception.settings import PerceptionSettings
+from desktop_pet.perception.settings import CameraSettings
 from desktop_pet.ui.camera_panel import CameraPanel
 
 
 @dataclass(frozen=True)
-class FakeCameraSettings(PerceptionSettings):
+class FakeCameraSettings(CameraSettings):
     device_id: str = ""
 
 

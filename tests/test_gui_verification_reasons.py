@@ -15,8 +15,8 @@ from desktop_pet.agents import AgentResult
 class VerificationReasonTests(unittest.TestCase):
     def test_actual_unknown_result_does_not_claim_missed_click_or_handoff(self):
         text = unconfirmed_reply(report("unverified", reason="GOAL_NOT_OBSERVABLE"))
-        self.assertIn("当前画面不足以确认", text)
-        self.assertIn("操作是否生效仍待确认", text)
+        self.assertIn("当前画面缺少用于核对结果的信息", text)
+        self.assertTrue(text.startswith("未完成："))
         self.assertNotIn("未达到要求", text)
         self.assertNotIn("接手", text)
 
@@ -24,8 +24,8 @@ class VerificationReasonTests(unittest.TestCase):
         failed = unconfirmed_reply(report("failed", reason="GOAL_STATE_NOT_MET"))
         unknown = unconfirmed_reply(report("unverified", reason="GOAL_NOT_OBSERVABLE"))
         self.assertNotEqual(failed, unknown)
-        self.assertIn("目标状态仍未达到要求", failed)
-        self.assertIn("任务未标记为完成", failed)
+        self.assertIn("目标状态未达到要求", failed)
+        self.assertTrue(failed.startswith("未完成："))
 
     def test_identity_and_order_missing_have_specific_scope(self):
         identity = unconfirmed_reply(report("unverified", reason="TARGET_IDENTITY_UNCONFIRMED"))
@@ -37,9 +37,9 @@ class VerificationReasonTests(unittest.TestCase):
     def test_service_format_capture_and_not_run_are_distinguished(self):
         reasons = {
             "VERIFICATION_SERVICE_UNAVAILABLE": "服务暂时不可用",
-            "VERIFICATION_RESPONSE_INVALID": "没有得到有效答复",
-            "VERIFICATION_CAPTURE_FAILED": "未能取得可用的新画面",
-            "VERIFICATION_NOT_RUN": "尚未完成独立",
+            "VERIFICATION_RESPONSE_INVALID": "没有返回有效答复",
+            "VERIFICATION_CAPTURE_FAILED": "截图失败",
+            "VERIFICATION_NOT_RUN": "检查结果前停止",
         }
         outputs = []
         for reason, expected in reasons.items():
@@ -78,7 +78,7 @@ class VerificationReasonTests(unittest.TestCase):
             reply, status, assessment = harness.finalize("已完成，已经给第二个视频点赞。")
             self.assertEqual(status, "needs_user")
             self.assertFalse(assessment["passed"])
-            self.assertIn("当前画面不足以确认", reply)
+            self.assertIn("当前画面缺少用于核对结果的信息", reply)
             self.assertNotIn("已经给第二个视频点赞", reply)
             self.assertNotIn("接手", reply)
 
@@ -89,7 +89,7 @@ class VerificationReasonTests(unittest.TestCase):
             harness.record_gui_verification(report("failed", reason="GOAL_STATE_NOT_MET"))
             reply, status, _ = harness.finalize("已完成")
             self.assertEqual(status, "needs_user")
-            self.assertIn("目标状态仍未达到要求", reply)
+            self.assertIn("目标状态未达到要求", reply)
 
 
 class VerificationReplyPresentationTests(unittest.TestCase):
@@ -113,7 +113,7 @@ class VerificationReplyPresentationTests(unittest.TestCase):
         self.assertTrue(self.chat.send("打开测试应用并给第二项点赞", agent_mode=True))
         self.finish()
         saved = self.chat.store.load_messages(self.chat.current_conversation_id)[-1]
-        self.assertTrue(saved["content"].startswith("任务尚未确认完成。\n"))
+        self.assertEqual(saved["content"], detail)
         self.assertIn(detail, saved["content"])
         self.assertNotIn("需要你接手", saved["content"])
         self.assertEqual(saved["metadata"]["execution"]["state"], "needs_user")

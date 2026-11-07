@@ -16,8 +16,8 @@ android {
         applicationId = "com.aura.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.9.0"
+        versionCode = 26
+        versionName = "1.19.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -56,6 +56,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
+    sourceSets.getByName("main").resources.srcDir("../../shared")
     packaging {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/LICENSE*", "META-INF/NOTICE*",
             "darwin-*/**", "linux-*/**", "win32-*/**", "freebsd-*/**", "openbsd-*/**", "sunos-*/**",

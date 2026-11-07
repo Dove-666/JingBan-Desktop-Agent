@@ -1,15 +1,19 @@
 """Public mobile process views keep actual events and exclude private traces."""
+from contextlib import closing
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
+import shutil
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 from desktop_pet.agent_presentation import MAX_AGENT_TRACE_MS, public_agent_trace
-from desktop_pet.conversations.store import ConversationStore, remote_sync_projection
-from desktop_pet.remote.sync import RemoteSyncStore, sanitize_message
+from desktop_pet.conversations.store import ConversationStore, REMOTE_SYNC_SCHEMA_VERSION, remote_sync_projection
+from desktop_pet.remote.sync import RemoteSyncStore, SyncResetRequired, sanitize_message
 
 
 def execution(state="running"):
@@ -129,6 +133,140 @@ class PublicExecutionProjectionTests(unittest.TestCase):
             connection.execute("UPDATE messages SET metadata = 'broken PRIVATE' WHERE id = ?", (message["id"],))
         self.assertIsNone(self.sql_public(message)["agent_trace"])
 
+    def test_delegation_sources_remain_public_with_private_fields_filtered(self):
+        value = execution("completed")
+        labels = ("任务分派说明（模型公开回复）", "任务分派说明（直接请求）")
+        value["events"] = [
+            {"id": "PRIVATE_" + str(index), "kind": "summary", "label": label,
+             "status": "completed", "elapsed_ms": index, "detail": "PRIVATE_DETAIL"}
+            for index, label in enumerate((*labels, "PRIVATE_UNKNOWN_LABEL"))]
+        message = self.add(value, status="complete")
+        trace = self.assert_parity(message)
+        self.assertEqual([event["label"] for event in trace["events"]], list(labels))
+        self.assertEqual([event["id"] for event in trace["events"]], ["step-0", "step-1"])
+        self.assertNotIn("PRIVATE", json.dumps(trace))
+        sync = RemoteSyncStore(self.store)
+        for public in (next(item["data"] for item in sync.snapshot()["items"] if item["id"] == message["id"]),
+                       next(item["data"] for item in sync.pull()["changes"] if item["id"] == message["id"])):
+            self.assertEqual(public["agent_trace"], trace)
+
+    def test_real_v10_upgrade_republishes_completed_trace_and_preserves_history(self):
+        fixture = Path(__file__).parent / "fixtures/remote_sync_v10_delegation.sqlite3"
+        self.assertEqual(hashlib.sha256(fixture.read_bytes()).hexdigest(),
+                         "1248413634aced32a3419f1fbdf0aed8f8886e2e31ca3e6061080036738ea59f")
+        path = self.path.with_name("real-v10.sqlite3")
+        shutil.copyfile(fixture, path)
+        preserved_tables = ("conversations", "messages", "screen_events", "remote_sync_operations", "remote_sync_tombstones")
+        with closing(sqlite3.connect(path)) as connection:
+            connection.row_factory = sqlite3.Row
+            self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], 10)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 3)
+            preserved = {table: [dict(row) for row in connection.execute("SELECT * FROM " + table + " ORDER BY rowid")]
+                         for table in preserved_tables}
+            journal = [dict(row) for row in connection.execute("SELECT * FROM remote_sync_changes ORDER BY seq")]
+            cursor = connection.execute("SELECT high_seq FROM remote_sync_state").fetchone()[0]
+            stale_snapshot = connection.execute("SELECT id FROM remote_sync_snapshots").fetchone()[0]
+            old_triggers = [row[0] for row in connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger'")]
+        direct = next(row for row in preserved["messages"] if row["content"] == "Owned direct request")
+        label = "任务分派说明（直接请求）"
+        self.assertIn(label, direct["metadata"])
+        self.assertTrue(all(label not in sql for sql in old_triggers))
+        self.assertFalse(any(label in row["payload"] for row in journal))
+        self.assertTrue(preserved["remote_sync_operations"])
+        self.assertTrue(preserved["remote_sync_tombstones"])
+        upgraded = ConversationStore(path)
+        upgraded.initialize()
+        sync = RemoteSyncStore(upgraded)
+        changes = sync.pull(since=cursor)["changes"]
+        direct_changes = [item["data"] for item in changes if item["entity"] == "message" and item["id"] == direct["id"]]
+        self.assertEqual(len(direct_changes), 1)
+        self.assertIn(label, [event["label"] for event in direct_changes[0]["agent_trace"]["events"]])
+        self.assertEqual(direct_changes[0]["request_status"], "complete")
+        self.assertNotIn("PRIVATE", json.dumps(direct_changes[0]["agent_trace"]))
+        with closing(sqlite3.connect(path)) as connection:
+            connection.row_factory = sqlite3.Row
+            for table, rows in preserved.items():
+                self.assertEqual([dict(row) for row in connection.execute("SELECT * FROM " + table + " ORDER BY rowid")], rows)
+            self.assertEqual([dict(row) for row in connection.execute("SELECT * FROM remote_sync_changes WHERE seq <= ? ORDER BY seq", (cursor,))], journal)
+            self.assertEqual(connection.execute("SELECT count(*) FROM remote_sync_snapshots").fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], REMOTE_SYNC_SCHEMA_VERSION)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 3)
+            self.assertIn(label, connection.execute("SELECT sql FROM sqlite_master WHERE name='remote_sync_message_insert'").fetchone()[0])
+            self.assertIn(label, connection.execute("SELECT sql FROM sqlite_master WHERE name='remote_sync_message_update'").fetchone()[0])
+        with self.assertRaises(SyncResetRequired):
+            sync.snapshot(cursor=stale_snapshot + ":0")
+        fresh = sync.snapshot()
+        public = next(item["data"] for item in fresh["items"] if item["entity"] == "message" and item["id"] == direct["id"])
+        self.assertEqual(public["agent_trace"], direct_changes[0]["agent_trace"])
+        trace = json.loads(direct["metadata"])["execution"]
+        trace["duration_ms"] += 100
+        upgraded.update_execution(direct["conversation_id"], direct["id"], trace)
+        followup = sync.pull(since=fresh["watermark"])
+        self.assertIn(label, [event["label"] for event in followup["changes"][-1]["data"]["agent_trace"]["events"]])
+        inserted = upgraded.append_message(direct["conversation_id"], "user", "Owned post-upgrade insert", "user",
+            metadata={"execution_mode": "agent", "request_status": "complete", "execution": trace})
+        insert_change = sync.pull(since=followup["next_since"])["changes"]
+        self.assertIn(label, [event["label"] for item in insert_change if item["id"] == inserted["id"]
+                             for event in item["data"]["agent_trace"]["events"]])
+        with closing(sqlite3.connect(path)) as connection:
+            settled = connection.execute("SELECT * FROM remote_sync_changes ORDER BY seq").fetchall()
+            snapshot_count = connection.execute("SELECT count(*) FROM remote_sync_snapshots").fetchone()[0]
+        upgraded.initialize()
+        ConversationStore(path).initialize()
+        with closing(sqlite3.connect(path)) as connection:
+            self.assertEqual(connection.execute("SELECT * FROM remote_sync_changes ORDER BY seq").fetchall(), settled)
+            self.assertEqual(connection.execute("SELECT count(*) FROM remote_sync_snapshots").fetchone()[0], snapshot_count)
+
+    def test_real_v10_refresh_respects_retention_and_filters_non_agent_rows(self):
+        path = self.path.with_name("real-v10-retention.sqlite3")
+        shutil.copyfile(Path(__file__).parent / "fixtures/remote_sync_v10_delegation.sqlite3", path)
+        with closing(sqlite3.connect(path)) as connection:
+            connection.row_factory = sqlite3.Row
+            direct = dict(connection.execute("SELECT * FROM messages WHERE content='Owned direct request'").fetchone())
+            model = dict(connection.execute("SELECT * FROM messages WHERE content='Owned model request'").fetchone())
+            ordinary = json.loads(model["metadata"])
+            ordinary["execution_mode"] = "ordinary"
+            connection.execute("UPDATE messages SET metadata=? WHERE id=?", (json.dumps(ordinary), model["id"]))
+            connection.execute("UPDATE messages SET metadata='broken PRIVATE_METADATA' WHERE content='Ordinary owned history'")
+            connection.commit()
+            tables = ("conversations", "messages", "screen_events", "remote_sync_operations", "remote_sync_tombstones")
+            preserved = {table: [dict(row) for row in connection.execute("SELECT * FROM " + table + " ORDER BY rowid")]
+                         for table in tables}
+            journal = {row["seq"]: dict(row) for row in connection.execute("SELECT * FROM remote_sync_changes ORDER BY seq")}
+            cursor = connection.execute("SELECT high_seq FROM remote_sync_state").fetchone()[0]
+        # Exercise the production compaction boundary with small owned limits.
+        with patch("desktop_pet.conversations.store.REMOTE_SYNC_MAX_CHANGES", len(journal) + 1), \
+                patch("desktop_pet.conversations.store.REMOTE_SYNC_PRUNE_BATCH", 4):
+            upgraded = ConversationStore(path)
+            upgraded.initialize()
+            sync = RemoteSyncStore(upgraded)
+            with self.assertRaises(SyncResetRequired):
+                sync.pull(since=0)
+            changes = sync.pull(since=cursor)["changes"]
+            self.assertEqual([item["id"] for item in changes if item["entity"] == "message"], [direct["id"]])
+            with closing(sqlite3.connect(path)) as connection:
+                connection.row_factory = sqlite3.Row
+                live = [dict(row) for row in connection.execute("SELECT * FROM remote_sync_changes ORDER BY seq")]
+                state = dict(connection.execute("SELECT * FROM remote_sync_state").fetchone())
+                self.assertGreater(state["floor_seq"], 0)
+                self.assertEqual(state["floor_seq"], live[0]["seq"] - 1)
+                self.assertEqual(state["high_seq"], live[-1]["seq"])
+                self.assertEqual(state["entry_count"], len(live))
+                self.assertEqual(state["payload_bytes"], sum(len(row["payload"].encode("utf-8")) for row in live))
+                self.assertLessEqual(len(live), len(journal) + 1)
+                for row in live:
+                    if row["seq"] in journal:
+                        self.assertEqual(row, journal[row["seq"]])
+                for table, rows in preserved.items():
+                    self.assertEqual([dict(row) for row in connection.execute("SELECT * FROM " + table + " ORDER BY rowid")], rows)
+            snapshot = sync.snapshot()
+        public = {item["id"]: item["data"] for item in snapshot["items"] if item["entity"] == "message"}
+        labels = [event["label"] for event in public[direct["id"]]["agent_trace"]["events"]]
+        self.assertIn("任务分派说明（直接请求）", labels)
+        self.assertIsNone(public[model["id"]]["agent_trace"])
+        self.assertTrue(all(item["agent_trace"] is None for item in public.values() if item["id"] != direct["id"]))
+        self.assertNotIn("PRIVATE", json.dumps(public))
+
     def test_v6_trigger_upgrade_emits_live_and_terminal_traces_without_message_replay(self):
         user = self.add(execution())
         with self.store._connection() as connection:
@@ -148,7 +286,7 @@ class PublicExecutionProjectionTests(unittest.TestCase):
         self.assertEqual(latest["agent_trace"]["state"], "cancelled")
         self.assertEqual(len(updated.load_messages(self.cid)), 1)
         with updated._connection() as connection:
-            self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], 7)
+            self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], REMOTE_SYNC_SCHEMA_VERSION)
 
 
 if __name__ == "__main__":

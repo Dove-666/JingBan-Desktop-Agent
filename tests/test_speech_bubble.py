@@ -14,6 +14,7 @@ from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication
 
 from desktop_pet.config import PetConfig
+from desktop_pet.bubble import LONG_REPLY_NOTICE, MAX_VISIBLE_MS
 from desktop_pet.pet_controller import PetController
 from desktop_pet.pet_window import PetWindow
 from desktop_pet.windows_work_area import work_area
@@ -287,9 +288,13 @@ class SpeechBubbleTests(unittest.TestCase):
             self.assert_complete_layout(self.bubble._pages[index], full_text=text)
 
     def test_linked_paginated_reply_pauses_on_hover_and_footer_can_move_both_directions(self):
-        text = COMMENT_160 * 8
-        self.bubble.say(text, 1000, conversation_link={"conversation_id": "local", "message_id": "message"})
-        self.assertGreater(len(self.bubble._pages), 2)
+        text = "一行。\n" * 5
+        area = patch("desktop_pet.bubble.work_area", return_value=QRect(0, 0, 320, 190))
+        area.start()
+        self.addCleanup(area.stop)
+        self.bubble.say(text.rstrip(), 1000, conversation_link={"conversation_id": "local", "message_id": "message"})
+        text = text.rstrip()
+        self.assertEqual(len(self.bubble._pages), 2)
         opening = QSignalSpy(self.bubble.conversation_requested)
         QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
         self.assertTrue(self.bubble._hover_paused)
@@ -315,6 +320,72 @@ class SpeechBubbleTests(unittest.TestCase):
         self.assertTrue(self.bubble.hide_timer.isActive())
         self.assertTrue(self.bubble._page_timer.isActive())
         self.assertEqual("".join(self.bubble._pages), text)
+
+    def test_long_linked_reply_is_a_compact_entry_to_the_original_message(self):
+        text = COMMENT_160 * 8
+        link = {"conversation_id": "local", "message_id": "complete-reply"}
+        opening = QSignalSpy(self.bubble.conversation_requested)
+        self.bubble.say(text, 10000, conversation_link=link)
+        self.assertEqual(self.bubble._source_text, text)
+        self.assertEqual(self.bubble._text, LONG_REPLY_NOTICE)
+        self.assertEqual(self.bubble._pages, [LONG_REPLY_NOTICE])
+        self.assertEqual(self.bubble.accessibleDescription(), LONG_REPLY_NOTICE)
+        self.assertFalse(self.bubble._page_timer.isActive())
+        self.assertTrue(self.bubble._deadline_timer.isActive())
+        self.assertEqual(self.bubble._deadline_timer.interval(), MAX_VISIBLE_MS)
+        QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton,
+                         pos=self.bubble._text_rect.center().toPoint())
+        self.assertEqual(opening.count(), 1)
+        self.assertEqual(opening.at(0), ["local", "complete-reply"])
+        self.assertFalse(self.bubble.isVisible())
+
+    def test_short_multiline_linked_reply_with_more_than_two_pages_is_compact(self):
+        text = "简短段落。\n" * 20
+        self.assertLessEqual(len(text), 220)
+        self.bubble.say(text, 10000, conversation_link={"conversation_id": "local", "message_id": "m"})
+        self.assertEqual(self.bubble._source_text, text)
+        self.assertEqual(self.bubble._pages, [LONG_REPLY_NOTICE])
+
+    def test_close_button_dismisses_hovered_reply_without_opening_the_chat(self):
+        opening = QSignalSpy(self.bubble.conversation_requested)
+        self.bubble.say("这是一条简短的屏幕评论。", 10000,
+                        conversation_link={"conversation_id": "local", "message_id": "m"})
+        QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
+        self.assertTrue(self.bubble._hover_paused)
+        self.assertFalse(self.bubble._close_rect.isEmpty())
+        self.assertFalse(self.bubble._close_rect.intersects(self.bubble._text_rect))
+        QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton,
+                         pos=self.bubble._close_rect.center().toPoint())
+        self.assertEqual(opening.count(), 0)
+        self.assertFalse(self.bubble.isVisible())
+        for timer in (self.bubble.hide_timer, self.bubble._page_timer, self.bubble._deadline_timer):
+            self.assertFalse(timer.isActive())
+        self.assertTrue(self.pet.isVisible())
+
+    def test_hover_cannot_pause_the_hard_visibility_deadline(self):
+        with patch("desktop_pet.bubble.MAX_VISIBLE_MS", 150):
+            self.bubble.say("鼠标停留也会到时关闭。", 10000,
+                            conversation_link={"conversation_id": "local", "message_id": "m"})
+        QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
+        self.assertFalse(self.bubble.hide_timer.isActive())
+        self.assertTrue(self.bubble._deadline_timer.isActive())
+        expiry = self.bubble._deadline_timer.remainingTime()
+        self.bubble.reposition()
+        self.bubble._theme_changed("dark")
+        self.assertLessEqual(self.bubble._deadline_timer.remainingTime(), expiry)
+        QTest.qWait(220)
+        self.assertFalse(self.bubble.isVisible())
+        self.assertFalse(self.bubble._deadline_timer.isActive())
+
+    def test_replacement_linked_reply_resets_hover_and_its_deadline(self):
+        link = {"conversation_id": "local", "message_id": "m"}
+        self.bubble.say(COMMENT_160 * 8, 10000, conversation_link=link)
+        QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
+        self.bubble.say("新的短回复。", 10000, conversation_link=link)
+        self.assertEqual(self.bubble._text, "新的短回复。")
+        self.assertFalse(self.bubble._hover_paused)
+        self.assertTrue(self.bubble.hide_timer.isActive())
+        self.assertEqual(self.bubble._deadline_timer.interval(), MAX_VISIBLE_MS)
 
     def test_font_controls_preserve_character_and_complete_every_page_at_largest_font(self):
         original = QRect(self.pet.frameGeometry()), QRect(self.pet.sprite_rect)

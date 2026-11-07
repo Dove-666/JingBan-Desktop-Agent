@@ -1,7 +1,7 @@
-# AURA chat frontend
+# 鲸伴 chat frontend
 
 The desktop chat panel uses the real `@assistant-ui/react` library, its
-`ExternalStoreRuntime`, thread primitives and message primitives. AURA's local
+`ExternalStoreRuntime`, thread primitives and message primitives. The local
 light CSS is designed for the existing desktop application. It does not copy the
 official demo's stylesheet.
 

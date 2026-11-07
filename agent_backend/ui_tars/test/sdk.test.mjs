@@ -82,7 +82,7 @@ test('real SDK modern GPT transport preserves model/auth and strips only incompa
       assert.equal((await handle.run('synthetic transport')).status, 'completed');
     }
     assert.equal(bodies[0].model, 'gateway/gpt-6.1');
-    assert.ok(!Object.hasOwn(bodies[0], 'max_completion_tokens')); assert.equal(bodies[0].reasoning_effort, 'low');
+    assert.ok(!Object.hasOwn(bodies[0], 'max_completion_tokens')); assert.equal(bodies[0].reasoning_effort, undefined);
     for (const name of ['max_tokens', 'temperature', 'top_p', 'seed', 'stop', 'frequency_penalty', 'presence_penalty', 'thinking']) assert.ok(!Object.hasOwn(bodies[0], name));
     assert.equal(bodies[1].model, 'UI-TARS-1.5-7B'); assert.ok(!Object.hasOwn(bodies[1], 'max_tokens'));
     assert.equal(bodies[1].temperature, 0); assert.equal(bodies[1].top_p, 0.7);
@@ -134,7 +134,7 @@ test('synthetic model probe proves parsed target hit and two-step finish without
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     assert.ok(!Object.hasOwn(body, 'max_completion_tokens'));
     assert.ok(!Object.hasOwn(body, 'max_tokens'));
-    assert.equal(body.reasoning_effort, 'low');
+    assert.equal(body.reasoning_effort, undefined);
     completion(response, ++calls === 1 ? "Thought: secret mock-key-only\nAction: click(start_box='(630,308)')" : 'Thought: done\nAction: finished()');
   });
   try {

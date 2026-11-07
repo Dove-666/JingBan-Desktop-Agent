@@ -26,11 +26,15 @@ def event(**overrides):
 
 
 class PerceptionSettingsTests(unittest.TestCase):
-    def test_defaults_require_both_explicit_opt_ins(self):
+    def test_requested_screen_defaults_retain_privacy_filters(self):
         settings = PerceptionSettings()
         settings.validate()
-        self.assertFalse(settings.enabled)
-        self.assertFalse(settings.allow_remote)
+        self.assertTrue(settings.enabled)
+        self.assertTrue(settings.allow_remote)
+        self.assertEqual((settings.observation_interval_seconds, settings.analysis_interval_seconds,
+                          settings.change_threshold, settings.speech_cooldown_seconds,
+                          settings.max_speeches_per_hour, settings.idle_pause_seconds),
+                         (10, 30, .08, 30, 30, 585))
         self.assertIn("密码", settings.privacy_keywords)
         self.assertIn("incognito", settings.privacy_keywords)
         self.assertIn("bitwarden.exe", settings.excluded_apps)
@@ -222,11 +226,12 @@ class EventDeduplicatorTests(unittest.TestCase):
 
 class ProactiveAgentTests(unittest.TestCase):
     def setUp(self):
-        self.settings = PerceptionSettings(enabled=True)
+        self.settings = PerceptionSettings(enabled=True, speech_cooldown_seconds=180,
+                                           max_speeches_per_hour=6, idle_pause_seconds=600)
         self.agent = ProactiveAgent()
 
     def test_disabled_busy_and_long_idle_are_quiet(self):
-        self.assertEqual(self.agent.decide(event(), 0, PerceptionSettings()).reason, "disabled")
+        self.assertEqual(self.agent.decide(event(), 0, PerceptionSettings(enabled=False)).reason, "disabled")
         self.assertEqual(self.agent.decide(event(), 0, self.settings, busy=True).reason, "user_busy")
         self.assertEqual(self.agent.decide(event(), 0, self.settings, idle_seconds=600).reason, "user_idle")
         self.assertEqual(self.agent.decide(event(), 0, self.settings, idle_seconds=599).action, "speak")

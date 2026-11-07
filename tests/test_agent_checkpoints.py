@@ -103,17 +103,18 @@ class CheckpointStoreTests(unittest.TestCase):
         self.assertFalse(self.store.load(self.cid, self.scope)["scope_matches"])
         self.assertEqual(self.store.load(self.cid, different)["history"], [{"role": "user", "content": "新权限任务"}])
 
-    def test_scope_binds_workspace_models_permissions_and_credentials(self):
+    def test_scope_binds_workspace_permissions_credentials_but_preserves_model_route_changes(self):
         settings = AgentSettings()
         api = {"base_url": "https://test.invalid/v1", "model": "model-a"}
         baseline = scope_fingerprint(settings, api, secrets=(KEY, GUI_KEY))
         for changed, config, secrets in (
                 (replace(settings, computer_enabled=not settings.computer_enabled), api, (KEY, GUI_KEY)),
                 (replace(settings, workspace=str(Path(settings.workspace) / "other")), api, (KEY, GUI_KEY)),
-                (settings, {**api, "model": "model-b"}, (KEY, GUI_KEY)),
                 (settings, api, ("other-test-key", GUI_KEY))):
             self.assertNotEqual(baseline, scope_fingerprint(changed, config, secrets=secrets))
         self.assertEqual(len(baseline), 64)
+        self.assertEqual(baseline, scope_fingerprint(settings, {**api, "model": "model-b"}, secrets=(KEY, GUI_KEY)))
+        self.assertEqual(baseline, scope_fingerprint(replace(settings, gui_model="another-vision-model"), api, secrets=(KEY, GUI_KEY)))
         self.assertNotEqual(scope_fingerprint(settings, api, secrets=(KEY,), generation=str(uuid4())),
                             scope_fingerprint(settings, api, secrets=(KEY,), generation=str(uuid4())))
 
@@ -212,7 +213,9 @@ class CheckpointStoreTests(unittest.TestCase):
         self.store.save(self.cid, self.scope, self.task, records, barrier=1)
         with database(self.path) as db:
             history, frontier = db.execute("SELECT history_json,frontier_json FROM agent_checkpoints").fetchone()
-            self.assertNotIn("critical-write-intent", history)
+            # Large observations are now recallable references, so a pending
+            # call can remain intact in hot replay as well as the safety ledger.
+            self.assertIn("critical-write-intent", history)
             pending = json.loads(frontier)["pending_calls"]
             self.assertEqual(pending[0]["id"], "critical-write-intent")
             self.assertEqual(pending[0]["function"]["name"], "write_file")
@@ -221,7 +224,8 @@ class CheckpointStoreTests(unittest.TestCase):
         self.assertEqual(recovered["pending_tool_count"], 1)
         self.assertIn("critical-write-intent", json.dumps(recovered["history"]))
         self.assertIn("do not repeat automatically", json.dumps(recovered["history"]))
-        self.assertFalse(any(record.get("tool_calls") for record in recovered["history"]))
+        self.assertTrue(any(record.get("tool_calls") for record in recovered["history"]))
+        self.assertTrue(any(record.get("content", "").startswith("INTERRUPTED:") for record in recovered["history"]))
 
     def test_schema_one_migration_preserves_existing_native_history(self):
         self.store.begin(self.cid, self.scope, self.task, transcript(), secrets=(KEY,))
@@ -276,7 +280,8 @@ class CheckpointHostTests(unittest.TestCase):
     def worker_body(self, *, barrier=1, wait_for_ack=True):
         prefix = (
             "import sys,json\nfrom pathlib import Path\n"
-            "request=json.loads(sys.stdin.readline());tid=request['id']\n"
+            "print(json.dumps({'type':'ready','protocol':1,'sdk':'nanobot-ai','sdk_version':'0.4.0'}),flush=True)\n"
+            "raw=sys.stdin.readline();assert raw.endswith('\\n');request=json.loads(raw);tid=request['id']\n"
             f"Path({str(self.capture)!r}).write_text(json.dumps(request),encoding='utf-8')\n"
             "def send(kind,**values):\n    print(json.dumps(dict(type=kind,id=tid,**values)),flush=True)\n"
             "send('session',message={'role':'user','content':request['task']})\n"
@@ -421,7 +426,8 @@ class CheckpointHostTests(unittest.TestCase):
         proof = self.root / "durable-frontier-proof.json"
         script = (
             "import sys,json,sqlite3\nfrom pathlib import Path\n"
-            "request=json.loads(sys.stdin.readline());tid=request['id']\n"
+            "print(json.dumps({'type':'ready','protocol':1,'sdk':'nanobot-ai','sdk_version':'0.4.0'}),flush=True)\n"
+            "raw=sys.stdin.readline();assert raw.endswith('\\n');request=json.loads(raw);tid=request['id']\n"
             "def send(kind,**values):\n    print(json.dumps(dict(type=kind,id=tid,**values)),flush=True)\n"
             "send('session',message={'role':'user','content':request['task']})\n"
             "for index in range(16):\n"

@@ -57,4 +57,9 @@ def agent_system_prompt(base: str) -> str:
     # A compact equivalent keeps the existing 768-token system sub-budget,
     # whose fallback estimator counts every UTF-8 byte as a whole token.
     # Ordinary chat continues to use the original Chinese prompt unchanged.
+    from ..character_prompts import CHARACTER_EXPRESSION_POLICY, character_identity_from_prompt
+    identity = character_identity_from_prompt(base)
+    if identity:
+        policy = ROUTING_PROMPT.replace('You are 鲸鱼娘. ', 'Use the selected character identity. ', 1)
+        return identity + CHARACTER_EXPRESSION_POLICY + policy
     return ROUTING_PROMPT

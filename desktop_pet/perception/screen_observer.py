@@ -10,6 +10,7 @@ import sys
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
+from ..branding import APP_NAME
 
 from .settings import PerceptionSettings
 from .capture_quality import is_near_black
@@ -96,10 +97,14 @@ def _is_aura_window(info: ForegroundInfo, own_pid: int) -> bool:
     # Do not capture its chat or revealed API fields. Match this application's
     # window identity together with its host, rather than excluding Python tools.
     host = PureWindowsPath(info.process_name).name.casefold()
-    if host not in {"python.exe", "pythonw.exe", "python", "pythonw", "aura-desktop-agent.exe"}:
+    if host not in {"python.exe", "pythonw.exe", "python", "pythonw", "aura-desktop-agent.exe", "jingban.exe", "鲸伴.exe"}:
         return False
     title = info.title.strip()
-    return (title == "AURA · 鲸鱼娘桌宠"
+    return (title == APP_NAME
+            or title.startswith(f"{APP_NAME} · 调试面板 · ")
+            or title in {f"设置 · {APP_NAME}", f"{APP_NAME} · 长期记忆"}
+            or title.endswith(f" - {APP_NAME}")
+            or title == "AURA · 鲸鱼娘桌宠"
             or title.startswith("鲸鱼娘 · 调试面板 · ")
             or title in {"和鲸鱼娘聊天", "设置 · 鲸鱼娘", "鲸鱼娘 · 长期记忆"}
             or title.endswith(" - 鲸鱼娘桌宠"))
@@ -110,7 +115,7 @@ def privacy_reason(info: ForegroundInfo, settings: PerceptionSettings, own_pid: 
     if not info.available or not info.hwnd or not info.process_name or not info.title.strip():
         return "无法确认前台窗口，已暂停截图和外发。"
     if _is_aura_window(info, own_pid):
-        return "前台是 AURA 自身窗口，跳过以避免自我观察。"
+        return "前台是鲸伴自身窗口，跳过以避免自我观察。"
     if (isinstance(info.idle_seconds, bool) or not isinstance(info.idle_seconds, (int, float))
             or info.idle_seconds < 0 or not math.isfinite(info.idle_seconds)):
         return "无法确认用户输入活动，暂停观察。"

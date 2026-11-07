@@ -11,12 +11,15 @@ import weakref
 
 from PySide6.QtCore import QSignalBlocker, Qt
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QCompleter, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMessageBox, QPushButton, QScrollArea, QSlider, QToolButton, QVBoxLayout, QWidget,
+    QComboBox, QCompleter, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QMessageBox, QPushButton, QScrollArea, QSizePolicy, QSlider, QToolButton, QVBoxLayout, QWidget,
 )
 from shiboken6 import isValid
 
 from ..settings_manager import ApiSettings
+from .theme import style_widget
+from .settings_widgets import CollapsibleSection, SettingsToggle
+from .reasoning_controls import ReasoningControls
 
 
 def _hint(text: str) -> QLabel:
@@ -43,13 +46,18 @@ class SettingsControlsMixin:
         contents = QWidget()
         scroll.setWidget(contents)
         layout = QVBoxLayout(contents)
-        layout.setContentsMargins(18, 18, 18, 18)
+        embedded = getattr(self, "_embedded_preferences", False)
+        layout.setContentsMargins(*( (0, 2, 6, 12) if embedded else (18, 18, 18, 18) ))
         layout.setSpacing(15)
+        if callable(getattr(getattr(self, "chat_controller", None), "set_character_card", None)):
+            from .character_card_panel import CharacterCardPanel
+            self.character_card_panel = CharacterCardPanel(self.settings_manager, self.chat_controller)
+            layout.addWidget(self.character_card_panel)
         size_group = QGroupBox("角色大小")
         size_layout = QVBoxLayout(size_group)
         size_layout.setSpacing(12)
         header = QHBoxLayout()
-        header.addWidget(_hint("相对于启动时的默认大小，实时调整并自动保存。"), 1)
+        header.addWidget(_hint("调整桌宠在桌面上的大小。"), 1)
         self.scale_label = QLabel()
         self.scale_label.setObjectName("scaleValue")
         header.addWidget(self.scale_label)
@@ -63,7 +71,7 @@ class SettingsControlsMixin:
         self.scale_slider.setAccessibleName("桌宠大小百分比")
         size_layout.addWidget(self.scale_slider)
         presets = QHBoxLayout()
-        for value in (50, 75, 100, 125, 150, 200):
+        for value in ((75, 100, 150) if embedded else (50, 75, 100, 125, 150, 200)):
             button = QPushButton(f"{value}%")
             button.setObjectName(f"scalePreset{value}")
             button.setMinimumWidth(0)
@@ -74,6 +82,8 @@ class SettingsControlsMixin:
         reset.setObjectName("resetScaleButton")
         reset.clicked.connect(self.pet_controller.reset_scale)
         size_layout.addWidget(reset, alignment=Qt.AlignmentFlag.AlignLeft)
+        if embedded:
+            reset.hide()  # The 100% preset already restores the default size.
         layout.addWidget(size_group)
         reading_group = QGroupBox("评论气泡阅读")
         reading_layout = QVBoxLayout(reading_group)
@@ -103,10 +113,34 @@ class SettingsControlsMixin:
         if signal is not None:
             signal.connect(self.reading_slider.setValue)
         layout.addWidget(reading_group)
-        expression_group = QGroupBox("表情与动作")
+        if embedded:
+            # Reading preferences have a single home on the General page.
+            reading_group.hide()
+        expression_group = QWidget()
+        expression_group.setObjectName("characterBehaviorCard")
+        expression_group.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        style_widget(expression_group, """
+QWidget#characterBehaviorCard { background: #ffffff; border: 1px solid #e6eaf0; border-radius: 12px; }
+QWidget#characterBehaviorCard > QLabel#characterBehaviorTitle { color: #344054; font-size: 14px; font-weight: 600; border: none; }
+QWidget#characterBehaviorCard QLabel#characterControlLabel { color: #667386; font-weight: 400; border: none; }
+QWidget#characterBehaviorCard QComboBox { padding: 7px 10px; min-height: 24px; }
+QWidget#characterBehaviorCard QPushButton { padding: 7px 12px; min-height: 24px; }
+QWidget#characterBehaviorCard QPushButton#playAssetAnimationButton { background: #253449; color: white; border-color: #253449; }
+QWidget#characterBehaviorCard QPushButton#playAssetAnimationButton:hover { background: #172334; }
+QWidget#characterBehaviorCard QPushButton#stopAssetAnimationButton { background: transparent; }
+QWidget#characterBehaviorCard QPushButton#stopAssetAnimationButton:hover { background: #edf2f8; }
+QWidget#characterBehaviorCard QToolButton#settingsDisclosureButton { background: transparent; border: 1px solid transparent;
+    text-align: left; color: #667386; padding: 5px 0; }
+QWidget#characterBehaviorCard QToolButton#settingsDisclosureButton:hover { background: #f3f6f9; }
+QWidget#characterBehaviorCard QToolButton#settingsDisclosureButton:focus { border-color: #87a8cb; }
+""")
         expression_layout = QVBoxLayout(expression_group)
+        expression_layout.setContentsMargins(18, 16, 18, 12)
         expression_layout.setSpacing(12)
-        self.auto_expression_checkbox = QCheckBox("API 按语境选择表情")
+        title = QLabel("表情与动作")
+        title.setObjectName("characterBehaviorTitle")
+        expression_layout.addWidget(title)
+        self.auto_expression_checkbox = SettingsToggle("自动切换表情")
         self.auto_expression_checkbox.setObjectName("autoExpressionEnabled")
         self.auto_expression_checkbox.setAccessibleName("API按语境选择表情")
         self.auto_expression_checkbox.setChecked(bool(getattr(self.pet_controller, "auto_expression_enabled", True)))
@@ -118,36 +152,65 @@ class SettingsControlsMixin:
         if auto_signal is not None:
             auto_signal.connect(self._auto_expression_changed)
         expression_layout.addWidget(self.auto_expression_checkbox)
-        expression_layout.addWidget(_hint("聊天、屏幕和摄像头分析时由 API 选择表情；关闭后可手动选择，不额外发起请求。"))
+        self.auto_expression_checkbox.setToolTip("根据聊天和观察内容切换表情；关闭后可手动选择。")
         self.auto_expression_status = _hint("")
         self.auto_expression_status.setObjectName("autoExpressionStatus")
-        expression_layout.addWidget(self.auto_expression_status)
+        self.auto_expression_status.setParent(expression_group)
         self._auto_expression_status_changed(getattr(self.pet_controller, "auto_expression_status", ""))
         auto_status_signal = getattr(self.pet_controller, "auto_expression_status_changed", None)
         if auto_status_signal is not None:
             auto_status_signal.connect(self._auto_expression_status_changed)
-        row = QHBoxLayout()
+        selectors = QFormLayout()
+        selectors.setContentsMargins(0, 0, 0, 0)
+        selectors.setHorizontalSpacing(16)
+        selectors.setVerticalSpacing(12)
+        selectors.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        selectors.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        selectors.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        row_widget = QWidget()
+        row = QHBoxLayout(row_widget)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
         self.expression_combo = QComboBox()
+        self.expression_combo.setMinimumWidth(0)
+        self.expression_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.expression_combo.setObjectName("expressionCombo")
         self.expression_combo.setAccessibleName("角色表情")
         for code, label, status in self.pet_controller.expression_catalog():
-            self.expression_combo.addItem(f"{label}  ·  {code}", code)
+            self.expression_combo.addItem(label, code)
             self.expression_combo.setItemData(self.expression_combo.count() - 1, status, Qt.ItemDataRole.ToolTipRole)
         row.addWidget(self.expression_combo, 1)
-        test = QPushButton("测试当前表情")
+        test = QPushButton("预览")
         test.setObjectName("testExpressionButton")
+        test.setAccessibleName("预览当前表情")
+        test.setToolTip("在桌宠上预览当前表情")
         test.clicked.connect(self.pet_controller.test_expression)
         row.addWidget(test)
-        expression_layout.addLayout(row)
+        label = QLabel("表情")
+        label.setObjectName("characterControlLabel")
+        label.setBuddy(self.expression_combo)
+        selectors.addRow(label, row_widget)
+        expression_layout.addLayout(selectors)
         self.expression_status = QLabel()
         self.expression_status.setObjectName("status")
         self.expression_status.setTextFormat(Qt.TextFormat.PlainText)
         self.expression_status.setWordWrap(True)
-        expression_layout.addWidget(self.expression_status)
-        expression_layout.addWidget(_hint("缺少独立表情 PNG 时，只切换逻辑状态，并以轻量动作或气泡反馈；原图不会被修改。"))
+        details = CollapsibleSection("更多")
+        details.setObjectName("characterBehaviorDetails")
+        details_layout = QVBoxLayout(details.content)
+        details_layout.setContentsMargins(0, 0, 0, 0)
+        details_layout.addWidget(self.auto_expression_status)
+        details_layout.addWidget(self.expression_status)
+        if hasattr(self.pet_controller, "animation_catalog"):
+            self._make_asset_controls(selectors, details_layout)
+            focus_order = [self.auto_expression_checkbox, self.expression_combo, test,
+                           self.asset_animation_combo,
+                           self.asset_animation_play_button, self.asset_animation_stop_button,
+                           details.button]
+            for before, after in zip(focus_order, focus_order[1:]):
+                QWidget.setTabOrder(before, after)
+        expression_layout.addWidget(details)
         layout.addWidget(expression_group)
-        if hasattr(self.pet_controller, "animation_catalog") and hasattr(self.pet_controller, "static_catalog"):
-            layout.addWidget(self._make_asset_controls())
         self.pet_error_label = QLabel()
         self.pet_error_label.setObjectName("error")
         self.pet_error_label.setAccessibleName("角色控制错误")
@@ -155,6 +218,8 @@ class SettingsControlsMixin:
         self.pet_error_label.setTextFormat(Qt.TextFormat.PlainText)
         self.pet_error_label.hide()
         layout.addWidget(self.pet_error_label)
+        if hasattr(self, "asset_animation_combo"):
+            self._update_asset_animation_buttons()
         layout.addStretch()
         self.scale_slider.valueChanged.connect(self.pet_controller.set_scale)
         self.pet_controller.scale_changed.connect(self._scale_changed)
@@ -166,59 +231,73 @@ class SettingsControlsMixin:
         self._expression_changed(self.pet_controller.expression, self.pet_controller.expression_status)
         return tab
 
-    def _make_asset_controls(self) -> QWidget:
-        group = QGroupBox("角色素材与序列帧")
-        layout = QVBoxLayout(group)
-        layout.setSpacing(12)
-        self.appearance_combo = QComboBox()
-        self.appearance_combo.setObjectName("staticCharacterCombo")
-        self.appearance_combo.setAccessibleName("静态角色素材，独立于API表情")
-        layout.addWidget(self.appearance_combo)
-        self.appearance_status = _hint(getattr(self.pet_controller, "appearance_status", ""))
-        self.appearance_status.setObjectName("staticCharacterStatus")
-        layout.addWidget(self.appearance_status)
-        row = QHBoxLayout()
+    def _make_asset_controls(self, selectors: QFormLayout, details_layout: QVBoxLayout) -> None:
+        row_widget = QWidget()
+        row = QHBoxLayout(row_widget)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
         self.asset_animation_combo = QComboBox()
+        self.asset_animation_combo.setMinimumWidth(0)
+        self.asset_animation_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.asset_animation_combo.setObjectName("assetAnimationCombo")
-        self.asset_animation_combo.setAccessibleName("素材动作")
+        self.asset_animation_combo.setAccessibleName("待机动作")
         row.addWidget(self.asset_animation_combo, 1)
-        play = QPushButton("播放动作")
+        play = QPushButton("播放")
         play.setObjectName("playAssetAnimationButton")
+        play.setAccessibleName("播放所选待机动作")
+        play.setMinimumWidth(68)
+        self.asset_animation_play_button = play
         play.clicked.connect(lambda: self.pet_controller.play_asset_animation(self.asset_animation_combo.currentData()))
         row.addWidget(play)
-        stop = QPushButton("停止 / 恢复")
+        stop = QPushButton("停止")
         stop.setObjectName("stopAssetAnimationButton")
+        stop.setAccessibleName("停止动作并恢复角色")
+        stop.setMinimumWidth(68)
+        self.asset_animation_stop_button = stop
+        stop.setToolTip("结束播放，恢复原来的角色外观")
         stop.clicked.connect(self.pet_controller.stop_asset_animation)
         row.addWidget(stop)
-        layout.addLayout(row)
+        label = QLabel("待机动作")
+        label.setObjectName("characterControlLabel")
+        label.setBuddy(self.asset_animation_combo)
+        label.setToolTip("闲着时随机播放；也可以在这里手动预览")
+        selectors.addRow(label, row_widget)
         self.asset_animation_status = _hint("")
         self.asset_animation_status.setObjectName("assetAnimationStatus")
-        layout.addWidget(self.asset_animation_status)
+        details_layout.addWidget(self.asset_animation_status)
         refresh = QPushButton("重新检查素材")
         refresh.setObjectName("refreshCharacterAssetsButton")
         refresh.clicked.connect(self._refresh_character_assets)
-        layout.addWidget(refresh, alignment=Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(_hint("待机时随机播放动作和傲娇抱臂姿态，对话中由 API 选择表情。3 秒内连点耳朵或尾巴 3 次，会生气约 8 秒，再回到待机。这里可手动循环预览；拖动时暂停，松开后平滑恢复。"))
+        details_layout.addWidget(refresh, alignment=Qt.AlignmentFlag.AlignLeft)
         self._refresh_character_assets()
-        self.appearance_combo.currentIndexChanged.connect(self._select_appearance)
         self.asset_animation_combo.currentIndexChanged.connect(self._selected_asset_status)
-        self.pet_controller.appearance_changed.connect(self._appearance_changed)
-        self.pet_controller.asset_animation_changed.connect(lambda name, status: self.asset_animation_status.setText(status))
-        return group
+        self.pet_controller.asset_animation_changed.connect(self._asset_animation_changed)
+
+    def _update_asset_animation_buttons(self):
+        player = getattr(self.pet_controller, "asset_player", None)
+        if player is not None:
+            loading = bool(player.loading)
+            self.asset_animation_play_button.setText("加载…" if loading else "播放")
+            self.asset_animation_play_button.setEnabled(not loading)
+            self.asset_animation_stop_button.setEnabled(bool(player.busy))
+
+    def _asset_animation_changed(self, name, status):
+        self.asset_animation_status.setText(status)
+        self._update_asset_animation_buttons()
+        player = getattr(self.pet_controller, "asset_player", None)
+        if player is not None and hasattr(self, "pet_error_label"):
+            # A failed play request must remain visible with diagnostics closed.
+            self._show_pet_error(str(status) if name and not player.busy else "")
 
     def _refresh_character_assets(self):
         selected = self.asset_animation_combo.currentData()
-        self.appearance_combo.blockSignals(True)
-        self.appearance_combo.clear()
-        for code, label, status in self.pet_controller.static_catalog():
-            self.appearance_combo.addItem(label, code)
-            self.appearance_combo.setItemData(self.appearance_combo.count() - 1, status, Qt.ItemDataRole.ToolTipRole)
-        self.appearance_combo.setCurrentIndex(self.appearance_combo.findData(self.pet_controller.appearance))
-        self.appearance_combo.blockSignals(False)
         self.asset_animation_combo.blockSignals(True)
         self.asset_animation_combo.clear()
         for code, label, status in self.pet_controller.animation_catalog():
-            self.asset_animation_combo.addItem(label, code)
+            # The row already says "待机动作"; retain stable action IDs and
+            # omit repetitive category prefixes from this local selector only.
+            display = label.partition(" · ")[2] or label
+            self.asset_animation_combo.addItem(display, code)
             self.asset_animation_combo.setItemData(self.asset_animation_combo.count() - 1, status, Qt.ItemDataRole.ToolTipRole)
         index = self.asset_animation_combo.findData(selected)
         self.asset_animation_combo.setCurrentIndex(max(0, index))
@@ -227,17 +306,6 @@ class SettingsControlsMixin:
 
     def _selected_asset_status(self):
         self.asset_animation_status.setText(self.asset_animation_combo.currentData(Qt.ItemDataRole.ToolTipRole) or "暂无动作素材。")
-
-    def _select_appearance(self):
-        code = self.appearance_combo.currentData()
-        if code:
-            self.pet_controller.set_static_character(code)
-
-    def _appearance_changed(self, code, status):
-        self.appearance_combo.blockSignals(True)
-        self.appearance_combo.setCurrentIndex(self.appearance_combo.findData(code))
-        self.appearance_combo.blockSignals(False)
-        self.appearance_status.setText(status)
 
     def _scale_changed(self, percent: int) -> None:
         self._show_pet_error("")
@@ -274,7 +342,7 @@ class SettingsControlsMixin:
     def _make_api_tab(self) -> QWidget:
         tab = QWidget()
         tab.setObjectName("apiSettingsTab")
-        tab.setStyleSheet("""
+        style_widget(tab, """
 QWidget#apiSettingsTab QPushButton#saveApiButton {
     background: #356da7; border: 1px solid #356da7; color: white; font-weight: 600;
 }
@@ -304,22 +372,25 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         contents = QWidget()
         scroll.setWidget(contents)
         layout = QVBoxLayout(contents)
-        layout.setContentsMargins(18, 18, 18, 18)
+        embedded = getattr(self, "_embedded_preferences", False)
+        layout.setContentsMargins(*( (0, 2, 6, 12) if embedded else (18, 18, 18, 18) ))
         layout.setSpacing(14)
-        group = QGroupBox("兼容聊天服务")
+        group = QGroupBox("全局模型")
         form = QFormLayout(group)
         form.setSpacing(13)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        if embedded:
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
         self.base_url_input = QLineEdit()
         self.base_url_input.setObjectName("apiBaseUrl")
-        self.base_url_input.setAccessibleName("聊天 API 根地址（Base URL）")
+        self.base_url_input.setAccessibleName("全局 API 根地址（Base URL）")
         self.base_url_input.setAccessibleDescription("填写服务商提供的完整 API 根地址。")
         self.base_url_input.setPlaceholderText("https://api.openai.com/v1")
         form.addRow("Base URL", self.base_url_input)
         key_row = QHBoxLayout()
         self.key_input = QLineEdit()
         self.key_input.setObjectName("apiKey")
-        self.key_input.setAccessibleName("聊天 API Key")
+        self.key_input.setAccessibleName("全局 API Key")
         self.key_input.setAccessibleDescription("输入新密钥；留空继续使用系统凭据库中已保存的密钥。此输入框不显示已保存的密钥。")
         self.key_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.key_input.setPlaceholderText("输入新密钥；留空保留已保存密钥")
@@ -342,6 +413,8 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         self.model_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.model_combo.setMaxVisibleItems(12)
         self.model_combo.setMinimumContentsLength(10)
+        self.model_combo.setMinimumWidth(0)
+        self.model_combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.model_combo.setAccessibleName("聊天模型选择")
         self.model_combo.setAccessibleDescription("从获取的模型列表中选择，或直接输入模型名称。")
@@ -355,7 +428,7 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         completer.setFilterMode(Qt.MatchFlag.MatchContains)
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         model_row.addWidget(self.model_combo, 1)
-        self.fetch_models_button = QPushButton("获取模型列表")
+        self.fetch_models_button = QPushButton("获取模型" if embedded else "获取模型列表")
         self.fetch_models_button.setObjectName("fetchModelsButton")
         self.fetch_models_button.setAccessibleDescription("使用当前地址和密钥查询模型列表；不发送聊天，不保存配置。")
         self.fetch_models_button.clicked.connect(self._fetch_models)
@@ -372,34 +445,30 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         form.addRow("", self.models_status_label)
         self._models_request_token = None
         self._models_loaded_source = None
-        self.reasoning_effort_combo = QComboBox()
-        self.reasoning_effort_combo.setObjectName("apiReasoningEffort")
-        self.reasoning_effort_combo.setAccessibleName("模型思考强度")
-        self.reasoning_effort_combo.setAccessibleDescription("默认由模型决定；其他强度是否可用取决于模型和服务商。")
-        for value, label in (("default", "默认"), ("none", "关闭"), ("minimal", "极低"),
-                             ("low", "低"), ("medium", "中"), ("high", "高"),
-                             ("xhigh", "很高"), ("max", "最高")):
-            self.reasoning_effort_combo.addItem(label, value)
+        try:
+            reasoning_config = self.settings_manager.load_api_settings()
+        except Exception:
+            reasoning_config = ApiSettings()
+        self.reasoning_controls = ReasoningControls(self.settings_manager, reasoning_config)
+        self.reasoning_effort_combo = self.reasoning_controls.value_combo
         layout.addWidget(group)
         self.api_advanced_button = QToolButton()
         self.api_advanced_button.setObjectName("apiAdvancedButton")
         self.api_advanced_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.api_advanced_button.setArrowType(Qt.ArrowType.RightArrow)
         self.api_advanced_button.setCheckable(True)
+        self.api_advanced_button.setMinimumWidth(0)
+        self.api_advanced_button.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.api_advanced_button.setAccessibleName("展开高级模型设置")
         layout.addWidget(self.api_advanced_button)
         self.api_advanced_content = QWidget()
         advanced_layout = QVBoxLayout(self.api_advanced_content)
         advanced_layout.setContentsMargins(0, 0, 0, 0)
-        advanced_form = QFormLayout()
-        advanced_form.addRow("思考强度", self.reasoning_effort_combo)
-        advanced_layout.addLayout(advanced_form)
-        advanced_layout.addWidget(_hint("支持范围取决于模型；较高强度可能增加耗时和 Token 消耗。「默认」不发送额外参数。"))
+        advanced_layout.addWidget(self.reasoning_controls)
         self.api_advanced_content.hide()
         layout.addWidget(self.api_advanced_content)
         self.api_advanced_button.toggled.connect(self._toggle_api_advanced)
-        self.reasoning_effort_combo.currentIndexChanged.connect(self._refresh_api_advanced_label)
-        layout.addWidget(_hint("密钥存入系统凭据库。保存后用于聊天；测试使用当前填写内容，会发送一次短请求。"))
+        self.reasoning_controls.changed.connect(self._refresh_api_advanced_label)
         self.credential_label = QLabel()
         self.credential_label.setObjectName("status")
         self.credential_label.setWordWrap(True)
@@ -417,7 +486,7 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         self.test_connection_button.clicked.connect(self._test_connection)
         buttons.addWidget(self.test_connection_button)
         buttons.addStretch()
-        self.clear_key_button = QPushButton("清除 API Key")
+        self.clear_key_button = QPushButton("清除密钥" if embedded else "清除 API Key")
         self.clear_key_button.setObjectName("clearApiKeyButton")
         self.clear_key_button.clicked.connect(self._clear_key)
         buttons.addWidget(self.clear_key_button)
@@ -439,8 +508,7 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
             self.base_url_input.setText(config.base_url)
             self.model_input.setText(config.model)
             self._timeout_seconds = config.timeout_seconds
-            self.reasoning_effort_combo.setCurrentIndex(max(0, self.reasoning_effort_combo.findData(
-                getattr(config, "reasoning_effort", "default"))))
+            self.reasoning_controls.set_identity(config.base_url, config.model, initial=config, refresh=True)
         except Exception as exc:
             self._timeout_seconds = 30.0
             self._show_api_error(str(exc))
@@ -453,7 +521,9 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
             field.textChanged.connect(self._connection_fields_edited)
         for field in (self.base_url_input, self.key_input):
             field.textChanged.connect(self._models_source_edited)
-        self.reasoning_effort_combo.currentIndexChanged.connect(self._connection_fields_edited)
+        self.reasoning_controls.changed.connect(self._connection_fields_edited)
+        for field in (self.base_url_input, self.model_input):
+            field.textChanged.connect(self._reasoning_identity_changed)
         self.chat_controller.connection_status_changed.connect(self._connection_status_changed)
         self.chat_controller.error_changed.connect(self._show_api_error)
         self.chat_controller.busy_changed.connect(lambda busy: self.test_connection_button.setEnabled(not busy))
@@ -466,7 +536,25 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         self.api_advanced_button.setAccessibleName("收起高级模型设置" if expanded else "展开高级模型设置")
 
     def _refresh_api_advanced_label(self, _index=None):
-        self.api_advanced_button.setText("高级设置 · 思考强度：" + self.reasoning_effort_combo.currentText())
+        value = self.reasoning_effort_combo.currentText()
+        self.api_advanced_button.setText("高级设置 · 思考：" + (value if len(value) <= 18 else "自定义值"))
+        self.api_advanced_button.setToolTip(value)
+
+    def _reasoning_identity_changed(self):
+        self._cache_current_reasoning_metadata()
+        self.reasoning_controls.set_identity(self.base_url_input.text(), self.model_input.text())
+        self._refresh_api_advanced_label()
+
+    def _cache_current_reasoning_metadata(self):
+        model = self.model_input.text().strip()
+        metadata = getattr(self, "_reasoning_model_metadata", {}).get(model)
+        saver = getattr(self.settings_manager, "save_reasoning_metadata", None)
+        if (callable(saver) and isinstance(metadata, dict) and
+                metadata.get("base_url", "").rstrip("/") == self.base_url_input.text().strip().rstrip("/")):
+            try:
+                saver(metadata, base_url=self.base_url_input.text().strip(), model=model)
+            except (ValueError, TypeError):
+                pass
 
     def _models_source_signature(self):
         key = self.key_input.text().strip() or self.settings_manager.get_api_key()
@@ -493,6 +581,7 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         if not unchanged:
             self._replace_model_choices([])
             self._models_loaded_source = None
+            self._reasoning_model_metadata = {}
             self.models_status_label.setText("地址或密钥已变更，请重新获取模型列表。")
             self.models_status_label.show()
 
@@ -543,7 +632,7 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
             return
         self._models_request_token = None
         self.fetch_models_button.setEnabled(True)
-        self.fetch_models_button.setText("获取模型列表")
+        self.fetch_models_button.setText("获取模型" if getattr(self, "_embedded_preferences", False) else "获取模型列表")
         try:
             current = self._models_source_signature() == signature
         except Exception:
@@ -555,6 +644,10 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         else:
             self._replace_model_choices(models)
             self._models_loaded_source = signature
+            self._reasoning_model_metadata = getattr(models, "reasoning_metadata", {})
+            self._cache_current_reasoning_metadata()
+            self.reasoning_controls.set_identity(self.base_url_input.text(), self.model_input.text(), refresh=True)
+            self._refresh_api_advanced_label()
             self.models_status_label.setText(f"已获取 {len(models)} 个模型，可下拉选择或输入筛选；仍支持手动填写。")
         self.models_status_label.show()
 
@@ -564,11 +657,8 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         self.show_key_button.setAccessibleName("隐藏 API Key" if visible else "显示 API Key")
 
     def _current_api_settings(self):
-        return ApiSettings(
-            base_url=self.base_url_input.text().strip(), model=self.model_input.text().strip(),
-            timeout_seconds=self._timeout_seconds,
-            reasoning_effort=self.reasoning_effort_combo.currentData(),
-        )
+        return self.reasoning_controls.api_settings(self.base_url_input.text().strip(),
+            self.model_input.text().strip(), self._timeout_seconds)
 
     def _show_api_error(self, message: str) -> None:
         # A credential backend must not accidentally reflect a newly entered key.
@@ -590,6 +680,10 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
         else:
             status += "\n仍可输入临时密钥测试连接；聊天需在凭据库恢复并保存密钥后使用。"
         self.credential_label.setText(status)
+        if getattr(self, "_embedded_preferences", False):
+            # Keep detailed vault diagnostics available without a second banner.
+            self.credential_label.setToolTip(status)
+            self.credential_label.setText(status.split("\n", 1)[-1] if "\n" in status else status)
 
     def _connection_fields_edited(self) -> None:
         self._connection_fields_revision += 1
@@ -635,6 +729,11 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
             else:
                 self._show_api_error(str(exc))
         self._refresh_credential_status()
+        # A QSettings sync failure does not prove its in-memory values stayed
+        # unchanged. Publish the actual current policy even after a failed save.
+        refresh = getattr(self.chat_controller, "refresh_agent_queue_policy", None)
+        if callable(refresh):
+            refresh()
 
     def _test_connection(self) -> None:
         self._show_api_error("")
@@ -673,3 +772,6 @@ QWidget#apiSettingsTab QToolButton#apiAdvancedButton:focus { border-color: #83ad
             self._show_api_error(str(exc))
         self._refresh_credential_status()
         self._models_source_edited()
+        refresh = getattr(self.chat_controller, "refresh_agent_queue_policy", None)
+        if callable(refresh):
+            refresh()

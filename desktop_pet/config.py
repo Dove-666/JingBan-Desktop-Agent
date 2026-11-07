@@ -4,9 +4,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .animation_config import AnimationConfig
+from .runtime_paths import resource_root
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = resource_root()
 DEFAULT_IMAGE = PROJECT_ROOT / "assets" / "whale.png"
 
 
@@ -24,12 +25,19 @@ class PetConfig:
     show_debug_panel: bool = False
     silent_start: bool | None = None
     autostart: bool = False
+    profile_dir: Path | None = None
+    qa_exit_after_ms: int | None = None
 
     def __post_init__(self) -> None:
         if self.silent_start is not None and type(self.silent_start) is not bool:
             raise ValueError("静默启动设置必须为开启或关闭。")
         if type(self.autostart) is not bool:
             raise ValueError("自动启动标识必须为开启或关闭。")
+        if self.profile_dir is not None and not isinstance(self.profile_dir, Path):
+            raise ValueError("独立配置目录必须是有效路径。")
+        if (self.qa_exit_after_ms is not None
+                and (type(self.qa_exit_after_ms) is not int or self.qa_exit_after_ms < 250)):
+            raise ValueError("自动退出等待时间至少为 250 毫秒。")
         if self.window_width < 160 or self.window_height < 200:
             raise ValueError("窗口宽度至少为 160，高度至少为 200。")
         if self.character_size < 32:

@@ -3,7 +3,11 @@
 
 package com.aura.companion.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -41,10 +46,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.launch
 
-private enum class AppSheet { CONNECTION, PET, IMAGES }
-private data class DesktopSubmission(val serial: Int, val conversationId: String?)
+private enum class AppSheet { CONNECTION }
 
 // Small code-native vectors keep the controls recognizable without shipping an icon font.
 internal val DesktopMonitorIcon by lazy {
@@ -91,7 +98,7 @@ private val StopSquareIcon by lazy {
 }
 
 @Composable
-fun AuraApp(state: UiState, actions: UiActions) {
+internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore? = null) {
     AuraTheme(state.theme) {
       LiquidScene {
         val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -101,48 +108,50 @@ fun AuraApp(state: UiState, actions: UiActions) {
         var showPairing by rememberSaveable { mutableStateOf(false) }
         var showQueue by rememberSaveable { mutableStateOf(false) }
         var showApiConfig by remember { mutableStateOf(false) }
+        var showCharacterCards by rememberSaveable { mutableStateOf(false) }
         var pairPrefill by remember { mutableStateOf("") }
-        var draft by rememberSaveable { mutableStateOf("") }
+        val draftFactory = remember(draftStore) { object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ConversationDrafts(draftStore) as T
+        } }
+        val drafts: ConversationDrafts = viewModel(factory = draftFactory)
+        BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
+        val draftCursor = rememberSaveable(saver = CurrentDraftCursor.saver(drafts)) {
+            CurrentDraftCursor(drafts, state.selectedConversationId)
+        }
+        SideEffect { draftCursor.conversationId = state.selectedConversationId }
+        val draft = drafts.read(state.selectedConversationId).text
         val desktopAssistance = state.desktopAgentMode
         var draftConversation by rememberSaveable { mutableStateOf(state.selectedConversationId) }
-        var preserveFirstDesktopDraft by remember { mutableStateOf(false) }
-        var desktopSubmission by remember { mutableStateOf<DesktopSubmission?>(null) }
-        var submissionSerial by remember { mutableStateOf(0) }
-        val currentConversation by rememberUpdatedState(state.selectedConversationId)
-        val currentDraft by rememberUpdatedState(draft)
         LaunchedEffect(state.selectedConversationId) {
             val selected = state.selectedConversationId
             if (draftConversation != selected) {
-                if (draftConversation == null && selected != null && preserveFirstDesktopDraft) {
-                    desktopSubmission = desktopSubmission?.copy(conversationId = selected)
-                } else {
-                    draft = ""
-                    desktopSubmission = null
-                }
-                preserveFirstDesktopDraft = false
+                if (draftConversation == null && selected != null && drafts.preserveFirstConversation) {
+                    drafts.migrateFirstDraft(selected)
+                } else drafts.cancelFirstMigration()
                 draftConversation = selected
             }
         }
         fun cancelDesktopDraftMigration() {
-            preserveFirstDesktopDraft = false
-            desktopSubmission = null
+            drafts.cancelFirstMigration()
         }
         fun newConversation() { cancelDesktopDraftMigration(); actions.newConversation() }
         fun setDesktopAgentMode(enabled: Boolean) {
-            preserveFirstDesktopDraft = state.selectedConversationId == null
+            drafts.preserveFirstDraft(state.selectedConversationId)
             actions.setDesktopAgentMode(enabled)
             // A deliberate mode selection explains unavailable tools once. Quiet sync
             // changes never open a sheet, submit a task or erase the current draft.
-            if (enabled && !state.desktopTaskAvailable) sheet = AppSheet.CONNECTION
         }
         fun pickChatImage() {
-            preserveFirstDesktopDraft = state.selectedConversationId == null
+            drafts.preserveFirstDraft(state.selectedConversationId)
             actions.pickImage()
         }
         val attachment = state.pendingAttachment?.takeIf { it.conversationId == state.selectedConversationId }
+        val interaction = state.agentInteraction?.takeIf { it.conversationId == state.selectedConversationId }
         val preparingImage = state.preparingImage || attachment?.preparing == true
-        val canSend = !preparingImage && !state.directChatBusy && !state.desktopTaskBusy && if (desktopAssistance)
-            state.desktopTaskAvailable && !state.desktopTaskRunning && (draft.isNotBlank() || attachment != null)
+        val canSend = drafts.persistenceError == null && draft.length <= 8000 && !preparingImage && !state.directChatBusy && !state.desktopTaskBusy && !state.agentInteractionBusy && if (desktopAssistance)
+            if (state.desktopTaskRunning) state.canSteerDesktop && interaction == null && draft.isNotBlank() && attachment == null
+            else state.desktopTaskAvailable && (draft.isNotBlank() || attachment != null)
             else state.directApi.available && (draft.isNotBlank() || attachment != null)
         var pairingObserved by remember { mutableStateOf(false) }
         LaunchedEffect(state.pendingPairInfo) {
@@ -177,10 +186,7 @@ fun AuraApp(state: UiState, actions: UiActions) {
                 HistoryDrawer(state, actions,
                     onSelect = { cancelDesktopDraftMigration(); actions.selectConversation(it); scope.launch { drawer.close() } },
                     onNew = { newConversation(); scope.launch { drawer.close() } },
-                    onSettings = { openSheet(AppSheet.CONNECTION) },
-                    onPet = { openSheet(AppSheet.PET) },
-                    onQueue = { showQueue = true; scope.launch { drawer.close() } },
-                    onImages = { openSheet(AppSheet.IMAGES); actions.refreshImages() })
+                    onSettings = { openSheet(AppSheet.CONNECTION) })
             },
         ) {
             Scaffold(
@@ -189,39 +195,38 @@ fun AuraApp(state: UiState, actions: UiActions) {
                 topBar = {
                     AppHeader(state,
                         onMenu = { scope.launch { drawer.open() } },
-                        onNew = ::newConversation,
-                        onSettings = { openSheet(AppSheet.CONNECTION) },
-                        onPet = { openSheet(AppSheet.PET) },
-                        onQueue = { showQueue = true },
-                        onImages = { openSheet(AppSheet.IMAGES); actions.refreshImages() },
-                        onScreenshot = actions::requestDesktopScreenshot)
+                        onSettings = { openSheet(AppSheet.CONNECTION) })
                 },
                 snackbarHost = { SnackbarHost(snackbars) },
                 bottomBar = {
                     if (state.chatAvailable) {
-                        MessageComposer(draft, { draft = it }, state, attachment, preparingImage, desktopAssistance, canSend,
+                      Column {
+                        drafts.persistenceError?.let { error -> Text(error,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 24.dp).testTag("draft-storage-error")) }
+                        MessageComposer(draft, { drafts.edit(state.selectedConversationId, it) }, state, attachment, preparingImage, desktopAssistance, canSend,
                             onDesktopAssistance = ::setDesktopAgentMode,
-                            onStop = actions::cancelDesktopTask,
+                            onStop = { if (!desktopAssistance && state.directChatConversationId == state.selectedConversationId)
+                                actions.cancelDirectChat() else actions.cancelDesktopTask() },
                             onAttach = ::pickChatImage,
-                            onConfigureApi = { showApiConfig = true },
                             onRemoveImage = actions::removePendingImage,
                             onSend = { if (canSend) {
                                 if (desktopAssistance) {
                                     val origin = state.selectedConversationId
                                     val submitted = draft
-                                    val serial = ++submissionSerial
-                                    preserveFirstDesktopDraft = origin == null
-                                    desktopSubmission = DesktopSubmission(serial, origin)
-                                    actions.sendDesktopMessage(submitted.trim()) { accepted ->
-                                        val active = desktopSubmission?.takeIf { it.serial == serial }
-                                        val target = active?.conversationId ?: currentConversation.takeIf { preserveFirstDesktopDraft }
-                                        if (accepted && active != null && currentConversation == target) {
-                                            if (currentDraft == submitted) draft = ""
-                                        }
-                                        if (active != null) desktopSubmission = null
+                                    val ticket = drafts.beginSubmission(origin)
+                                    val submit: (String, (Boolean) -> Unit) -> Unit =
+                                        if (state.desktopTaskRunning) actions::steerDesktopTask else actions::sendDesktopMessage
+                                    submit(submitted.trim()) { accepted ->
+                                        drafts.acknowledge(ticket, accepted)
                                     }
-                                } else { cancelDesktopDraftMigration(); actions.sendMessage(draft.trim()); draft = "" }
+                                } else {
+                                    cancelDesktopDraftMigration()
+                                    val ticket = drafts.beginSubmission(state.selectedConversationId)
+                                    actions.sendPhoneMessage(draft.trim()) { accepted -> drafts.acknowledge(ticket, accepted) }
+                                }
                             } })
+                      }
                     }
                 },
             ) { insets ->
@@ -230,13 +235,14 @@ fun AuraApp(state: UiState, actions: UiActions) {
                         Welcome(Modifier.weight(1f), onPair = { pairPrefill = ""; showPairing = true },
                             onConfigureApi = { showApiConfig = true })
                     } else {
-                        if (state.messages.isEmpty()) {
-                            EmptyConversation(Modifier.weight(1f), !state.directApi.available,
-                                onSuggestion = { draft = it }, onPet = { openSheet(AppSheet.PET) })
+                        if (state.messages.isEmpty() && interaction == null && state.agentArtifacts.isEmpty()) {
+                            EmptyConversation(Modifier.weight(1f))
                         } else {
                             key(state.selectedConversationId) {
                                 ConversationMessages(state.messages, Modifier.weight(1f), actions::retryMessage, actions::openImage,
-                                    phoneAvailable = state.directApi.available)
+                                    phoneAvailable = state.directApi.available, interaction = interaction,
+                                    interactionBusy = state.agentInteractionBusy, onAnswer = actions::answerAgentInteraction,
+                                    artifacts = state.agentArtifacts, artifactDownloading = state.artifactDownloading, onSaveArtifact = actions::saveArtifact)
                             }
                         }
                     }
@@ -247,12 +253,17 @@ fun AuraApp(state: UiState, actions: UiActions) {
             AppSheet.CONNECTION -> ConnectionSheet(state, actions,
                 onDismiss = { sheet = null }, onQueue = { sheet = null; showQueue = true },
                 onConfigureApi = { sheet = null; showApiConfig = true },
+                onCharacterCards = { sheet = null; showCharacterCards = true; actions.refreshCharacters() },
                 onPair = { sheet = null; pairPrefill = ""; showPairing = true })
-            AppSheet.PET -> PetSheet(state, actions, onDismiss = { sheet = null })
-            AppSheet.IMAGES -> ImagesSheet(state.images, actions, notice = state.notice,
-                onPick = { sheet = null; pickChatImage() }, onDismiss = { sheet = null })
             null -> Unit
         }
+        if (showCharacterCards) CharacterCardsSheet(state, actions,
+            onDismiss = { showCharacterCards = false },
+            onConnect = {
+                showCharacterCards = false
+                if (state.paired) actions.reconnect()
+                else { pairPrefill = ""; showPairing = true }
+            })
         if (showPairing) PairingDialog(state, actions, initialPayload = pairPrefill,
             onDismiss = { showPairing = false; pairPrefill = "" })
         if (showQueue) QueueDialog(state.queue, actions, notice = state.notice,
@@ -264,271 +275,79 @@ fun AuraApp(state: UiState, actions: UiActions) {
 }
 
 @Composable
-private fun AppHeader(state: UiState, onMenu: () -> Unit, onNew: () -> Unit,
-                      onSettings: () -> Unit, onPet: () -> Unit, onQueue: () -> Unit, onImages: () -> Unit,
-                      onScreenshot: () -> Unit) {
-    var menu by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center) {
-      LiquidSurface(Modifier.widthIn(max = 800.dp).fillMaxWidth(),
-          shape = RoundedCornerShape(24.dp), prominent = true, elevation = 1.dp) {
-       Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun AppHeader(state: UiState, onMenu: () -> Unit, onSettings: () -> Unit) {
+    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically) {
         if (state.chatAvailable) IconButton(onMenu, Modifier.size(48.dp)) {
             Icon(Icons.Default.Menu, contentDescription = "打开对话历史")
-        } else AuraMark(Modifier.size(48.dp))
+        } else AuraMark(Modifier.padding(8.dp).size(32.dp))
         val title = state.conversations.firstOrNull { it.id == state.selectedConversationId }
-            ?.title?.trim()?.takeIf { it.isNotEmpty() } ?: if (state.chatAvailable) "新对话" else "AURA"
+            ?.title?.trim()?.takeIf { it.isNotEmpty() } ?: if (state.chatAvailable) "新对话" else "鲸伴"
         Text(title, style = MaterialTheme.typography.titleMedium,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).testTag("conversation-title").semantics { heading() })
-        ConnectionIndicator(state, onSettings)
-        Box {
-            IconButton(onClick = { menu = true }, Modifier.size(48.dp)) {
-                Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
-            }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false },
-                shape = RoundedCornerShape(24.dp), containerColor = glassSheetColor(),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-                if (state.chatAvailable) DropdownMenuItem(text = { Text("新建对话") },
-                    modifier = Modifier.semantics { contentDescription = "新建对话" },
-                    leadingIcon = { Icon(NewChatIcon, null) },
-                    onClick = { menu = false; onNew() })
-                if (state.chatAvailable) DropdownMenuItem(text = { Text("查看电脑桌面") },
-                    leadingIcon = { Icon(DesktopMonitorIcon, null) },
-                    enabled = state.desktopTaskAvailable && !state.desktopTaskBusy &&
-                        !state.desktopTaskRunning && !state.directChatBusy && !state.preparingImage,
-                    onClick = { menu = false; onScreenshot() })
-                if (state.paired) {
-                    DropdownMenuItem(text = { Text("桌宠控制") },
-                        leadingIcon = { Icon(Icons.Default.Face, null) },
-                        onClick = { menu = false; onPet() })
-                    DropdownMenuItem(text = { Text("图片收件箱") },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, null) },
-                        onClick = { menu = false; onImages() })
-                }
-                if (state.chatAvailable || state.queue.isNotEmpty()) DropdownMenuItem(
-                    text = { Text("待处理消息${if (state.queue.isEmpty()) "" else " (${state.queue.size})"}") },
-                    leadingIcon = { Icon(Icons.Default.Info, null) },
-                    onClick = { menu = false; onQueue() })
-                DropdownMenuItem(text = { Text("连接与外观") },
-                    leadingIcon = { Icon(Icons.Default.Settings, null) },
-                    onClick = { menu = false; onSettings() })
-            }
-        }
-       }
-      }
-    }
-}
-
-@Composable
-private fun ConnectionIndicator(state: UiState, onClick: () -> Unit) {
-    val deviceName = state.desktopName.trim().ifBlank { "我的电脑" }
-    val availability = when (state.connection) {
-        ConnectionState.CONNECTED -> "在线"
-        ConnectionState.CONNECTING -> "连接中"
-        ConnectionState.UNAUTHORIZED -> "需要重新配对"
-        ConnectionState.ERROR -> "连接失败"
-        ConnectionState.DISCONNECTED -> "离线"
-    }
-    val status = if (state.connection == ConnectionState.CONNECTED && !state.desktopTaskAvailable)
-        "$availability，电脑 Agent 暂不可用" else availability
-    val online = state.connection == ConnectionState.CONNECTED
-    val indicatorInk = if (online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-    val indicatorCutout = MaterialTheme.colorScheme.surface
-    IconButton(onClick, Modifier.size(48.dp).testTag("connection-status").semantics {
-        contentDescription = "$deviceName，连接设置"
-        stateDescription = status
-    }) {
-        Box(Modifier.size(24.dp)) {
-            Icon(DesktopMonitorIcon, null, Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            androidx.compose.foundation.Canvas(Modifier.size(8.dp).align(Alignment.BottomEnd)) {
-                drawCircle(indicatorInk, radius = size.minDimension / 2)
-                if (!online) drawLine(indicatorCutout, androidx.compose.ui.geometry.Offset(size.width * .25f, size.height * .75f),
-                    androidx.compose.ui.geometry.Offset(size.width * .75f, size.height * .25f), strokeWidth = 1.1.dp.toPx())
-            }
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                .testTag("conversation-title").semantics { heading() })
+        if (state.paired) Box(Modifier.size(6.dp).clip(RoundedCornerShape(3.dp))
+            .background(if (state.connection == ConnectionState.CONNECTED) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f))
+            .semantics { contentDescription = if (state.connection == ConnectionState.CONNECTED) "电脑在线" else "电脑离线" })
+        IconButton(onSettings, Modifier.size(48.dp).testTag("app-settings")) {
+            Icon(Icons.Default.Settings, contentDescription = "设置", modifier = Modifier.size(22.dp))
         }
     }
 }
 
 @Composable
 private fun Welcome(modifier: Modifier, onPair: () -> Unit, onConfigureApi: () -> Unit) {
-    Column(modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
-        .padding(horizontal = 28.dp, vertical = 24.dp),
+    Column(modifier.widthIn(max = 440.dp).fillMaxWidth().verticalScroll(rememberScrollState())
+        .padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
-        LiquidSurface(shape = RoundedCornerShape(28.dp)) {
-            AuraMark(Modifier.padding(10.dp).size(60.dp))
-        }
+        AuraMark(Modifier.size(64.dp))
         Spacer(Modifier.height(20.dp))
-        Text("把陪伴，\n带在身边。", style = MaterialTheme.typography.headlineLarge,
+        Text("把陪伴，带在身边。", style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.semantics { heading() })
-        Spacer(Modifier.height(12.dp))
-        Text("在手机上和 AURA 聊聊天，\n也可以与电脑接着上次的话题。",
-            style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FeatureRow("对话随行", "接着上次的话题。", Modifier.weight(1f))
-            FeatureRow("轻轻遥控", "给桌宠一个回应。", Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onConfigureApi, shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-            Text("配置模型，直接聊天")
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onPair, shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("连接我的电脑") }
+        Button(onConfigureApi, Modifier.heightIn(min = 48.dp)) { Text("配置模型") }
+        TextButton(onPair, Modifier.heightIn(min = 48.dp)) { Text("连接电脑") }
+    }
+}
+
+@Composable
+private fun EmptyConversation(modifier: Modifier) {
+    Column(modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        AuraMark(Modifier.size(48.dp))
         Spacer(Modifier.height(16.dp))
-        Text("在电脑端打开「远程连接」，复制配对信息。", style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Composable
-private fun FeatureRow(title: String, description: String, modifier: Modifier = Modifier) {
-    LiquidSurface(modifier, shape = RoundedCornerShape(22.dp)) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(description, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun EmptyConversation(modifier: Modifier, offline: Boolean, onSuggestion: (String) -> Unit,
-                              onPet: () -> Unit) {
-    Column(modifier.widthIn(max = 620.dp).fillMaxWidth().verticalScroll(rememberScrollState())
-        .padding(horizontal = 28.dp, vertical = 32.dp), verticalArrangement = Arrangement.Center) {
-        LiquidSurface(shape = RoundedCornerShape(24.dp)) {
-            AuraMark(Modifier.padding(9.dp).size(48.dp))
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("今天，想聊点什么？", style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.semantics { heading() })
-        Spacer(Modifier.height(12.dp))
-        Text(if (offline) "配置手机模型，文字和图片都可以直接聊。" else "日常的小事，也可以慢慢说。",
-            style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(28.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Suggestion("陪我聊一会儿") { onSuggestion("陪我聊一会儿") }
-            Suggestion("整理一下今天") { onSuggestion("帮我整理一下今天的想法") }
-            Suggestion("看看桌宠") { onPet() }
-        }
-    }
-}
-
-@Composable
-private fun Suggestion(text: String, onClick: () -> Unit) {
-    OutlinedButton(onClick, shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = .65f)),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .8f)),
-        modifier = Modifier.heightIn(min = 48.dp)) {
-        Text(text, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.bodyMedium)
+        Text("今天想聊什么？", style = MaterialTheme.typography.titleLarge)
     }
 }
 
 @Composable
 private fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier, onRetry: (String) -> Unit,
-                                 onOpenImage: (String) -> Unit, phoneAvailable: Boolean) {
+                                 onOpenImage: (String) -> Unit, phoneAvailable: Boolean,
+                                 interaction: UiAgentInteraction? = null, interactionBusy: Boolean = false,
+                                 onAnswer: (String, UiAgentAnswer, (Boolean) -> Unit) -> Unit = { _, _, answer -> answer(false) },
+                                 artifacts: List<UiAgentArtifact> = emptyList(), artifactDownloading: String? = null,
+                                 onSaveArtifact: (String) -> Unit = {}) {
     val listState = rememberLazyListState()
     var initiallyPositioned by remember { mutableStateOf(false) }
-    LaunchedEffect(messages.lastOrNull()?.id, messages.lastOrNull()?.content, messages.lastOrNull()?.status) {
+    LaunchedEffect(messages.lastOrNull()?.id, messages.lastOrNull()?.content, messages.lastOrNull()?.status, interaction?.id, artifacts) {
         val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
         if (!initiallyPositioned || lastVisible >= messages.size - 3 || listState.layoutInfo.totalItemsCount == 0) {
-            if (messages.isNotEmpty()) {
-                listState.scrollToItem(messages.lastIndex)
+            if (messages.isNotEmpty() || interaction != null || artifacts.isNotEmpty()) {
+                listState.scrollToItem(messages.size + artifacts.size + (if (interaction != null) 1 else 0) - 1)
                 initiallyPositioned = true
             }
         }
     }
-    LazyColumn(state = listState, modifier = modifier.widthIn(max = 800.dp).fillMaxWidth(),
+    LazyColumn(state = listState, modifier = modifier.widthIn(max = 800.dp).fillMaxWidth().testTag("conversation-messages"),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)) {
         items(messages, key = { it.id }) { MessageRow(it, onRetry, onOpenImage, phoneAvailable) }
-    }
-}
-
-@Composable
-private fun MessageRow(message: UiMessage, onRetry: (String) -> Unit, onOpenImage: (String) -> Unit, phoneAvailable: Boolean) {
-    val user = message.role == MessageRole.USER
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = if (user) Alignment.End else Alignment.Start) {
-        if (message.role == MessageRole.ASSISTANT && message.execution == null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AuraMark(Modifier.size(20.dp))
-                Text(if (message.desktopAgent) "AURA · 电脑 Agent" else "AURA", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(10.dp))
-        }
-        message.execution?.let { process ->
-            ExecutionProcess(process, Modifier.fillMaxWidth(), identity = if (message.role == MessageRole.ASSISTANT)
-                if (message.desktopAgent) "AURA · 电脑 Agent" else "AURA" else null)
-            if (message.content.isNotBlank()) Spacer(Modifier.height(12.dp))
-        }
-        val body: @Composable ColumnScope.() -> Unit = {
-            if (message.attachmentUri != null || message.attachmentId != null) {
-                Surface(onClick = { message.attachmentId?.let(onOpenImage) },
-                    enabled = message.attachmentId != null,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "预览消息图片" }) {
-                    message.attachmentUri?.let { uri ->
-                        LocalImage(uri, Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 360.dp),
-                            "消息中的图片", expandToAvailableWidth = true)
-                    } ?: Box(Modifier.fillMaxWidth().heightIn(min = 160.dp).padding(20.dp),
-                        contentAlignment = Alignment.Center) {
-                        Text("点按查看图片", style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                if (message.content.isNotBlank()) Spacer(Modifier.height(8.dp))
-            }
-            if (message.content.isNotBlank()) SelectionContainer {
-                if (message.role == MessageRole.ASSISTANT) MessageText(message.content)
-                else Text(message.content, style = if (message.role == MessageRole.SYSTEM)
-                    MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                    color = if (message.role == MessageRole.SYSTEM) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface)
-            }
-        }
-        if (user) Surface(color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .64f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = .78f)),
-            shape = RoundedCornerShape(22.dp, 22.dp, 6.dp, 22.dp),
-            modifier = Modifier.fillMaxWidth(.88f)) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), content = body)
-        } else Column(Modifier.fillMaxWidth(), content = body)
-        if (message.role == MessageRole.ASSISTANT && message.content.isNotBlank()) {
-            CopyTextButton(message.content, "复制回复")
-        }
-        val delivery = if (message.execution != null) "" else when (message.status) {
-            MessageStatus.QUEUED -> if (message.desktopAgent) "电脑任务等待发送" else "尚未发送 · 可在待处理消息中继续"
-            MessageStatus.SENDING -> if (message.desktopAgent) "正在提交电脑任务…" else "正在发送…"
-            MessageStatus.PENDING -> if (message.desktopAgent) "电脑任务执行中…" else "正在思考…"
-            MessageStatus.FAILED -> if (message.desktopAgent) "电脑任务未完成" else "发送失败"
-            MessageStatus.UNCERTAIN -> if (message.desktopAgent) "电脑任务状态待确认 · 请先同步" else "送达结果待确认 · 请先同步"
-            MessageStatus.SENT -> if (message.desktopAgent && user) "已交给电脑 Agent" else ""
-        }
-        if (delivery.isNotBlank() || message.detail.isNotBlank()) {
-            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(Modifier.weight(1f, fill = false)) {
-                    if (delivery.isNotBlank()) Text(delivery, style = MaterialTheme.typography.bodySmall,
-                        color = if (message.status == MessageStatus.FAILED) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (message.detail.isNotBlank()) Text(message.detail, style = MaterialTheme.typography.bodySmall,
-                        color = if (message.status == MessageStatus.FAILED) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                val retryOnPhone = phoneAvailable && message.retryOnPhone && message.status == MessageStatus.QUEUED
-                if (message.retryable || retryOnPhone) TextButton({ onRetry(message.id) }, Modifier.heightIn(min = 48.dp)) {
-                    Text(if (retryOnPhone) "手机直接发送" else "重试")
-                }
-            }
-        }
+        items(artifacts, key = { "artifact:${it.reference}" }) { AgentArtifactCard(it, artifactDownloading, onSaveArtifact) }
+        interaction?.let { pending -> item(key = "agent-question:${pending.id}") {
+            AgentInteractionCard(pending, interactionBusy, onAnswer)
+        } }
     }
 }
 
@@ -537,26 +356,34 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
                             attachment: UiPendingAttachment?, preparingImage: Boolean,
                             desktopAssistance: Boolean, canSend: Boolean,
                             onDesktopAssistance: (Boolean) -> Unit, onStop: () -> Unit,
-                            onConfigureApi: () -> Unit,
                             onAttach: () -> Unit, onRemoveImage: () -> Unit, onSend: () -> Unit) {
+    val modeLineHeight = with(LocalDensity.current) { MaterialTheme.typography.labelLarge.lineHeight.toDp() }
+    val modeVisualHeight = maxOf(34.dp, modeLineHeight + 8.dp)
+    val modeTouchHeight = maxOf(48.dp, modeVisualHeight)
     Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().testTag("message-composer")
         .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        LiquidSurface(Modifier.widthIn(max = 800.dp).fillMaxWidth().padding(bottom = 6.dp),
-            shape = RoundedCornerShape(24.dp)) {
-          Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
-              verticalAlignment = Alignment.CenterVertically) {
-            FilterChip(selected = !desktopAssistance, onClick = { onDesktopAssistance(false) },
-                label = { Text("手机聊天") }, enabled = !state.desktopTaskBusy && !state.directChatBusy,
-                leadingIcon = { Icon(ChatBubbleIcon, null, Modifier.size(18.dp)) },
-                shape = RoundedCornerShape(20.dp), border = null,
-                colors = liquidModeColors(), modifier = Modifier.weight(1f).heightIn(min = 48.dp))
-            FilterChip(selected = desktopAssistance, onClick = { onDesktopAssistance(true) },
-                label = { Text("电脑 Agent") }, enabled = !state.desktopTaskBusy && !state.directChatBusy,
-                leadingIcon = { Icon(DesktopMonitorIcon, null, Modifier.size(18.dp)) },
-                shape = RoundedCornerShape(20.dp), border = null,
-                colors = liquidModeColors(), modifier = Modifier.weight(1f).heightIn(min = 48.dp))
-          }
+        Row(Modifier.widthIn(max = 268.dp).fillMaxWidth().height(modeTouchHeight).testTag("chat-mode-switch"),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            listOf(false to "手机聊天", true to "电脑 Agent").forEach { (desktop, label) ->
+                val selected = desktopAssistance == desktop
+                Box(Modifier.weight(1f).height(modeTouchHeight)
+                    .testTag(if (desktop) "desktop-agent-mode" else "phone-chat-mode")
+                    .clip(RoundedCornerShape(20.dp))
+                    .selectable(selected = selected, enabled = !state.desktopTaskBusy && !state.directChatBusy,
+                        role = Role.Tab, onClick = { onDesktopAssistance(desktop) }),
+                    contentAlignment = Alignment.Center) {
+                    Surface(shape = RoundedCornerShape(18.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .55f) else Color.Transparent,
+                        modifier = Modifier.fillMaxWidth().height(modeVisualHeight)) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
         }
         if (preparingImage || attachment != null) {
             LiquidSurface(shape = RoundedCornerShape(22.dp),
@@ -576,130 +403,109 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
             modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()) {
             Row(Modifier.padding(4.dp), verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onAttach, Modifier.size(48.dp), enabled = !preparingImage && !state.desktopTaskBusy) {
+                IconButton(onAttach, Modifier.size(48.dp), enabled = !preparingImage && !state.desktopTaskBusy && !state.desktopTaskRunning) {
                     Icon(Icons.Default.Add, contentDescription = "添加图片")
                 }
-                if (!desktopAssistance && !state.directApi.available) IconButton(onConfigureApi,
-                    Modifier.size(48.dp), enabled = !preparingImage && !state.desktopTaskBusy) {
-                    Icon(Icons.Default.Settings, contentDescription = "配置手机模型")
-                }
-                BasicTextField(value = draft, onValueChange = { onDraft(it.take(8000)) },
+                BasicTextField(value = draft, onValueChange = onDraft,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary), maxLines = 6,
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp).padding(vertical = 12.dp)
                         .semantics { contentDescription = "消息内容" },
                     decorationBox = { inner ->
-                        if (draft.isEmpty()) Text(if (desktopAssistance) "告诉电脑 Agent 下一步…" else if (attachment != null) "问问 AURA 这张图片…" else "发消息给 AURA",
+                        if (draft.isEmpty()) Text(if (desktopAssistance && state.desktopTaskRunning && state.canSteerDesktop) "补充当前任务…" else if (desktopAssistance && !state.desktopTaskAvailable)
+                            if (state.connection == ConnectionState.CONNECTED) "电脑 Agent 暂不可用" else "电脑离线，连接后可执行任务"
+                            else if (desktopAssistance) "告诉电脑 Agent 下一步…" else if (attachment != null) "问问 鲸伴 这张图片…" else "发消息给 鲸伴",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         inner()
                     })
-                val showStop = desktopAssistance && state.desktopTaskRunning
-                FilledIconButton(if (showStop) onStop else onSend, enabled = showStop || canSend,
+                val phoneStreaming = !desktopAssistance && state.directChatBusy &&
+                    state.directChatConversationId == state.selectedConversationId
+                val showStop = (desktopAssistance && state.desktopTaskRunning) || phoneStreaming
+                if (showStop && canSend) IconButton(onStop, Modifier.size(48.dp)) {
+                    Icon(StopSquareIcon, contentDescription = "停止电脑任务", modifier = Modifier.size(21.dp))
+                }
+                FilledIconButton(if (showStop && !canSend) onStop else onSend, enabled = showStop || canSend,
                     modifier = Modifier.size(48.dp).semantics {
-                        contentDescription = if (showStop) "停止电脑任务" else if (state.desktopTaskBusy) "正在提交电脑任务" else if (state.directChatBusy) "正在回复，请稍候" else "发送消息"
+                        contentDescription = if (phoneStreaming) "停止回复" else if (showStop && !canSend) "停止电脑任务" else if (showStop) "补充指令" else if (state.desktopTaskBusy) "正在提交电脑任务" else if (state.directChatBusy) "正在回复，请稍候" else "发送消息"
                     }) {
-                    if (showStop) Icon(StopSquareIcon, contentDescription = null, modifier = Modifier.size(21.dp))
+                    if (showStop && !canSend) Icon(StopSquareIcon, contentDescription = null, modifier = Modifier.size(21.dp))
                     else if (state.directChatBusy || state.desktopTaskBusy) CircularProgressIndicator(Modifier.size(21.dp), strokeWidth = 2.dp)
                     else Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(21.dp))
                 }
             }
         }
-
+        if (draft.length > 8000) Text("${draft.length}/8000 字，请缩短后发送",
+            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+                .testTag("draft-over-limit"))
     }
 }
 
 @Composable
-private fun liquidModeColors() = FilterChipDefaults.filterChipColors(
-    containerColor = Color.Transparent,
-    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .72f),
-    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-)
-
-@Composable
 private fun HistoryDrawer(state: UiState, actions: UiActions, onSelect: (String) -> Unit,
-                          onNew: () -> Unit, onSettings: () -> Unit,
-                          onPet: () -> Unit, onQueue: () -> Unit, onImages: () -> Unit) {
+                          onNew: () -> Unit, onSettings: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val filtered = remember(state.conversations, query) {
         state.conversations.filter { it.title.contains(query, true) || it.preview.contains(query, true) }
     }
-    ModalDrawerSheet(Modifier.widthIn(max = 340.dp).fillMaxHeight(),
-        drawerShape = RoundedCornerShape(topEnd = 30.dp, bottomEnd = 30.dp),
+    ModalDrawerSheet(Modifier.widthIn(max = 340.dp).fillMaxHeight().testTag("history-drawer"),
+        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
         drawerContainerColor = glassSheetColor(), drawerContentColor = MaterialTheme.colorScheme.onSurface) {
-        Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            AuraMark(Modifier.size(36.dp))
-            Text("AURA", modifier = Modifier.padding(start = 10.dp),
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AuraMark(Modifier.size(30.dp))
+            Text("鲸伴", modifier = Modifier.padding(start = 10.dp).weight(1f),
                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+            IconButton(onSettings, Modifier.size(48.dp).testTag("drawer-settings")) {
+                Icon(Icons.Default.Settings, contentDescription = "设置", modifier = Modifier.size(22.dp))
+            }
         }
-        OutlinedButton(onNew, Modifier.fillMaxWidth().padding(horizontal = 20.dp).heightIn(min = 48.dp),
-            shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-            Icon(Icons.Default.Add, null, Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("新建对话")
+        OutlinedButton(onNew, Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = 48.dp),
+            shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = .55f))) {
+            Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("新建对话")
         }
-        OutlinedTextField(query, { query = it }, label = { Text("搜索对话") }, singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            modifier = Modifier.fillMaxWidth().padding(20.dp), shape = RoundedCornerShape(14.dp))
+        OutlinedTextField(query, { query = it }, placeholder = { Text("搜索对话") }, singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(20.dp)) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                .semantics { contentDescription = "搜索对话" }, shape = RoundedCornerShape(14.dp))
         Text("最近对话", style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp))
-        if (filtered.isEmpty()) Text(if (query.isBlank()) "对话会保存在这里。" else "没有找到相关对话。",
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+        if (filtered.isEmpty()) Text(if (query.isBlank()) "还没有对话" else "没有找到相关对话",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(24.dp))
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            verticalArrangement = Arrangement.spacedBy(2.dp)) {
             items(filtered, key = { it.id }) { conversation ->
-                Surface(onClick = { onSelect(conversation.id) }, shape = RoundedCornerShape(14.dp),
-                    color = if (conversation.id == state.selectedConversationId) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth().semantics {
-                        selected = conversation.id == state.selectedConversationId
-                    }) {
-                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text(conversation.title.ifBlank { "新对话" }, style = MaterialTheme.typography.titleMedium,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        if (conversation.preview.isNotBlank()) Text(conversation.preview,
-                            style = MaterialTheme.typography.bodySmall, maxLines = 2,
-                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (conversation.localOnly || conversation.updatedAt.isNotBlank()) Text(
-                            if (conversation.localOnly) "保存在手机" else conversation.updatedAt,
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Surface(onClick = { onSelect(conversation.id) }, shape = RoundedCornerShape(12.dp),
+                    color = if (conversation.id == state.selectedConversationId) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .50f)
+                        else Color.Transparent,
+                    modifier = Modifier.fillMaxWidth().semantics { selected = conversation.id == state.selectedConversationId }) {
+                    Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                        Text(conversation.title.ifBlank { "新对话" }, style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (conversation.updatedAt.isNotBlank()) Text(conversation.updatedAt,
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            DrawerAction("桌宠控制", Icons.Default.Face, onPet)
-            DrawerAction("图片收件箱", Icons.AutoMirrored.Filled.List, onImages)
-            DrawerAction("待处理消息${if (state.queue.isEmpty()) "" else " (${state.queue.size})"}", Icons.Default.Info, onQueue)
-            DrawerAction("连接与外观", Icons.Default.Settings, onSettings)
-        }
     }
 }
 
-@Composable
-private fun DrawerAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    TextButton(onClick, Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-        Icon(icon, null, Modifier.size(20.dp)); Spacer(Modifier.width(12.dp))
-        Text(label, Modifier.weight(1f), textAlign = TextAlign.Start, color = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-@Preview(name = "AURA · Welcome", widthDp = 393, heightDp = 852, showBackground = true)
+@Preview(name = "鲸伴 · Welcome", widthDp = 393, heightDp = 852, showBackground = true)
 @Composable
 private fun WelcomePreview() { AuraApp(UiState(theme = ThemeMode.LIGHT), PreviewActions) }
 
-@Preview(name = "AURA · Dark", widthDp = 393, heightDp = 852, showBackground = true)
+@Preview(name = "鲸伴 · Dark", widthDp = 393, heightDp = 852, showBackground = true)
 @Composable
 private fun DarkPreview() { AuraApp(previewChatState().copy(theme = ThemeMode.DARK), PreviewActions) }
 
-@Preview(name = "AURA · Conversation", widthDp = 393, heightDp = 852, showBackground = true)
+@Preview(name = "鲸伴 · Conversation", widthDp = 393, heightDp = 852, showBackground = true)
 @Composable
 private fun ChatPreview() { AuraApp(previewChatState(), PreviewActions) }
 
-@Preview(name = "AURA · Phone API", widthDp = 393, heightDp = 852, showBackground = true)
+@Preview(name = "鲸伴 · Phone API", widthDp = 393, heightDp = 852, showBackground = true)
 @Composable
 private fun DirectApiPreview() {
     AuraApp(previewChatState().copy(connection = ConnectionState.DISCONNECTED, sync = SyncState.IDLE,

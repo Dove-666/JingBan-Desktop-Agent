@@ -1,7 +1,7 @@
 #target photoshop
 (function () {
-    var root = new Folder('E:/github/AURA-Desktop-Agent/美术资产/鲸鱼娘_透明背景');
-    var work = new Folder(root.fsName + '/工程');
+    var work = new File($.fileName).parent;
+    var root = work.parent;
     root.create();
     work.create();
     var oldDialogs = app.displayDialogs;
@@ -48,7 +48,7 @@
     }
     try {
         record('Photoshop ' + app.version);
-        var source = new File('E:/github/AURA-Desktop-Agent/美术资产/7cb43b514fde4132299895825136e63.jpg');
+        var source = new File(root.parent.fsName + '/7cb43b514fde4132299895825136e63.jpg');
         var doc = app.open(source);
         var original = doc.activeLayer;
         original.name = '原图（保留）';

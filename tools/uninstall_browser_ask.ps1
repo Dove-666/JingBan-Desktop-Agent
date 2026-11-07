@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$Apply,
     [string]$InstallDirectory = (Join-Path $env:LOCALAPPDATA 'AURA-Desktop-Agent\browser-ask')
@@ -15,7 +15,7 @@ $files = @('host.cmd', 'native-host.json', 'installation.json', 'registration-ba
 $allowed = @('Software\Microsoft\Edge\NativeMessagingHosts\aura.whale_ask', 'Software\Google\Chrome\NativeMessagingHosts\aura.whale_ask')
 $plan = [ordered]@{ mode = $(if ($Apply) { 'apply' } else { 'plan' }); install_directory = $InstallDirectory; files = $files; registry = @(); browser_extension_removed = $false }
 if (-not (Test-Path -LiteralPath $markerPath -PathType Leaf)) {
-    if ($Apply) { throw 'AURA installation marker was not found. No files or registry keys were removed.' }
+    if ($Apply) { throw '未找到鲸伴安装标记，未移除任何文件或注册项。' }
     $plan | ConvertTo-Json -Depth 5; exit 0
 }
 $marker = Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json

@@ -1,4 +1,4 @@
-"""Agent settings UI with an in-memory store/vault and synthetic Qt events."""
+"""Permission-only Agent settings use no credential fields or running backend."""
 
 from dataclasses import asdict, replace
 import os
@@ -8,9 +8,8 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
-from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QGroupBox, QLineEdit, QPushButton, QSpinBox
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QApplication, QComboBox, QGroupBox, QLineEdit, QPushButton, QSpinBox
 
 from desktop_pet.agents import AgentSettings
 from desktop_pet.ui.agent_panel import AgentSettingsPanel
@@ -93,174 +92,102 @@ class AgentSettingsUiTests(unittest.TestCase):
         self.panel.deleteLater()
         self.app.processEvents()
 
-    def test_open_only_reads_public_settings_and_checks_files(self):
+    def test_open_only_reads_public_settings_without_starting_backend_or_reading_credentials(self):
         with patch.object(subprocess, "Popen") as spawn:
             panel = AgentSettingsPanel(self.settings, self.chat)
-            panel.refresh_backend_status()
             self.assertTrue(panel.enabled_checkbox.isChecked())
             self.assertTrue(panel.tools_checkbox.isChecked())
             self.assertFalse(panel.computer_checkbox.isChecked())
-            self.assertIn("普通聊天", panel.status_label.text())
-            self.assertIn("安装文件", panel.backend_status_label.text())
+            self.assertEqual(panel.findChildren(QLineEdit), [])
+            self.assertEqual(panel.findChildren(QComboBox), [])
             spawn.assert_not_called()
             panel.deleteLater()
         self.assertEqual(self.settings.calls, [])
         self.assertEqual(self.settings.key_reads, 0)
         self.assertEqual(self.chat.refreshes, 0)
 
-    def test_stored_credentials_are_never_prefilled_or_read(self):
-        self.assertEqual(self.panel.gui_key_input.text(), "")
-        self.assertEqual(self.panel.gui_key_input.echoMode(), QLineEdit.EchoMode.Password)
-        self.panel.reload_settings()
-        self.assertEqual(self.settings.key_reads, 0)
-        self.assertNotIn(OLD_KEY, self.panel.credential_status_label.text())
-
     def test_editing_is_not_saved_until_save_and_hidden_developer_fields_are_preserved(self):
         original = self.settings.settings
+        self.panel.enabled_checkbox.setChecked(False)
         self.panel.tools_checkbox.setChecked(False)
-        self.panel.gui_model_input.setText("ui-tars-test-model")
-        self.panel.gui_profile_combo.setCurrentIndex(self.panel.gui_profile_combo.findData("pixel"))
+        self.panel.computer_checkbox.setChecked(True)
         self.assertEqual(self.settings.settings, original)
         self.assertEqual(self.settings.calls, [])
         self.panel.save_button.click()
         saved = self.settings.settings
+        self.assertFalse(saved.enabled)
         self.assertFalse(saved.tools_enabled)
+        self.assertTrue(saved.computer_enabled)
         self.assertEqual((saved.timeout_seconds, saved.max_steps), (0, 0))
         self.assertEqual(saved.python_executable, original.python_executable)
         self.assertEqual(saved.workspace, original.workspace)
-        self.assertEqual(saved.gui_coordinate_profile, "pixel")
+        self.assertEqual(saved.gui_base_url, original.gui_base_url)
+        self.assertEqual(saved.gui_model, original.gui_model)
         self.assertEqual(self.chat.refreshes, 1)
-        self.assertIn("已保存", self.panel.status_label.text())
-
-    def test_save_public_settings_before_key_and_clear_key_draft(self):
-        self.panel.gui_model_input.setText("ui-tars-test-model")
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.show_key_button.setChecked(True)
-        self.panel.save_button.click()
-        self.assertEqual([call[0] for call in self.settings.calls], ["public", "save_key"])
-        self.assertEqual(self.settings.calls[0][2], KEY)
-        self.assertNotIn(KEY, repr(asdict(self.settings.settings)))
-        self.assertEqual(self.settings.gui_key, KEY)
-        self.assertEqual(self.panel.gui_key_input.text(), "")
-        self.assertEqual(self.panel.gui_key_input.echoMode(), QLineEdit.EchoMode.Password)
-        self.assertFalse(self.panel.show_key_button.isChecked())
-
-    def test_key_in_public_field_blocks_both_save_paths_without_partial_writes(self):
-        for button in (self.panel.save_button, self.panel.save_key_button):
-            self.panel.gui_model_input.setText("model-" + KEY)
-            self.panel.gui_key_input.setText(KEY)
-            button.click()
-            self.assertEqual(self.settings.calls, [])
-            self.assertEqual(self.settings.gui_key, OLD_KEY)
-            self.assertIn("非密钥设置", self.panel.error_label.text())
-            self.assertNotIn(KEY, self.panel.error_label.text())
-
-    def test_invalid_public_model_address_never_saves_key(self):
-        self.panel.gui_base_url_input.setText("https://user:password@example.test/v1")
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.save_button.click()
-        self.assertEqual(self.settings.calls, [])
-        self.assertFalse(self.panel.error_label.isHidden())
-        self.assertNotIn("password", self.panel.error_label.text())
-
-    def test_empty_key_does_not_clear_existing_vault_credential(self):
-        self.panel.save_button.click()
-        self.assertEqual(self.settings.gui_key, OLD_KEY)
         self.assertEqual([call[0] for call in self.settings.calls], ["public"])
-
-    def test_dedicated_key_buttons_change_only_gui_credential(self):
-        original = self.settings.settings
-        self.panel.gui_model_input.setText("pending-unsaved-model")
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.save_key_button.click()
-        self.assertEqual(self.settings.gui_key, KEY)
-        self.assertEqual(self.settings.settings, original)
-        self.assertEqual(self.panel.gui_model_input.text(), "pending-unsaved-model")
-        self.panel.clear_key_button.click()
-        self.assertEqual(self.settings.gui_key, "")
-        self.assertEqual(self.settings.settings, original)
-        self.assertEqual(self.chat.refreshes, 2)
+        self.assertIn("已保存", self.panel.status_label.text())
         self.assertEqual(self.settings.key_reads, 0)
+        self.assertEqual(self.settings.gui_key, OLD_KEY)
 
-    def test_vault_failure_is_static_and_distinguishes_saved_public_preferences(self):
-        self.settings.fail_key = True
-        self.panel.gui_key_input.setText(KEY)
+    def test_permission_save_failure_keeps_original_settings_and_sanitizes_error(self):
+        original = self.settings.settings
+        self.settings.fail_public = True
         self.panel.tools_checkbox.setChecked(False)
         self.panel.save_button.click()
-        self.assertEqual(self.settings.settings.timeout_seconds, 0)
-        self.assertFalse(self.settings.settings.tools_enabled)
-        self.assertIn("设置已保存", self.panel.status_label.text())
-        self.assertNotIn(KEY, self.panel.error_label.text())
+        self.assertEqual(self.settings.calls, [])
+        self.assertEqual(self.settings.settings, original)
+        self.assertFalse(self.panel.tools_checkbox.isChecked())
+        self.assertFalse(self.panel.error_label.isHidden())
+        self.assertIn("未能保存", self.panel.error_label.text())
         self.assertNotIn("synthetic-private", self.panel.error_label.text())
+        self.assertNotIn(OLD_KEY, self.panel.error_label.text())
         self.assertEqual(self.settings.gui_key, OLD_KEY)
-
-    def test_window_deactivation_and_hide_clear_draft_and_restore_password(self):
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.show_key_button.setChecked(True)
-        self.app.sendEvent(self.panel, QEvent(QEvent.Type.WindowDeactivate))
-        self.assertEqual(self.panel.gui_key_input.text(), "")
-        self.assertEqual(self.panel.gui_key_input.echoMode(), QLineEdit.EchoMode.Password)
-        self.panel.show()
-        self.app.processEvents()
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.show_key_button.setChecked(True)
-        self.panel.hide()
-        self.assertEqual(self.panel.gui_key_input.text(), "")
-        self.assertFalse(self.panel.show_key_button.isChecked())
-
-    def test_internal_focus_change_to_save_button_keeps_key_until_save(self):
-        self.panel.show()
-        self.app.processEvents()
-        self.panel.gui_key_input.setText(KEY)
-        self.panel.gui_key_input.setFocus()
-        self.panel.scroll.ensureWidgetVisible(self.panel.save_key_button)
-        self.app.processEvents()
-        QTest.mouseClick(self.panel.save_key_button, Qt.MouseButton.LeftButton)
-        self.assertEqual(self.settings.gui_key, KEY)
-        self.assertEqual(self.panel.gui_key_input.text(), "")
+        self.assertEqual(self.settings.key_reads, 0)
 
     def test_external_refresh_signal_preserves_unsaved_fields(self):
-        self.panel.gui_model_input.setText("draft-model")
-        self.panel.gui_key_input.setText(KEY)
+        self.panel.enabled_checkbox.setChecked(False)
+        self.panel.tools_checkbox.setChecked(False)
+        self.panel.computer_checkbox.setChecked(True)
         self.chat.agent_settings_changed.emit()
-        self.assertEqual(self.panel.gui_model_input.text(), "draft-model")
-        self.assertEqual(self.panel.gui_key_input.text(), KEY)
+        self.assertFalse(self.panel.enabled_checkbox.isChecked())
+        self.assertFalse(self.panel.tools_checkbox.isChecked())
+        self.assertTrue(self.panel.computer_checkbox.isChecked())
+        self.assertTrue(self.panel._dirty)
         self.assertEqual(self.settings.calls, [])
 
-    def test_450_pixel_panel_scrolls_vertically_without_horizontal_overflow(self):
-        self.panel.show()
-        self.app.processEvents()
-        self.assertEqual(self.panel.scroll.horizontalScrollBar().maximum(), 0)
-        self.assertLessEqual(self.panel.scroll.widget().width(), self.panel.scroll.viewport().width())
-        self.assertGreater(self.panel.scroll.verticalScrollBar().maximum(), 0)
-        for group in self.panel.findChildren(QGroupBox):
-            self.assertLessEqual(group.geometry().right(), self.panel.scroll.widget().width())
-        self.assertEqual(self.panel.duration_status.text(), "不设上限")
+    def test_compact_panel_has_no_hidden_api_controls_or_horizontal_overflow(self):
+        for width in (450, 340):
+            with self.subTest(width=width):
+                self.panel.resize(width, 360)
+                self.panel.show()
+                self.app.processEvents()
+                self.assertEqual(self.panel.scroll.horizontalScrollBar().maximum(), 0)
+                self.assertLessEqual(self.panel.scroll.widget().width(), self.panel.scroll.viewport().width())
+                for group in self.panel.findChildren(QGroupBox):
+                    self.assertLessEqual(group.geometry().right(), self.panel.scroll.widget().width())
+        self.assertEqual(self.panel.findChildren(QLineEdit), [])
         self.assertIsNone(self.panel.findChild(QSpinBox, "agentTimeoutSeconds"))
-        self.assertEqual(self.panel.steps_status.text(), "不设上限")
         self.assertIsNone(self.panel.findChild(QSpinBox, "agentMaxSteps"))
-        self.assertEqual(self.panel.gui_provider_combo.count(), 4)
+        self.assertEqual(self.panel.findChildren(QComboBox), [])
         self.assertFalse(any("测试连接" in button.text() for button in self.panel.findChildren(QPushButton)))
 
-    def test_credential_status_failure_never_displays_private_details(self):
-        self.settings.fail_status = True
-        self.panel.reload_settings()
-        self.assertNotIn(OLD_KEY, self.panel.credential_status_label.text())
-        self.assertNotIn("synthetic-private", self.panel.credential_status_label.text())
+    def test_reload_failure_is_static_and_does_not_consume_credentials(self):
+        with patch.object(self.settings, "load_agent_settings", side_effect=OSError("private-" + OLD_KEY)):
+            self.panel.reload_settings()
+        self.assertFalse(self.panel.enabled_checkbox.isChecked())
+        self.assertFalse(self.panel.error_label.isHidden())
+        self.assertNotIn(OLD_KEY, self.panel.error_label.text())
+        self.assertNotIn("private-", self.panel.error_label.text())
         self.assertEqual(self.settings.key_reads, 0)
+        self.assertEqual(self.settings.calls, [])
 
     def test_legacy_finite_setting_becomes_unlimited_on_explicit_save(self):
         self.settings.settings = replace(self.settings.settings, max_steps=12, timeout_seconds=120)
         self.panel.reload_settings()
-        self.assertIn("不设上限", self.panel.steps_status.text())
-        self.assertIn("保存后生效", self.panel.steps_status.text())
         self.assertEqual(self.settings.settings.max_steps, 12)
-        self.assertIn("保存后生效", self.panel.duration_status.text())
         self.assertEqual(self.settings.settings.timeout_seconds, 120)
         self.panel.save_button.click()
         self.assertEqual(self.settings.settings.max_steps, 0)
-        self.assertEqual(self.panel.steps_status.text(), "不设上限")
-        self.assertEqual(self.panel.duration_status.text(), "不设上限")
         self.assertEqual(self.settings.settings.timeout_seconds, 0)
 
 

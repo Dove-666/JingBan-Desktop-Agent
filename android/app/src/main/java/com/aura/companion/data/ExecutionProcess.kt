@@ -18,7 +18,7 @@ private val PROCESS_STATES = setOf("running", "completed", "failed", "cancelled"
 private val PROCESS_KINDS = setOf("progress", "tool", "computer", "summary")
 private val PROCESS_STATUSES = setOf("running", "completed", "failed")
 private val PROCESS_EXTRA_LABELS = setOf("开始处理请求", "回复已完成", "本次请求未能完成", "本次请求已停止",
-    "等待你完成当前步骤", "上次请求意外中断", "任务分派说明（模型公开回复）", "正在请求模型…")
+    "等待你完成当前步骤", "任务未完成", "上次请求意外中断", "任务分派说明（模型公开回复）", "任务分派说明（直接请求）", "正在请求模型…")
 private val PROCESS_START = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})")
 private val PROCESS_ID = Regex("step-[0-9]{1,10}")
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -48,6 +49,11 @@ class ScriptedModel:
 
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                from fixture_goal_judge import judge_message, send_judge
+                judged = judge_message(body)
+                if judged is not None:
+                    send_judge(self, judged)
+                    return
                 index = len(owner.calls)
                 owner.calls.append(body)
                 try:
@@ -126,7 +132,7 @@ class HarnessWorkerTests(unittest.TestCase):
         self.assertTrue(target.is_relative_to((REPO / "agent_workspace").resolve()))
         shutil.rmtree(target)
 
-    def start(self, steps, *, checkpoint_required=False, worker_path=None, computer=False, tools=True, image=False, steps_limit=20):
+    def start(self, steps, *, checkpoint_required=False, worker_path=None, computer=False, tools=True, image=False, steps_limit=20, task=None):
         model = ScriptedModel(steps)
         self.models.append(model)
         client = Client(worker_path=worker_path)
@@ -137,7 +143,7 @@ class HarnessWorkerTests(unittest.TestCase):
                              "provider": "ui-tars-1.5", "coordinate_profile": "pixel"}
         payload = {"type": "run", "id": "harness-case", "kind": "agent",
                    "conversation_id": str(uuid4()), "session_history": [],
-                   "task": "Complete the owned test task, verify actual outputs, and report blockers honestly. Replacing owned fixture outputs is authorized.",
+                   "task": task or "Complete the owned test task, verify actual outputs, and report blockers honestly. Replacing owned fixture outputs is authorized.",
                    "config": config, "context": "", "options": {"workspace": str(self.workspace), "max_steps": steps_limit,
                        "timeout_seconds": 25, "include_activity": True, "tools_enabled": tools,
                        "computer_enabled": computer, "checkpoint_required": checkpoint_required}}
@@ -170,11 +176,11 @@ class HarnessWorkerTests(unittest.TestCase):
         bad = {"category_totals": {"设备": "849.44", "资料": "300.15", "交通": "83.8"},
                "total": "1133.39", "record_count": 3}
         client, model = self.start([tool("read_file", path="input.csv"),
-            tool("write_file", path="summary.json", content=json.dumps(bad)), "Everything is complete."])
+            tool("write_file", path="summary.json", content=json.dumps(bad))] + ["Everything is complete."] * 3)
         result = client.terminal()
         self.assertEqual(result["type"], "final", result)
         self.assertEqual(result["status"], "needs_user")
-        self.assertIn("尚未", result["reply"])
+        self.assertIn("未完成", result["reply"])
         self.assertEqual(json.loads((self.workspace / "summary.json").read_text())["total"], "1133.39")
         self.assertNotIn(KEY, json.dumps(client.all_frames))
 
@@ -182,7 +188,7 @@ class HarnessWorkerTests(unittest.TestCase):
         bad = {"category_totals": {"设备": "849.44", "资料": "300.15", "交通": "83.8"},
                "total": "1133.39", "record_count": 3}
         client, _ = self.start([tool("write_file", path="summary.json", content=json.dumps(bad)),
-            tool("verify_artifact", path="summary.json", kind="text"), "The text file is readable, so I am done."])
+            tool("verify_artifact", path="summary.json", kind="text")] + ["The text file is readable, so I am done."] * 3)
         result = client.terminal()
         self.assertEqual(result.get("status"), "needs_user", result)
 
@@ -193,7 +199,7 @@ class HarnessWorkerTests(unittest.TestCase):
         bad = {**good, "total": "1133.39"}
         client, _ = self.start([tool("write_file", path="summary.json", content=json.dumps(good)),
             tool("verify_artifact", path="summary.json", kind="csv_summary", source_path="input.csv", value_column="金额", group_by="类别"),
-            tool("write_file", path="summary.json", content=json.dumps(bad), overwrite=True), "The earlier check passed."])
+            tool("write_file", path="summary.json", content=json.dumps(bad), overwrite=True)] + ["The earlier check passed."] * 3)
         result = client.terminal()
         self.assertEqual(result.get("status"), "needs_user", result)
 
@@ -224,16 +230,19 @@ class HarnessWorkerTests(unittest.TestCase):
         self.assertEqual(len(model.calls), 7)
 
     def test_failed_read_without_explicit_finish_does_not_become_completed(self):
-        client, _ = self.start([tool("read_file", path="missing.txt"), "All done despite the error."])
+        client, _ = self.start([tool("read_file", path="missing.txt")] + ["All done despite the error."] * 3,
+                               task="Read missing.txt and report its exact contents.")
         result = client.terminal()
         self.assertEqual(result.get("status"), "needs_user", result)
         self.assertFalse((self.workspace / "missing.txt").exists())
 
-    def test_successful_unrelated_read_cannot_erase_a_missing_input_failure(self):
+    def test_exploratory_missing_candidate_does_not_poison_valid_alternative(self):
         (self.workspace / "unrelated.txt").write_text("Not the missing required input", encoding="utf-8")
         client, _ = self.start([tool("read_file", path="missing.txt"),
                                tool("read_file", path="unrelated.txt"), "Pretend the missing input was recovered."])
-        self.assertEqual(client.terminal().get("status"), "needs_user")
+        self.assertEqual(client.terminal().get("status"), "completed")
+        observations = [f for f in client.all_frames if f.get("type") == "activity"]
+        self.assertTrue(any(f.get("name") == "read_file" and f.get("status") == "failed" for f in observations))
 
     def test_changed_source_after_analysis_requires_new_evidence(self):
         self.seed_csv()
@@ -246,7 +255,7 @@ class HarnessWorkerTests(unittest.TestCase):
             (self.workspace / "input.csv").write_text("类别,金额\n设备,1\n", encoding="utf-8")
             return tool("write_file", path="summary.json", content=json.dumps(summary))
         client, _ = self.start([tool("analyze_csv", path="input.csv", value_column="金额", group_by="类别"),
-                               change_source, "An earlier source observation is enough."])
+                               change_source] + ["An earlier source observation is enough."] * 3)
         self.assertEqual(client.terminal().get("status"), "needs_user")
 
     def test_missing_material_can_explicitly_end_as_needs_user(self):
@@ -262,7 +271,10 @@ class HarnessWorkerTests(unittest.TestCase):
     def test_normal_text_read_write_remains_compatible_without_finish_tool(self):
         def reply(body):
             values = [m["content"] for m in body["messages"] if m.get("role") == "tool" and m.get("name") == "read_file"]
-            self.assertEqual(values[-1], "owned中文🙂")
+            page = json.loads(values[-1])
+            self.assertEqual(page["text"], "owned中文🙂")
+            self.assertFalse(page["truncated"])
+            self.assertEqual(page["sha256"], hashlib.sha256("owned中文🙂".encode()).hexdigest())
             return "Created and read the owned file."
         client, _ = self.start([tool("write_file", path="normal.txt", content="owned中文🙂"),
                                 tool("read_file", path="normal.txt"), reply])
@@ -276,7 +288,7 @@ class HarnessWorkerTests(unittest.TestCase):
             self.assertIn("PLAN_UNFINISHED", finish["issues"])
             return "Pretending the unfinished plan is complete."
         client, _ = self.start([tool("update_plan", steps=[{"content": "Read source and verify totals", "status": "pending"}]),
-                                tool("finish_task", status="completed"), reply])
+                                tool("finish_task", status="completed")] + [reply] * 3)
         self.assertEqual(client.terminal().get("status"), "needs_user")
 
     def test_decimal_and_csv_outputs_reach_the_actual_model_loop(self):
@@ -344,17 +356,22 @@ class HarnessWorkerTests(unittest.TestCase):
             "worker=importlib.util.module_from_spec(spec)\nspec.loader.exec_module(worker)\n"
             f"counter=Path({str(counter)!r})\n"
             "async def fail_once(self,task):\n"
+            "    if self._current_verify_only:\n"
+            "        return json.dumps({'status':'needs_user','effect_state':'uncertain'})\n"
             "    values=json.loads(counter.read_text()) if counter.exists() else []\n"
             "    values.append('dispatch')\n"
             "    counter.write_text(json.dumps(values))\n"
-            "    raise worker.BridgeFailure('GUI_ACTION_FAILED')\n"
+            "    self._uncertain_effect=True\n"
+            "    error=worker.BridgeFailure('GUI_ACTION_FAILED')\n"
+            "    error.effect_state='uncertain'\n"
+            "    raise error\n"
             "worker.GuiBridge._run_once=fail_once\nasyncio.run(worker.main())\n", encoding="utf-8")
         client, model = self.start([tool("computer_use", task="only the owned test window"),
                                    tool("computer_use", task="retry the same side effect"), "I tried again."],
                                   worker_path=wrapper, computer=True)
         result = client.terminal()
-        self.assertEqual(result.get("type"), "error", result)
-        self.assertEqual(result.get("code"), "GUI_ACTION_FAILED", result)
+        self.assertEqual(result.get("type"), "final", result)
+        self.assertEqual(result.get("status"), "needs_user", result)
         self.assertEqual(json.loads(counter.read_text()), ["dispatch"])
         self.assertEqual(len(model.calls), 3)
 
@@ -362,8 +379,12 @@ class HarnessWorkerTests(unittest.TestCase):
         def reply(body):
             self.assertFalse(body.get("tools"))
             return "Ordinary explanation without desktop or file tools."
-        client, _ = self.start([reply], tools=False, computer=False)
-        self.assertEqual(client.terminal().get("status"), "completed")
+        client, _ = self.start([reply], tools=False, computer=False,
+                               task="Explain what a desktop assistant is without taking any actions.")
+        result = client.terminal()
+        self.assertEqual(result.get("status"), "completed")
+        self.assertEqual(result.get("completion_scope"), "answer")
+        self.assertIn("Ordinary explanation", result["reply"])
         self.assertEqual(list(self.workspace.iterdir()), [])
 
     def test_four_identical_read_failures_stop_before_another_model_or_tool_dispatch(self):
@@ -400,7 +421,7 @@ class HarnessWorkerTests(unittest.TestCase):
             "    return json.dumps({'status':'needs_user','summary':'Owned fixture needs human input.','steps':1})\n"
             "worker.GuiBridge._run_once=needs_user\nasyncio.run(worker.main())\n", encoding="utf-8")
         client, _ = self.start([tool("computer_use", task="owned task"),
-                               tool("finish_task", status="completed"), "The planner claims completion."],
+                               tool("finish_task", status="completed")] + ["The planner claims completion."] * 3,
                               worker_path=wrapper, computer=True)
         result = client.terminal()
         self.assertEqual(result.get("type"), "final", result)

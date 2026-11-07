@@ -49,10 +49,28 @@ function ReadNode($element) {
         }
         $selection = Pattern $element ([Windows.Automation.SelectionItemPattern]::Pattern)
         if ($null -ne $selection) { $state.selected = [bool]$selection.Current.IsSelected; $actions.Add('select') }
+        $expand = Pattern $element ([Windows.Automation.ExpandCollapsePattern]::Pattern)
+        if ($null -ne $expand -and [int]$expand.Current.ExpandCollapseState -ne 3) {
+            $state.expanded = [int]$expand.Current.ExpandCollapseState -eq 1
+            $actions.Add('expand'); $actions.Add('collapse')
+        }
+        $scroll = Pattern $element ([Windows.Automation.ScrollPattern]::Pattern)
+        if ($null -ne $scroll -and ($scroll.Current.HorizontallyScrollable -or $scroll.Current.VerticallyScrollable)) {
+            $actions.Add('scroll')
+        }
     }
     return @{ runtime_id = (RuntimeId $element); name = $current.Name;
         control_type = $current.ControlType.ProgrammaticName; automation_id = $current.AutomationId;
         password = $password; state = $state; actions = @($actions.ToArray()) }
+}
+function ResolveWindow($target) {
+    $root = [Windows.Automation.AutomationElement]::FromHandle([IntPtr][long]$target.handle)
+    if ($null -eq $root) { Fail 'DESKTOP_STALE_REF' }
+    $window = WindowInfo $root ([long]$target.handle)
+    foreach ($key in @('handle','process_id','process_started','runtime_id')) {
+        if ([string]$window[$key] -cne [string]$target.$key) { Fail 'DESKTOP_STALE_REF' }
+    }
+    return @{ root = $root; window = $window }
 }
 function Resolve($target) {
     $root = [Windows.Automation.AutomationElement]::FromHandle([IntPtr][long]$target.window.handle)
@@ -95,15 +113,61 @@ using System;
 using System.Runtime.InteropServices;
 public static class AuraUiaNative {
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr window, int command);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr window);
 }
 '@
     $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
-    if ($request.operation -eq 'snapshot') {
-        $handle = [AuraUiaNative]::GetForegroundWindow()
-        if ($handle -eq [IntPtr]::Zero) { Fail 'DESKTOP_UNAVAILABLE' }
-        $root = [Windows.Automation.AutomationElement]::FromHandle($handle)
-        $window = WindowInfo $root $handle.ToInt64()
+    if ($request.operation -eq 'windows') {
+        $foreground = [AuraUiaNative]::GetForegroundWindow().ToInt64()
+        $windows = [Collections.Generic.List[object]]::new()
+        $roots = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Children, [Windows.Automation.Condition]::TrueCondition)
+        foreach ($element in $roots) {
+            Budget
+            try {
+                $handle = [long]$element.Current.NativeWindowHandle
+                if ($handle -le 0 -or -not [AuraUiaNative]::IsWindowVisible([IntPtr]$handle)) { continue }
+                $window = WindowInfo $element $handle
+                if ($request.query -and $window.title.IndexOf([string]$request.query, [StringComparison]::OrdinalIgnoreCase) -lt 0) { continue }
+                $window.foreground = $handle -eq $foreground
+                $windows.Add($window)
+                if ($windows.Count -ge 40) { break }
+            } catch { continue }
+        }
+        $result = @{ windows = @($windows.ToArray()); truncated = $windows.Count -ge 40 }
+    } elseif ($request.operation -eq 'activate') {
+        $selected = ResolveWindow $request.window
+        $handle = [IntPtr][long]$request.window.handle
+        if (-not [AuraUiaNative]::IsWindowVisible($handle)) { Fail 'DESKTOP_STALE_REF' }
+        $dispatched = $false
+        if ([AuraUiaNative]::GetForegroundWindow() -ne $handle) {
+            if ([AuraUiaNative]::IsIconic($handle)) { [AuraUiaNative]::ShowWindowAsync($handle, 9) | Out-Null }
+            [AuraUiaNative]::SetForegroundWindow($handle) | Out-Null
+            $dispatched = $true
+            if ([AuraUiaNative]::GetForegroundWindow() -ne $handle) {
+                # Standard accessibility focus is a legitimate fallback; it
+                # never changes UAC/secure-desktop policy or sends fake keys.
+                try { $selected.root.SetFocus() } catch { }
+            }
+            Start-Sleep -Milliseconds 100
+        }
+        $selected = ResolveWindow $request.window
+        $result = @{ window = $selected.window; foreground = [AuraUiaNative]::GetForegroundWindow() -eq $handle; dispatched = $dispatched }
+    } elseif ($request.operation -eq 'snapshot') {
+        if ($null -ne $request.window) {
+            $selected = ResolveWindow $request.window
+            $root = $selected.root; $window = $selected.window
+        } else {
+            $handle = [AuraUiaNative]::GetForegroundWindow()
+            if ($handle -eq [IntPtr]::Zero) { Fail 'DESKTOP_UNAVAILABLE' }
+            $root = [Windows.Automation.AutomationElement]::FromHandle($handle)
+            $window = WindowInfo $root $handle.ToInt64()
+        }
         $limit = [Math]::Min(120, [Math]::Max(1, [int]$request.limit))
+        $offset = [Math]::Min(1500, [Math]::Max(0, [int]$request.offset))
+        $matched = 0
         $nodes = [Collections.Generic.List[object]]::new()
         $queue = [Collections.Generic.Queue[object]]::new()
         $queue.Enqueue($root)
@@ -111,7 +175,12 @@ public static class AuraUiaNative {
         while ($queue.Count -gt 0 -and $nodes.Count -lt $limit -and $script:visited -lt 1200) {
             $element = $queue.Dequeue()
             $node = ReadNode $element
-            if ($node.name -or $node.actions.Count -gt 0) { $nodes.Add($node) }
+            $matches = -not $request.query -or
+                (($node.name + ' ' + $node.automation_id + ' ' + $node.control_type).IndexOf([string]$request.query, [StringComparison]::OrdinalIgnoreCase) -ge 0)
+            if (($node.name -or $node.actions.Count -gt 0) -and $matches) {
+                if ($matched -ge $offset) { $nodes.Add($node) }
+                $matched += 1
+            }
             $child = $walker.GetFirstChild($element)
             while ($null -ne $child -and $queue.Count -lt 500 -and $script:visited -lt 1200) {
                 Budget
@@ -119,7 +188,10 @@ public static class AuraUiaNative {
                 $child = $walker.GetNextSibling($child)
             }
         }
-        $result = @{ window = $window; nodes = @($nodes.ToArray()); truncated = $queue.Count -gt 0 }
+        $truncated = $queue.Count -gt 0
+        $result = @{ window = $window; nodes = @($nodes.ToArray()); truncated = $truncated;
+            next_offset = $(if ($truncated -and $nodes.Count -gt 0) { $offset + $nodes.Count } else { $null });
+            scan_limited = $script:visited -ge 1200 }
     } elseif ($request.operation -in @('read', 'act')) {
         $resolved = Resolve $request.target
         if ($request.operation -eq 'read') { $result = @{ window = $resolved.window; node = $resolved.node } }
@@ -153,6 +225,25 @@ public static class AuraUiaNative {
                 'focus' {
                     if (-not $element.Current.IsKeyboardFocusable) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }
                     $element.SetFocus()
+                }
+                { $_ -in @('expand', 'collapse') } {
+                    $pattern = Pattern $element ([Windows.Automation.ExpandCollapsePattern]::Pattern)
+                    if ($null -eq $pattern -or [int]$pattern.Current.ExpandCollapseState -eq 3) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }
+                    if ($request.action -ceq 'expand') { $pattern.Expand() } else { $pattern.Collapse() }
+                }
+                'scroll' {
+                    $pattern = Pattern $element ([Windows.Automation.ScrollPattern]::Pattern)
+                    if ($null -eq $pattern) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }
+                    $none = [Windows.Automation.ScrollAmount]::NoAmount
+                    $inc = [Windows.Automation.ScrollAmount]::LargeIncrement
+                    $dec = [Windows.Automation.ScrollAmount]::LargeDecrement
+                    switch -CaseSensitive ([string]$request.value) {
+                        'up' { if (-not $pattern.Current.VerticallyScrollable) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }; $pattern.Scroll($none, $dec) }
+                        'down' { if (-not $pattern.Current.VerticallyScrollable) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }; $pattern.Scroll($none, $inc) }
+                        'left' { if (-not $pattern.Current.HorizontallyScrollable) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }; $pattern.Scroll($dec, $none) }
+                        'right' { if (-not $pattern.Current.HorizontallyScrollable) { Fail 'DESKTOP_UNSUPPORTED_ACTION' }; $pattern.Scroll($inc, $none) }
+                        default { Fail 'DESKTOP_INVALID_ARGUMENT' }
+                    }
                 }
                 default { Fail 'DESKTOP_UNSUPPORTED_ACTION' }
             }

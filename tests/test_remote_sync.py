@@ -85,6 +85,85 @@ class RemoteSyncTests(unittest.TestCase):
         event = next(item["data"] for item in items if item["entity"] == "screen_event")
         self.assertEqual(set(event), {"id", "conversation_id", "observed_at", "source_kind"})
 
+    def test_title_provenance_is_a_boolean_in_snapshot_and_change_records(self):
+        self.store.append_message(self.cid, "user", "first topic", "user")
+        items, since = self._all_snapshot()
+        row = next(item["data"] for item in items if item["entity"] == "conversation")
+        self.assertIs(row["title_manual"], False)
+        # Changing provenance alone must be visible even if the label and its
+        # timestamp stay identical (a user may deliberately name it New chat).
+        with self.store._connection() as connection:
+            connection.execute("UPDATE conversations SET title_manual = 1 WHERE id = ?", (self.cid,))
+        changes, _ = self._all_changes(since)
+        self.assertEqual(len(changes), 1)
+        self.assertIs(changes[0]["data"]["title_manual"], True)
+        self.assertEqual(changes[0]["data"]["title"], row["title"])
+        items, _ = self._all_snapshot()
+        self.assertIs(next(i["data"] for i in items if i["entity"] == "conversation")["title_manual"], True)
+
+    def test_internal_queue_is_pending_on_wire_without_exposing_origin_authority(self):
+        message = self.store.append_message(self.cid, "user", "future task", "user", metadata={
+            "request_status": "queued", "execution_mode": "agent",
+            "agent_queue_origin": {"peer_id": "a" * 64, "pair_authorization": "PRIVATE_PAIR_STAMP"}})
+        items, _ = self._all_snapshot()
+        row = next(item["data"] for item in items if item["id"] == message["id"])
+        self.assertEqual(row["request_status"], "pending")
+        self.assertEqual(sanitize_message(message)["request_status"], "pending")
+        self.assertNotIn("PRIVATE_PAIR_STAMP", json.dumps(items))
+        self.assertNotIn("agent_queue_origin", json.dumps(items))
+        changes, _ = self._all_changes()
+        self.assertEqual(next(item["data"] for item in changes if item["id"] == message["id"])["request_status"], "pending")
+        self.assertEqual(self.store.load_messages(self.cid)[0]["metadata"]["request_status"], "queued")
+
+    def test_v9_upgrade_refreshes_queued_record_for_already_caught_up_peer(self):
+        message = self.store.append_message(self.cid, "user", "queued before projection upgrade", "user",
+                                          metadata={"request_status": "queued", "execution_mode": "agent"})
+        _, since = self._all_snapshot()
+        with closing(sqlite3.connect(self.path)) as connection, connection:
+            connection.execute("UPDATE remote_sync_schema SET version = 9")
+        restarted = ConversationStore(self.path)
+        sync = RemoteSyncStore(restarted)
+        restarted.initialize()
+        rows = [row for row in sync.pull(since)["changes"] if row["entity"] == "message"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["id"], message["id"])
+        self.assertEqual(rows[0]["data"]["request_status"], "pending")
+        self.assertEqual(restarted.load_messages(self.cid)[0]["metadata"]["request_status"], "queued")
+
+    def test_v8_upgrade_publishes_title_provenance_to_caught_up_clients(self):
+        user = self.store.append_message(self.cid, "user", "preserved text", "user")
+        self.store.rename_conversation(self.cid, "新对话")
+        deleted_cid = str(uuid4())
+        self.store.append_message(deleted_cid, "user", "removed", "user")
+        self.store.delete_conversation(deleted_cid)
+        snapshot = self.sync.snapshot(limit=1)
+        # Simulate the actual older wire projection, not an integer substitute.
+        with closing(sqlite3.connect(self.path)) as connection, connection:
+            connection.execute("UPDATE remote_sync_changes SET payload = json_remove(payload, '$.title_manual') "
+                               "WHERE entity = 'conversation' AND deleted = 0")
+            connection.execute("UPDATE remote_sync_state SET payload_bytes = "
+                               "(SELECT coalesce(sum(length(CAST(payload AS BLOB))),0) FROM remote_sync_changes)")
+            connection.execute("UPDATE remote_sync_schema SET version = 8")
+            old = connection.execute("SELECT seq, entity, entity_id, payload FROM remote_sync_changes ORDER BY seq").fetchall()
+            since = connection.execute("SELECT high_seq FROM remote_sync_state").fetchone()[0]
+            tombstones = connection.execute("SELECT * FROM remote_sync_tombstones ORDER BY entity, entity_id").fetchall()
+        restarted = ConversationStore(self.path)
+        sync = RemoteSyncStore(restarted)
+        restarted.initialize()
+        changes = sync.pull(since)["changes"]
+        self.assertEqual(len(changes), 1)
+        self.assertEqual(changes[0]["id"], self.cid)
+        self.assertIs(changes[0]["data"]["title_manual"], True)
+        self.assertGreater(changes[0]["seq"], since)
+        self.assertEqual(restarted.load_messages(self.cid)[0]["id"], user["id"])
+        with self.assertRaises(SyncResetRequired):
+            sync.snapshot(cursor=snapshot["next_cursor"])
+        with closing(sqlite3.connect(self.path)) as connection:
+            self.assertEqual(connection.execute("SELECT seq, entity, entity_id, payload FROM remote_sync_changes "
+                                                "WHERE seq <= ? ORDER BY seq", (since,)).fetchall(), old)
+            self.assertEqual(connection.execute("SELECT * FROM remote_sync_tombstones ORDER BY entity, entity_id").fetchall(), tombstones)
+        self.assertEqual(sync.pull(changes[0]["seq"])["changes"], [])
+
     def test_sanitize_message_never_copies_unrecognized_metadata(self):
         reply_id = str(uuid4())
         message = sanitize_message({"id": str(uuid4()), "content": "hello", "metadata": {
@@ -369,7 +448,7 @@ class RemoteSyncTests(unittest.TestCase):
         restarted.initialize()
         with self.assertRaises(SyncResetRequired):
             sync.snapshot(cursor=snapshot["next_cursor"])
-        self.assertEqual(sync.snapshot()["watermark"], high)
+        self.assertGreater(sync.snapshot()["watermark"], high)
         self.assertEqual(restarted.load_messages(self.cid)[0]["content"], "preserved history")
         self.assertTrue(sync.pull(0)["changes"])
 

@@ -206,7 +206,7 @@ def _correct_explicit(memory, user_id, messages, generate, total_tokens, output_
     Semantic retrieval proposes candidates; it never authorizes deleting or
     replacing a fact. Ambiguous corrections remain available for manual review.
     """
-    from .service import _CORRECTION, _SENSITIVE
+    from .policy import _CORRECTION, _SENSITIVE
     from desktop_pet.conversations.context import memory_is_active
 
     text = "\n".join(message["content"] for message in messages)
@@ -415,7 +415,7 @@ def execute(payload: dict) -> object:
                 raise LookupError
             return memory.history(arguments["memory_id"])
         if operation == "extract":
-            from .service import _SENSITIVE
+            from .policy import _SENSITIVE
             secrets = [config[name]["config"].get("api_key", "") for name in ("llm", "embedder")]
             original_generate = memory.llm.generate_response
             original_create = memory.llm.client.chat.completions.create
@@ -439,7 +439,7 @@ def execute(payload: dict) -> object:
 
             memory.llm.client.chat.completions.create = bounded_create
 
-            from .service import _CORRECTION
+            from .policy import _CORRECTION
             # The installed SDK uses an additive fact pipeline. Handle a
             # validated explicit correction with its real update API instead
             # of asking the additive pipeline to append a contradiction.

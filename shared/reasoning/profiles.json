@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "labels": {
+    "default": "默认（由模型决定）", "none": "关闭思考", "enabled": "开启思考",
+    "adaptive": "自适应", "minimal": "极低", "low": "低", "medium": "中", "high": "高",
+    "xhigh": "很高", "max": "最高", "ultra": "ultra"
+  },
+  "profiles": {
+    "auto": {"label": "自动适配", "control": "none", "wire": "omit", "values": ["default"], "notice": "尚无此模型的推理能力声明，默认不发送思考参数；可刷新模型列表或显式选择兼容协议。"},
+    "legacy": {"label": "旧版兼容", "control": "effort", "wire": "effort", "values": ["default", "none", "minimal", "low", "medium", "high", "xhigh", "max"], "notice": "保留升级前原有参数；可切换自动适配。"},
+    "custom": {"label": "自定义 effort", "control": "custom", "wire": "effort", "values": ["default"], "allow_custom": true, "notice": "原值发送 reasoning_effort，请填写接口文档规定的值。"},
+    "openai": {"label": "OpenAI 兼容 effort", "control": "effort", "wire": "effort", "values": ["default", "none", "minimal", "low", "medium", "high", "xhigh", "max"], "allow_custom": true, "notice": "使用 OpenAI 兼容 effort 字段，具体支持以接口和模型声明为准。"},
+    "deepseek": {"label": "DeepSeek 思考", "control": "effort", "wire": "deepseek", "values": ["default", "none", "low", "high", "max"], "temperature_policy": "omit"},
+    "thinking": {"label": "thinking 开关", "control": "toggle", "wire": "thinking", "values": ["default", "none", "enabled"]},
+    "enable_thinking": {"label": "enable_thinking 开关", "control": "toggle", "wire": "enable_thinking", "values": ["default", "none", "enabled"]},
+    "qwen_budget": {"label": "兼容思考预算", "control": "budget", "wire": "qwen_budget", "values": ["default", "none", "enabled"], "budget_min": 1, "budget_max": 262144, "budget_default": 8192, "budget_required": true, "notice": "显式预算模式；接口和模型需支持 enable_thinking 与 thinking_budget。"},
+    "openrouter": {"label": "OpenRouter 推理", "control": "effort", "wire": "openrouter", "values": ["default", "none", "minimal", "low", "medium", "high", "xhigh"]},
+    "gemini": {"label": "Gemini OpenAI 兼容", "control": "effort", "wire": "effort", "values": ["default", "low", "medium", "high"], "notice": "用于 Gemini 的 OpenAI 兼容端点；原生 generateContent 协议不在此模式中。"},
+    "claude_adaptive": {"label": "Claude 自适应兼容网关", "control": "effort", "wire": "claude_adaptive", "values": ["default", "low", "medium", "high", "xhigh", "max"], "temperature_policy": "omit", "notice": "仅显式用于接收 Anthropic thinking/output_config 字段的 Chat Completions 网关。"},
+    "claude_budget": {"label": "Claude 预算兼容网关", "control": "budget", "wire": "claude_budget", "values": ["default", "none", "enabled"], "temperature_policy": "omit", "budget_min": 1024, "budget_max": 262144, "budget_default": 4096, "budget_required": true, "notice": "仅用于支持旧版 thinking.budget_tokens 的 Chat Completions 兼容网关，不是原生 Messages 端点；输出额度必须大于思考预算。"},
+    "omit": {"label": "不发送思考参数", "control": "none", "wire": "omit", "values": ["default"]}
+  },
+  "auto_rules": [
+    {"id": "known-nonreasoning-models", "match": {"models": ["gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "openai/gpt-3.5-turbo", "openai/gpt-4o", "openai/gpt-4o-mini", "openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano"], "allow_date_suffix": true}, "profile": "omit", "source": "model"},
+    {"id": "openrouter-unverified-model", "match": {"hosts": ["openrouter.ai"]}, "profile": "auto", "source": "provider"},
+    {"id": "siliconflow-unverified-model", "match": {"hosts": ["api.siliconflow.cn", "api.siliconflow.com"]}, "profile": "auto", "source": "provider"},
+    {"id": "modelscope-unverified-model", "match": {"hosts": ["api-inference.modelscope.cn"]}, "profile": "auto", "source": "provider"},
+    {"id": "gemini-compat-25-flash", "match": {"hosts": ["generativelanguage.googleapis.com"], "paths": ["/v1beta/openai", "/v1/openai"], "models": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash-preview-09-2025", "gemini-2.5-flash-lite-preview-09-2025"]}, "profile": "gemini", "values": ["default", "none", "minimal", "low", "medium", "high"], "source": "provider"},
+    {"id": "gemini-compat-25-pro", "match": {"hosts": ["generativelanguage.googleapis.com"], "paths": ["/v1beta/openai", "/v1/openai"], "models": ["gemini-2.5-pro"]}, "profile": "gemini", "values": ["default", "minimal", "low", "medium", "high"], "source": "provider"},
+    {"id": "gemini-compat-31-pro", "match": {"hosts": ["generativelanguage.googleapis.com"], "paths": ["/v1beta/openai", "/v1/openai"], "models": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools"]}, "profile": "gemini", "values": ["default", "low", "medium", "high"], "source": "provider"},
+    {"id": "gemini-compat-flash", "match": {"hosts": ["generativelanguage.googleapis.com"], "paths": ["/v1beta/openai", "/v1/openai"], "models": ["gemini-3-flash-preview", "gemini-3.1-flash-lite-preview", "gemini-3.5-flash"]}, "profile": "gemini", "values": ["default", "minimal", "low", "medium", "high"], "source": "provider"},
+    {"id": "gemini-compat-38-flash", "match": {"hosts": ["generativelanguage.googleapis.com"], "paths": ["/v1beta/openai", "/v1/openai"], "models": ["gemini-3.8-flash"]}, "profile": "gemini", "source": "provider"},
+    {"id": "deepseek-current-model", "match": {"models": ["deepseek-flash", "deepseek-v4-pro", "deepseek/deepseek-flash", "deepseek/deepseek-v4-pro"]}, "profile": "deepseek", "source": "model"},
+    {"id": "openai-gpt5", "match": {"models": ["gpt-5", "openai/gpt-5"], "allow_date_suffix": true}, "profile": "openai", "values": ["default", "minimal", "low", "medium", "high"], "temperature_policy": "omit", "source": "model"},
+    {"id": "openai-gpt51", "match": {"models": ["gpt-5.1", "openai/gpt-5.1"], "allow_date_suffix": true}, "profile": "openai", "values": ["default", "none", "low", "medium", "high"], "temperature_policy": "omit", "source": "model"},
+    {"id": "openai-gpt54", "match": {"models": ["gpt-5.4", "openai/gpt-5.4"], "allow_date_suffix": true}, "profile": "openai", "values": ["default", "none", "low", "medium", "high", "xhigh"], "temperature_policy": "omit", "source": "model"},
+    {"id": "openai-gpt6-frontier", "match": {"models": ["gpt-6-astra", "gpt-6.1-sol", "openai/gpt-6-astra", "openai/gpt-6.1-sol"], "allow_date_suffix": true}, "profile": "openai", "values": ["default", "low", "medium", "high", "xhigh", "max"], "temperature_policy": "omit", "source": "model"},
+    {"id": "openai-gpt6-fast", "match": {"models": ["gpt-6-sol", "gpt-6-luna", "openai/gpt-6-sol", "openai/gpt-6-luna"], "allow_date_suffix": true}, "profile": "openai", "values": ["default", "none", "low", "medium", "high", "xhigh", "max"], "temperature_policy": "omit", "source": "model"}
+  ],
+  "sources": [
+    "https://github.com/farion1231/cc-switch/blob/e1f8acf6479068b05e7e9df7c764aff3f76c08b4/src-tauri/src/proxy/providers/codex.rs",
+    "https://api-docs.deepseek.com/guides/thinking_mode/",
+    "https://ai.google.dev/gemini-api/docs/openai",
+    "https://platform.claude.com/docs/en/build-with-claude/thinking",
+    "https://platform.claude.com/docs/en/build-with-claude/effort",
+    "https://developers.openai.com/api/docs/models/gpt-5.4",
+    "https://developers.openai.com/api/docs/guides/reasoning"
+  ]
+}

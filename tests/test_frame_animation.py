@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, QPoint, QRect, QRectF, Qt, QThreadPool
 from PySide6.QtGui import QColor, QImage, QPainter
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QPushButton
 
 from desktop_pet.animation_controller import AnimationState
 from desktop_pet.config import PetConfig
@@ -120,17 +120,132 @@ class FrameAnimationTests(unittest.TestCase):
         self.assertFalse(pet._sequence_frames)
         self.assertIn("尚未制作", player.catalog()[1][2])
 
+    def test_new_video_idles_missing_or_unreviewed_keep_current_animation(self):
+        for name, label in (("idle_hands_on_hips", "待机 · 叉腰小得意"),
+                            ("idle_heart_cheeks", "待机 · 捧脸心动"),
+                            ("idle_typing_work", "待机 · 认真打字"),
+                            ("idle_eating_rice", "待机 · 大口扒饭")):
+            with self.subTest(name=name):
+                pet = self.pet()
+                player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+                self.install(player)
+                current_clip = player._clip
+                current_pixels = pet._hit_image.copy()
+                self.assertFalse(player.play(name))
+                self.assertIn("尚未制作", player.status)
+                self.assertIs(player._clip, current_clip)
+                self.assertEqual(pet._hit_image, current_pixels)
+                entry = next(row for row in player.catalog() if row[0] == name)
+                self.assertEqual(entry[1], label)
+                self.assertIn("尚未制作", entry[2])
+                self.make_clip(name, complete=False, qa_passed=False)
+                self.assertFalse(player.play(name))
+                self.assertIn("未通过素材验收", player.status)
+                self.assertIs(player._clip, current_clip)
+                self.assertEqual(pet._hit_image, current_pixels)
+
+    def test_ready_video_idles_use_dynamic_frames_and_manual_loop(self):
+        # Temporary moving rectangles exercise the new IDs through the actual
+        # loader and clock; no fixture is ever copied into product assets.
+        for name in ("idle_hands_on_hips", "idle_heart_cheeks", "idle_typing_work", "idle_eating_rice"):
+            with self.subTest(name=name):
+                self.make_clip(name, complete=True, qa_passed=True, loop=True)
+                pet = self.pet()
+                player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+                self.assertTrue(player.play(name))
+                wait_until(lambda: player._clip is not None)
+                pet.animation.advance(1)
+                player.advance(0)
+                self.assertFalse(player._clip.manifest.static_pose_idle)
+                self.assertTrue(player._clip.manifest.loop)
+                first_pixels = pet._hit_image.copy()
+                player.advance(.09)
+                self.assertNotEqual(pet._hit_image, first_pixels)
+                player.advance(.09)
+                self.assertTrue(player.playing)
+                self.assertEqual(pet._hit_image, first_pixels)
+                player.stop()
+                self.assertFalse(pet._sequence_frames)
+
     def test_invalid_metadata_paths_and_unfinished_production_are_rejected(self):
         bad = ({"schema_version": True}, {"fps": True}, {"fps": 60}, {"fps": float("nan")}, {"frame_count": 1},
                {"canvas": {"width": 640, "height": 640}}, {"frames": ["../custom.png", "frames/0002.png"]},
                {"frames": ["frames/0001.png", "frames/0001.png"]}, {"anchor": {"x": 2, "y": .5}},
                {"loop": "false"}, {"completion": "execute"}, {"qa_passed": False},
+               {"return_transition": "morph"}, {"return_transition": True}, {"return_transition": []},
                {"complete": False}, {"origin": {"synthetic": True}}, {"duration_ms": 999})
         for change in bad:
             with self.subTest(change=change):
                 self.write_manifest({**self.data, **change})
                 with self.assertRaises(FrameAssetError):
                     load_clip(self.clip_dir, "think_scratch_head")
+
+    def test_return_transition_defaults_to_crossfade_and_accepts_explicit_fade(self):
+        self.assertEqual(read_manifest(self.clip_dir, "think_scratch_head").return_transition, "crossfade")
+        self.write_manifest({**self.data, "return_transition": "fade"})
+        self.assertEqual(read_manifest(self.clip_dir, "think_scratch_head").return_transition, "fade")
+
+    def test_fade_return_never_overlaps_poses_or_relocates_a_pet_already_home(self):
+        source = QImage(1024, 1024, QImage.Format.Format_ARGB32_Premultiplied)
+        source.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(source)
+        painter.fillRect(100, 200, 100, 600, QColor("#d64848"))
+        painter.end()
+        self.assertTrue(source.save(str(self.original), "PNG"))
+        self.write_manifest({**self.data, "transition_ms": 250, "return_transition": "fade"})
+        with patch("desktop_pet.pet_window.work_area", return_value=QRect(0, 0, 1920, 1040)):
+            pet = self.pet()
+            pet.move(600, 100)
+            player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+            self.install(player)
+            player.advance(.25)
+            player.advance(.09)
+            self.assertEqual(pet.pos(), pet.frame_home_position)
+            baseline = pet._source.toImage().copy()
+            with patch.object(pet, "place_frame_home", wraps=pet.place_frame_home) as relocate:
+                player.stop(smooth=True)
+                frames = player._active_frames
+                self.assertGreater(len(frames), 3)
+                self.assertEqual(frames[0].pixelColor(650, 300).alpha(), 255)
+                self.assertEqual(frames[-1].pixelColor(150, 300).alpha(), 255)
+                # Separate red source and cyan action witnesses expose even a
+                # single cached frame that mixes the two distant silhouettes.
+                for frame in frames:
+                    self.assertFalse(frame.pixelColor(150, 300).alpha() and
+                                     frame.pixelColor(650, 300).alpha())
+                middle = frames[len(frames)//2]
+                self.assertEqual(middle.pixelColor(150, 300).alpha(), 0)
+                self.assertEqual(middle.pixelColor(650, 300).alpha(), 0)
+                player.advance(.125)
+                player.advance(.13)
+                relocate.assert_not_called()
+            self.assertFalse(player.busy)
+            self.assertFalse(pet._sequence_frames)
+            self.assertEqual(pet._source.toImage(), baseline)
+
+    def test_fade_return_waits_for_drag_recovery_before_fading(self):
+        self.write_manifest({**self.data, "transition_ms": 250, "return_transition": "fade"})
+        pet = self.pet()
+        player = FrameAnimationPlayer(pet, self.clip_dir, pet)
+        self.install(player)
+        player.advance(.25)
+        player.advance(.09)
+        pet.animation.start_dragging()
+        frozen = pet._hit_image.copy()
+        player.stop(smooth=True)
+        player.advance(5)
+        self.assertEqual(pet._hit_image, frozen)
+        self.assertTrue(player._stop_pending)
+        pet.animation.finish_dragging()
+        player.advance(5)
+        self.assertEqual(pet._hit_image, frozen)
+        pet.animation.advance(1)
+        player.advance(0)
+        self.assertEqual(player._phase, "exit")
+        self.assertEqual(pet._hit_image, frozen)
+        player.advance(.26)
+        self.assertFalse(player.busy)
+        self.assertFalse(pet._sequence_frames)
 
     def test_missing_corrupt_rgb_and_wrong_canvas_frames_are_rejected(self):
         path = self.clip_dir / "think_scratch_head" / "frames" / "0002.png"
@@ -434,25 +549,29 @@ class FrameAnimationTests(unittest.TestCase):
         self.assertEqual(fallback.pet._source.cacheKey(), fallback._original.cacheKey())
         self.assertIn("回退", fallback.appearance_status)
 
-    def test_debug_asset_actions_report_missing_and_can_refresh_new_static_art(self):
+    def test_debug_asset_actions_refresh_frames_without_an_appearance_row(self):
         controller, settings = self.controller()
         panel = DebugPanel(controller, settings, FakeChat())
         self.windows.append(panel)
+        self.assertIsNone(panel.findChild(QComboBox, "staticCharacterCombo"))
+        self.assertIsNone(panel.findChild(QLabel, "staticCharacterStatus"))
+        for name, label in (("idle_tsundere", "傲娇"), ("idle_sleepy", "困倦")):
+            index = panel.asset_animation_combo.findData(name)
+            self.assertGreaterEqual(index, 0)
+            self.assertEqual(panel.asset_animation_combo.itemText(index), label)
         panel.asset_animation_combo.setCurrentIndex(1)
         self.assertIn("尚未制作", panel.asset_animation_status.text())
         panel.findChild(QPushButton, "playAssetAnimationButton").click()
         self.assertIn("尚未制作", panel.asset_animation_status.text())
-        self.assertIn("尚未就绪", panel.appearance_combo.itemData(1, Qt.ItemDataRole.ToolTipRole))
-        folder = self.root / "character" / "static"
-        folder.mkdir(parents=True)
-        image = QImage(1024, 1024, QImage.Format.Format_ARGB32)
-        image.fill(Qt.GlobalColor.transparent)
-        image.setPixelColor(500, 500, QColor("red"))
-        image.save(str(folder / "tsundere.png"), "PNG")
+        self.make_clip("snarl_cute")
         panel.findChild(QPushButton, "refreshCharacterAssetsButton").click()
-        panel.appearance_combo.setCurrentIndex(1)
-        self.assertEqual(controller.appearance, "tsundere")
-        self.assertIn("已加载", panel.appearance_status.text())
+        self.assertEqual(panel.asset_animation_combo.currentData(), "snarl_cute")
+        self.assertIn("帧文件齐全", panel.asset_animation_status.text())
+        panel.findChild(QPushButton, "playAssetAnimationButton").click()
+        wait_until(lambda: controller.asset_player.playing)
+        self.assertEqual(controller.asset_player.name, "snarl_cute")
+        panel.findChild(QPushButton, "stopAssetAnimationButton").click()
+        self.assertFalse(controller.asset_player.busy)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "completed_at": "2026-11-03T14:43:57.588880+00:00",
+  "asset_revision": "20261103-foreground-flicker-fixed",
+  "asset_manifest_sha256": "3deda2fb2e76dcdf16e0de3dfe4d767bf86877010f87f659ae05da4de20b8491",
+  "cause": "Local source-pale background flood crossed frill/stocking contours and removed real foreground after stocking restoration.",
+  "native_frames_repaired_and_checked": 124,
+  "delivered_frames": 68,
+  "specific_source_pixel_regression": "qa/foreground_regression.json",
+  "native_exhaustive": [
+    {
+      "scale": 100,
+      "frames": 68
+    },
+    {
+      "scale": 200,
+      "frames": 68
+    }
+  ],
+  "native_realtime_coverage": 68,
+  "native_realtime_loops": 2,
+  "native_screenshots": 204,
+  "native_wrong_frame_captures": 0,
+  "targeted_native_images_actually_reviewed": 20,
+  "regression_tests": 149,
+  "regression_seconds": 115.453,
+  "real_asset_smoke": "passed",
+  "scoped_syntax_check": "passed",
+  "art_package_exact_runtime_files": 73,
+  "other_asset_files_unchanged": 1045,
+  "additional_generation_submissions": 0,
+  "additional_cost_cny": 0,
+  "gif_generated": false,
+  "production_process_restarted": false,
+  "production_settings_changed": false,
+  "previous_runtime_and_art_package_retained": "before/",
+  "limits": "Native screenshots render only owned Qt windows; physical OS mouse and compositor camera were not tested. Source completeness uses independent original-source witnesses/guards as well as visual review; paint matching a source alone is insufficient."
+}

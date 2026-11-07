@@ -34,6 +34,20 @@ class ExecutionProcessTest {
         assertEquals(parsed, parseExecutionProcess(saved))
     }
 
+    @Test fun delegationSourcesRetainDirectAndModelLabelsAndFilterUnknownPrivateFields() {
+        val labels = listOf("任务分派说明（模型公开回复）", "任务分派说明（直接请求）")
+        val input = trace().put("events", JSONArray((labels + "PRIVATE_UNKNOWN_LABEL").mapIndexed { index, label ->
+            event(index, label).put("kind", "summary").put("detail", "PRIVATE_DETAIL")
+                .put("arguments", "PRIVATE_ARGUMENTS").put("reasoning", "PRIVATE_THOUGHTS")
+        }))
+        val parsed = parseExecutionProcess(input)!!
+        assertEquals(labels, parsed.events.map { it.label })
+        assertEquals(listOf("step-0", "step-1"), parsed.events.map { it.id })
+        assertTrue(parsed.events.all { it.kind == "summary" && it.status == "completed" })
+        assertFalse(parsed.canonicalJson().contains("PRIVATE"))
+        assertEquals(parsed, parseExecutionProcess(parsed.canonicalJson()))
+    }
+
     @Test fun malformedTimesStatesAndOversizedTracesAreRejectedWithoutCoercion() {
         for (value in listOf(-1L, MAX_EXECUTION_MS + 1, "1200", true, 1.5))
             assertNull(parseExecutionProcess(trace().put("duration_ms", value)))

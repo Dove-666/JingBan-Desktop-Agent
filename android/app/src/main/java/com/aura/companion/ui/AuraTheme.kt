@@ -95,7 +95,7 @@ private val AuraTypography = Typography(
 )
 
 @Composable
-fun AuraTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
+fun AuraTheme(mode: ThemeMode = ThemeMode.LIGHT, content: @Composable () -> Unit) {
     val dark = when (mode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
