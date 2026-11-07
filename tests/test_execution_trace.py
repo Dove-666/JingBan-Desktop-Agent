@@ -100,7 +100,9 @@ class PublicEventAgent(AgentService):
         self.calls = []
 
     def execute(self, settings, key, request, context, cancellation_event=None,
-                progress_callback=None, event_callback=None):
+                progress_callback=None, event_callback=None, interaction_callback=None,
+                image_resolver=None, diagnostic_callback=None, worker_lifecycle_callback=None,
+                worker_dispatch_guard=None, execution_attempt_callback=None, guardian_launch=None):
         self.calls.append(context)
         progress_callback("planning")
         event_callback({"id": "tool:read_file:1", "kind": "tool", "label": "读取文件", "status": "running",

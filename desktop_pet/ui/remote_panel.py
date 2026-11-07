@@ -7,11 +7,13 @@ from datetime import datetime
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
-    QApplication, QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QApplication, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QListWidget, QListWidgetItem, QPushButton, QScrollArea, QVBoxLayout, QWidget,
 )
 
+from .theme import style_widget
 from .styles import PANEL_STYLE
+from .settings_widgets import SettingsToggle
 
 
 INSTALL_COMMAND = r".\.venv\Scripts\python.exe -m pip install -r requirements-remote.txt"
@@ -43,7 +45,7 @@ def _expiry_timestamp(value):
 class RemotePanel(QWidget):
     """Small controller-backed settings page, with no network work on the UI thread."""
 
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, parent=None, *, embedded=False):
         super().__init__(parent)
         self.controller = controller
         self._status = {}
@@ -51,7 +53,8 @@ class RemotePanel(QWidget):
         self._expires_at = 0.0
         self._copied_pairing_text = ""
         self.setObjectName("remotePanel")
-        self.setStyleSheet(PANEL_STYLE)
+        if not embedded:
+            style_widget(self, PANEL_STYLE)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -62,12 +65,12 @@ class RemotePanel(QWidget):
         contents = QWidget()
         self.scroll.setWidget(contents)
         layout = QVBoxLayout(contents)
-        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setContentsMargins(*( (0, 2, 6, 12) if embedded else (18, 18, 18, 18) ))
         layout.setSpacing(14)
-        layout.addWidget(_label("手机远程连接", "sectionTitle"))
-        layout.addWidget(_label("连接已配对设备，用于传递图片、桌宠指令和同步对话记录。手机端接入后即可使用。"))
+        if not embedded:
+            layout.addWidget(_label("手机远程连接", "sectionTitle"))
 
-        self.enabled_checkbox = QCheckBox("允许手机连接这台电脑")
+        self.enabled_checkbox = SettingsToggle("允许手机连接这台电脑")
         self.enabled_checkbox.setObjectName("remoteEnabled")
         self.enabled_checkbox.setToolTip("开启后随桌宠启动自动恢复连接；网络未就绪时会自动重试。")
         self.enabled_checkbox.toggled.connect(self._enabled_toggled)
@@ -97,7 +100,7 @@ class RemotePanel(QWidget):
 
         self.dependency_group = QGroupBox("可选通信组件未安装")
         dependency_layout = QVBoxLayout(self.dependency_group)
-        dependency_layout.addWidget(_label("在项目目录运行下面的命令，安装后重启 AURA。"))
+        dependency_layout.addWidget(_label("在项目目录运行下面的命令，安装后重启鲸伴。"))
         self.install_command = QLineEdit(INSTALL_COMMAND)
         self.install_command.setReadOnly(True)
         self.install_command.setAccessibleName("安装可选通信组件命令")

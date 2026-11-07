@@ -25,7 +25,7 @@ def synthetic_image(width=1600, height=900):
 
 class ScreenObserverTests(unittest.TestCase):
     def setUp(self):
-        self.settings = PerceptionSettings(enabled=True)
+        self.settings = PerceptionSettings(enabled=True, allow_remote=False)
         self.metadata = Mock(return_value=safe_info())
         self.capture = Mock(return_value=synthetic_image())
         self.observer = ScreenObserver(self.metadata, self.capture, own_pid=999)
@@ -38,8 +38,8 @@ class ScreenObserverTests(unittest.TestCase):
         self.capture.assert_not_called()
         return observed
 
-    def test_default_disabled_reads_no_metadata_and_captures_no_pixels(self):
-        result = self.observer.observe(PerceptionSettings())
+    def test_explicitly_disabled_reads_no_metadata_and_captures_no_pixels(self):
+        result = self.observer.observe(PerceptionSettings(enabled=False, allow_remote=False))
         self.assertIsNone(result.image)
         self.assertIn("关闭", result.blocked_reason)
         self.metadata.assert_not_called()
@@ -108,10 +108,23 @@ class ScreenObserverTests(unittest.TestCase):
                     self.assertEqual(result.blocked_code, "own_window")
                     self.assertEqual(self.observer.current_blocked_code(self.settings), "own_window")
 
+    def test_renamed_windows_are_blocked_for_python_and_packaged_hosts(self):
+        titles = ("鲸伴", "鲸伴 · 调试面板 · 2026.11.07-r26", "设置 · 鲸伴",
+                  "鲸伴 · 长期记忆", "和鲸鱼娘聊天 - 鲸伴", "和鲸鱼娘下象棋 - 鲸伴",
+                  "和鲸鱼娘下五子棋 - 鲸伴", "确认删除会话 - 鲸伴")
+        for host in ("python.exe", "PythonW.EXE", "Jingban.exe", "鲸伴.exe"):
+            for title in titles:
+                with self.subTest(host=host, title=title):
+                    result = self.assert_blocked_before_capture(
+                        safe_info(pid=12345, process_name=host, title=title), "鲸伴自身")
+                    self.assertEqual(result.blocked_code, "own_window")
+
     def test_ordinary_python_windows_and_browser_project_pages_are_not_excluded(self):
         for host, title in (("python.exe", "AURA Python environment diagnostics"),
                             ("pythonw.exe", "独立图像编辑器"),
-                            ("msedge.exe", "AURA-Desktop-Agent - GitHub")):
+                            ("msedge.exe", "AURA-Desktop-Agent - GitHub"),
+                            ("msedge.exe", "鲸伴 - 项目介绍"),
+                            ("python.exe", "鲸伴图像测试工具")):
             with self.subTest(host=host):
                 self.metadata.return_value = safe_info(process_name=host, title=title)
                 result = self.observer.observe(self.settings)

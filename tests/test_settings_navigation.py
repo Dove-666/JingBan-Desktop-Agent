@@ -13,11 +13,13 @@ from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QEvent, QThreadPool
 from PySide6.QtGui import QColor, QImage
-from PySide6.QtWidgets import QApplication, QLineEdit, QStackedWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit, QStackedWidget
 
 from desktop_pet.application_controller import ApplicationController
+from desktop_pet import APP_VERSION
 from desktop_pet.config import PetConfig
 from desktop_pet.expression_manager import ExpressionManager
+from desktop_pet.perception.settings import PerceptionSettings
 from desktop_pet.settings_manager import ApiSettings
 from tests.test_application import MemoryCredentialBackend, isolated_settings, spin_until
 from tests.test_assistant_ui import click_dom, wait_js
@@ -39,6 +41,7 @@ class EmbeddedSettingsNavigationTests(unittest.TestCase):
         self.assertTrue(image.save(str(image_path)))
         self.backend = MemoryCredentialBackend()
         self.settings = isolated_settings(self.base / "settings.ini", self.backend)
+        self.settings.save_perception_settings(PerceptionSettings(enabled=False, allow_remote=False))
         self.settings.save_api_settings(ApiSettings("https://example.invalid/v1", "synthetic-model", 5))
         self.settings.save_api_key("synthetic-saved-settings-token")
         self.memory = FakeMemoryService()
@@ -97,12 +100,48 @@ class EmbeddedSettingsNavigationTests(unittest.TestCase):
         panel = window.chat_panel
         spin_until(lambda: panel._frontend_ready, timeout=20)
         self.assertIsNotNone(panel.web_view)
-        wait_js(panel, "Boolean(document.querySelector('.sidebar-setting'))")
-        click_dom(panel, ".sidebar-setting")
+        # Game launchers share the visual class and have their own test IDs.
+        # Confirm the rendered label before clicking the settings entry.
+        settings_button = ".sidebar-setting:not([data-testid])"
+        wait_js(panel, f"document.querySelector({json.dumps(settings_button)})?.textContent.trim() === {json.dumps('设置')}")
+        click_dom(panel, settings_button)
+        spin_until(lambda: window.settings_page is not None
+                   and window.pages.currentWidget() is window.settings_page)
         self.assertIs(window.pages.currentWidget(), window.settings_page)
         self.assertEqual(window.settings_page.section_key, "general")
         self.assertIsNone(self.session.debug_panel)
         self.assertIs(window.settings_page.window(), window)
+
+    def test_general_settings_only_shows_a_quiet_version_number(self):
+        window, page = self.open_settings()
+        self.assertEqual(page.version_label.text(), APP_VERSION)
+        self.assertEqual(page.version_label.accessibleName(), "版本")
+        self.assertEqual(page.version_label.toolTip(), "")
+        self.assertNotIn("版本", page.version_label.text())
+        self.assertFalse(any(marker in page.version_label.text().casefold()
+                             for marker in ("beta", "test", "测试", "正式", "体验")))
+        self.assertNotIn(APP_VERSION, window.windowTitle())
+
+    def test_character_card_import_apply_and_reset_through_embedded_settings(self):
+        window, page = self.open_settings("character")
+        card_panel = page.character_card_panel
+        self.assertTrue(card_panel.isVisible())
+        path = self.base / "owned-character-card.json"
+        path.write_text(json.dumps({"name": "海月", "personality": "温柔俏皮，讲话简洁。",
+            "description": "来自海边的小伙伴。", "first_mes": "你好呀。"}, ensure_ascii=False), encoding="utf-8")
+        with patch.object(QFileDialog, "getOpenFileName", return_value=(str(path), "")):
+            card_panel.import_button.click()
+        self.assertIsNone(self.session.chat.character_card)
+        card_panel.apply_button.click()
+        self.assertEqual(self.session.chat.character_card.name, "海月")
+        self.assertEqual(self.settings.load_character_card().name, "海月")
+        self.assertIn("海月", card_panel.current_label.text())
+        self.session.open_settings("general")
+        self.session.open_settings("character")
+        self.assertIs(page.character_card_panel, card_panel)
+        card_panel.reset_button.click()
+        self.assertIsNone(self.session.chat.character_card)
+        self.assertIsNone(self.settings.load_character_card())
 
     def test_settings_entry_reuses_one_window_and_one_settings_page(self):
         window, page = self.open_settings()
@@ -112,6 +151,38 @@ class EmbeddedSettingsNavigationTests(unittest.TestCase):
         self.assertEqual(page.section_key, "character")
         self.assertEqual(window.pages.count(), 2)
         self.assertIsNone(self.session.debug_panel)
+
+    def test_character_library_save_and_switch_through_embedded_settings(self):
+        from desktop_pet.character_cards import CharacterCard
+
+        window, page = self.open_settings("character")
+        panel = page.character_card_panel
+        path = self.base / "owned-library-card.json"
+        path.write_text(json.dumps({"name": "海月", "personality": "温柔而简洁。"},
+                                   ensure_ascii=False), encoding="utf-8")
+        with patch.object(QFileDialog, "getOpenFileName", return_value=(str(path), "")):
+            panel.import_button.click()
+        panel.save_button.click()
+        self.assertIsNone(self.session.chat.character_card)
+        self.assertEqual(len(self.settings.list_character_cards()), 1)
+        panel.apply_button.click()
+        self.assertEqual(self.session.chat.character_card.name, "海月")
+
+        another = self.settings.save_library_character_card(CharacterCard.from_dict({
+            "name": "星遥", "personality": "活泼又耐心。"}))
+        panel.refresh_button.click()
+        index = panel.library_combo.findData(another.id)
+        self.assertGreaterEqual(index, 0)
+        panel.library_combo.setCurrentIndex(index)
+        self.assertIn("星遥", panel.name_label.text())
+        self.assertEqual(self.session.chat.character_card.name, "海月")
+        panel.apply_button.click()
+        self.assertEqual(self.session.chat.character_card.name, "星遥")
+        self.assertEqual(self.settings.load_character_card().name, "星遥")
+        self.session.open_settings("general")
+        self.session.open_settings("character")
+        self.assertIs(page.character_card_panel, panel)
+        self.assertIs(self.session.chat_window, window)
 
     def test_specialized_entry_points_open_the_expected_settings_category(self):
         window, page = self.open_settings()

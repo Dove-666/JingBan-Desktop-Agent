@@ -41,11 +41,13 @@ class RemotePreferences:
                             or not isinstance(device.get("name"), str)
                             or not 1 <= len(device["name"]) <= 80
                             or any(ord(c) < 32 for c in device["name"])
-                            or not isinstance(device.get("paired_at"), str)):
+                            or not isinstance(device.get("paired_at"), str)
+                            or "agent_grant" in device and (not isinstance(device["agent_grant"], str)
+                                or not PEER_ID.fullmatch(device["agent_grant"]))):
                         raise ValueError("invalid device")
                     seen.add(device["id"])
                 self._data = {"version": 1, "enabled": data["enabled"],
-                              "devices": [{key: device[key] for key in ("id", "name", "paired_at")}
+                              "devices": [{key: device[key] for key in ("id", "name", "paired_at", "agent_grant") if key in device}
                                           for device in data["devices"]]}
         except (OSError, ValueError, TypeError):
             # A damaged allowlist never silently authorizes an unknown peer.
@@ -67,11 +69,37 @@ class RemotePreferences:
     @property
     def devices(self):
         with self._lock:
-            return deepcopy(self._data["devices"])
+            # The per-pair Agent grant is host authority, never a public
+            # status/device field or a credential copied to the phone.
+            return [{key: device[key] for key in ("id", "name", "paired_at")}
+                    for device in self._data["devices"]]
 
     def authorized(self, peer_id):
         with self._lock:
             return any(device["id"] == peer_id for device in self._data["devices"])
+
+    def agent_authorization(self, peer_id, *, create=False):
+        """Host-only pairing incarnation for future durable task admission.
+
+        Legacy pairings get a nonce only at an explicit host admission boundary.
+        Reconnection does not rotate it; revocation then re-pairing always does.
+        A hash is an identity fence, not permission to execute a task by itself.
+        """
+        if type(create) is not bool or not isinstance(peer_id, str) or not PEER_ID.fullmatch(peer_id):
+            raise RemoteError("invalid_request", "设备授权标识无效。")
+        with self._lock:
+            device = next((row for row in self._data["devices"] if row["id"] == peer_id), None)
+            if device is None:
+                return None
+            nonce = device.get("agent_grant")
+            if nonce is None:
+                if not create:
+                    return None
+                data = deepcopy(self._data)
+                nonce = secrets.token_hex(32)
+                next(row for row in data["devices"] if row["id"] == peer_id)["agent_grant"] = nonce
+                self._commit(data)
+            return hashlib.sha256(("aura-pair-agent-v1:" + peer_id + ":" + nonce).encode("ascii")).hexdigest()
 
     def _commit(self, data):
         try:
@@ -95,11 +123,13 @@ class RemotePreferences:
 
     def add_device(self, peer_id, name, paired_at):
         with self._lock:
-            devices = self.devices
+            devices = deepcopy(self._data["devices"])
             if not self.authorized(peer_id) and len(devices) >= MAX_DEVICES:
                 raise RemoteError("device_limit", "已配对设备已达上限，请先撤销不再使用的设备。")
+            previous = next((item for item in devices if item["id"] == peer_id), None)
             devices = [item for item in devices if item["id"] != peer_id]
-            devices.append({"id": peer_id, "name": name, "paired_at": paired_at})
+            devices.append({"id": peer_id, "name": name, "paired_at": paired_at,
+                            "agent_grant": previous.get("agent_grant", secrets.token_hex(32)) if previous else secrets.token_hex(32)})
             self._commit({**self._data, "devices": devices})
 
     def revoke(self, peer_id):

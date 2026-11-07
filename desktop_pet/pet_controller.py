@@ -6,7 +6,7 @@ from .animation_controller import AnimationState
 from .config import DEFAULT_IMAGE, PROJECT_ROOT
 from .expression_manager import EXPRESSIONS, Expression, ExpressionManager
 from .frame_animation import FrameAnimationPlayer
-from .idle_behavior import IdleBehaviorPolicy
+from .idle_behavior import IDLE_DURATION_SECONDS, IdleBehaviorPolicy
 from .pet_window import PetWindow
 from .settings_manager import SettingsManager
 
@@ -17,6 +17,10 @@ FEEDBACK = {
     "angry": "哼，我有点生气啦。", "thinking": "让我想一想…",
     "talking": "我在认真回应你。",
 }
+
+# Zero-based, half-open range of the installed typing clip. The desk is fully
+# present throughout these frames, including the source's brief eye blink.
+TYPING_WORK_LOOP_SEGMENT = (14, 55)
 
 
 class PetController(QObject):
@@ -57,6 +61,9 @@ class PetController(QObject):
         self.asset_player.status_changed.connect(self.asset_animation_changed.emit)
         self.behavior = IdleBehaviorPolicy()
         self._conversation_busy = False
+        self._task_working = False
+        self._work_animation_pending = False
+        self._work_clip_owned = False
         self._idle_clip_owned = False
         self._idle_exit_pending = False
         self._behavior_applying = False
@@ -91,8 +98,45 @@ class PetController(QObject):
         if busy and self._idle_clip_owned:
             self.asset_player.stop(smooth=True)
 
+    def set_task_working(self, working: bool) -> None:
+        """Keep the typing workstation present throughout an Agent task."""
+        working = bool(working)
+        if self._behavior_closed or working == self._task_working:
+            return
+        self._task_working = working
+        self._work_animation_pending = working
+        self.behavior.register_activity()
+        if working:
+            self.behavior.cancel_anger()
+            self._queued_context = None
+            if self.asset_player.busy:
+                self.asset_player.stop(smooth=True)
+            self._start_work_animation()
+        else:
+            if self._work_clip_owned:
+                self.asset_player.stop(smooth=True)
+            self._work_clip_owned = False
+            context, self._queued_context = self._queued_context, None
+            if context is not None:
+                self.apply_context_expression(context[0], source=context[1])
+
+    def _start_work_animation(self) -> None:
+        if (not self._work_animation_pending or not self._task_working
+                or not self._uses_project_character or self.appearance != "original"
+                or not self.pet.isVisible() or self.asset_player.busy
+                or self._pending_expression is not None
+                or self.pet.animation.state != AnimationState.IDLE):
+            return
+        # Attempt once per task. Missing or invalid artwork must not create a
+        # per-frame retry loop or interfere with the actual request.
+        self._work_animation_pending = False
+        if self.asset_player.play("idle_typing_work", loop_segment=TYPING_WORK_LOOP_SEGMENT):
+            self._work_clip_owned = self._idle_clip_owned = True
+            self.pet.sequence_part_hits_enabled = False
+
     def _stop_behavior(self) -> None:
         self._behavior_closed = True
+        self._task_working = self._work_animation_pending = self._work_clip_owned = False
         self._queued_context = None
         self.pet.sequence_part_hits_enabled = False
 
@@ -118,9 +162,11 @@ class PetController(QObject):
             return
         if self._idle_clip_owned and not self.asset_player.busy:
             self._idle_clip_owned = False
+            self._work_clip_owned = False
             self.pet.sequence_part_hits_enabled = False
+        self._start_work_animation()
         allowed = (self._uses_project_character and self.appearance == "original"
-                   and self.pet.isVisible() and not self._conversation_busy
+                   and self.pet.isVisible() and not self._conversation_busy and not self._task_working
                    and not self.pet.bubble.isVisible() and self._pending_expression is None
                    and self.pet.animation.state == AnimationState.IDLE
                    and not self.asset_player.busy
@@ -143,7 +189,7 @@ class PetController(QObject):
             if self._expression != "neutral":
                 self._behavior_expression("neutral")
             self._last_context_code = None
-            if self.asset_player.play(name, once=True):
+            if self.asset_player.play(name, once=True, duration_seconds=IDLE_DURATION_SECONDS):
                 self._idle_clip_owned = True
                 self.pet.sequence_part_hits_enabled = True
             else:
@@ -200,11 +246,15 @@ class PetController(QObject):
         return True
 
     def apply_context_expression(self, code: str, *, source: str = "chat") -> bool:
-        sources = {"chat": "当前对话", "screen": "屏幕情境", "camera": "摄像头情境"}
+        sources = {"chat": "当前对话", "screen": "屏幕情境", "camera": "摄像头情境", "game": "棋局互动"}
         if (not self._auto_expression_enabled or not isinstance(code, str) or code not in EXPRESSIONS
                 or not isinstance(source, str) or source not in sources):
             return False
         self.behavior.register_activity(hold_seconds=8.0)
+        if self._task_working and (self._work_animation_pending or self._work_clip_owned):
+            self._queued_context = (code, source)
+            self._set_auto_expression_status(f"API · {sources[source]}：{EXPRESSIONS[code][0]}；任务结束后显示。")
+            return True
         if self.behavior.is_angry:
             self._queued_context = (code, source)
             self._set_auto_expression_status(f"API · {sources[source]}：{EXPRESSIONS[code][0]}；互动生气结束后恢复。")
@@ -267,6 +317,7 @@ class PetController(QObject):
 
     def set_expression(self, code: str, *, feedback: bool = True, animate: bool = True) -> None:
         if not self._behavior_applying:
+            self._work_animation_pending = self._work_clip_owned = False
             self.behavior.cancel_anger()
             self.behavior.register_activity(hold_seconds=8.0)
             self._queued_context = None
@@ -344,6 +395,7 @@ class PetController(QObject):
         if code != "original" and appearance.pixmap is None:
             self.appearance_changed.emit(self.appearance, appearance.status)
             return False
+        self._work_animation_pending = self._work_clip_owned = False
         self.asset_player.stop()
         self.behavior.cancel_anger()
         self.behavior.register_activity(hold_seconds=8.0)
@@ -366,6 +418,7 @@ class PetController(QObject):
     def play_asset_animation(self, name: str) -> bool:
         accepted = self.asset_player.play(name)
         if accepted:
+            self._work_animation_pending = self._work_clip_owned = False
             self.behavior.cancel_anger()
             self.behavior.register_activity(hold_seconds=8.0)
             self._queued_context = None
@@ -377,6 +430,7 @@ class PetController(QObject):
         return accepted
 
     def stop_asset_animation(self) -> None:
+        self._work_animation_pending = self._work_clip_owned = False
         self.behavior.register_activity(hold_seconds=8.0)
         self.asset_player.stop(smooth=True)
 
@@ -387,7 +441,7 @@ class PetController(QObject):
         changed = self._last_context_code != emotion or self._expression != emotion
         if not self.apply_context_expression(emotion, source=source):
             return
-        if self.behavior.is_angry:
+        if self.behavior.is_angry or (self._task_working and self._work_clip_owned):
             return
         if not changed:
             return

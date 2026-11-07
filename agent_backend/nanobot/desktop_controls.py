@@ -27,8 +27,8 @@ ERROR_CODES = frozenset({
     "DESKTOP_ACCESS_DENIED", "DESKTOP_PASSWORD_CONTROL",
     "DESKTOP_INVALID_ARGUMENT", "DESKTOP_POSTCONDITION_FAILED",
 })
-ACTIONS = frozenset({"invoke", "set_value", "check", "uncheck", "select", "focus"})
-PROPERTIES = frozenset({"name", "value", "checked", "selected", "enabled", "focused"})
+ACTIONS = frozenset({"invoke", "set_value", "check", "uncheck", "select", "focus", "expand", "collapse", "scroll"})
+PROPERTIES = frozenset({"name", "value", "checked", "selected", "enabled", "focused", "expanded"})
 MAX_CONTROLS = 120
 MAX_OUTPUT = 192 * 1024
 _REF = re.compile(r"^uia_[a-f0-9]{16}_[a-f0-9]{16}$")
@@ -37,6 +37,7 @@ _REF = re.compile(r"^uia_[a-f0-9]{16}_[a-f0-9]{16}$")
 class DesktopControlError(Exception):
     def __init__(self, code):
         self.code = code if code in ERROR_CODES else "DESKTOP_UNAVAILABLE"
+        self.effect_state = "not_dispatched"
         super().__init__(self.code)
 
 
@@ -161,6 +162,7 @@ class DesktopControls:
         self._snapshot = ""
         self._mutated = False
         self._epoch = 0
+        self._window_refs = {}
 
     def invalidate(self):
         """Host calls this when a different executor may have altered the UI."""
@@ -169,18 +171,76 @@ class DesktopControls:
         self._snapshot = ""
         self._mutated = True
 
-    def _check_cancelled(self):
+    def _check_cancelled(self, effect_state="not_dispatched"):
         if self.cancel.is_set():
-            raise DesktopControlError("DESKTOP_CANCELLED")
+            error = DesktopControlError("DESKTOP_CANCELLED")
+            error.effect_state = effect_state
+            raise error
 
-    async def observe(self):
+    async def windows(self, query=""):
         async with self._lock:
             self._check_cancelled()
+            if not isinstance(query, str) or len(query) > 200:
+                raise DesktopControlError("DESKTOP_INVALID_ARGUMENT")
+            result = await self.backend.request("windows", query=query, limit=40)
+            self._check_cancelled()
+            if not isinstance(result.get("windows"), list):
+                raise DesktopControlError("DESKTOP_PROTOCOL")
+            refs, windows = {}, []
+            for window in result["windows"][:40]:
+                identity = _identity(window, {"runtime_id": window.get("runtime_id"),
+                    "name": window.get("title", ""), "control_type": "ControlType.Window"})["window"]
+                ref = "window_" + uuid.uuid4().hex
+                refs[ref] = identity
+                windows.append({"ref": ref, "title": _text(window.get("title")), "process_id": identity["process_id"],
+                                "foreground": window.get("foreground") is True})
+            self._window_refs = refs
+            return _json({"status": "observed", "windows": windows, "truncated": result.get("truncated") is True})
+
+    async def activate(self, window_ref):
+        async with self._lock:
+            self._check_cancelled()
+            if not isinstance(window_ref, str) or window_ref not in self._window_refs:
+                raise DesktopControlError("DESKTOP_STALE_REF")
+            target = deepcopy(self._window_refs[window_ref])
+            try:
+                result = await self.backend.request("activate", window=target)
+            except DesktopControlError as error:
+                if error.code in {"DESKTOP_UNAVAILABLE", "DESKTOP_TIMEOUT", "DESKTOP_PROTOCOL", "DESKTOP_CANCELLED"}:
+                    error.effect_state = "uncertain"
+                raise
+            self._check_cancelled(effect_state="confirmed")
+            actual = result.get("window", {})
+            if any(actual.get(key) != value for key, value in target.items()):
+                raise DesktopControlError("DESKTOP_STALE_REF")
+            if result.get("foreground") is not True:
+                error = DesktopControlError("DESKTOP_POSTCONDITION_FAILED")
+                error.effect_state = "confirmed"
+                raise error
+            self.invalidate()
+            return _json({"status": "executed", "dispatched": result.get("dispatched") is True,
+                          "effect_state": "confirmed", "foreground": True, "refresh_required": True, "task_verified": False})
+
+    async def observe(self, query="", offset=0, limit=MAX_CONTROLS, window_ref=None):
+        async with self._lock:
+            self._check_cancelled()
+            if (not isinstance(query, str) or len(query) > 200 or type(offset) is not int or not 0 <= offset <= 1500
+                    or type(limit) is not int or not 1 <= limit <= MAX_CONTROLS):
+                raise DesktopControlError("DESKTOP_INVALID_ARGUMENT")
+            window = None
+            if window_ref is not None:
+                if not isinstance(window_ref, str) or window_ref not in self._window_refs:
+                    raise DesktopControlError("DESKTOP_STALE_REF")
+                window = deepcopy(self._window_refs[window_ref])
             # Even an unsuccessful refresh invalidates the previous references.
             self._refs.clear()
             self._snapshot = ""
             epoch = self._epoch
-            result = await self.backend.request("snapshot", limit=MAX_CONTROLS)
+            request = {"limit": limit}
+            if query: request["query"] = query
+            if offset: request["offset"] = offset
+            if window: request["window"] = window
+            result = await self.backend.request("snapshot", **request)
             self._check_cancelled()
             if epoch != self._epoch:
                 raise DesktopControlError("DESKTOP_STALE_REF")
@@ -210,7 +270,8 @@ class DesktopControls:
             return _json({"status": "observed", "snapshot_id": snapshot,
                 "window": {"title": _text(window.get("title")), "process_id": window.get("process_id")},
                 "controls": controls, "truncated": result.get("truncated") is True or len(nodes) > MAX_CONTROLS,
-                "scope": "foreground_window_accessibility_only"})
+                "offset": offset, "next_offset": result.get("next_offset"), "query": query,
+                "scope": "selected_window_accessibility" if window_ref else "foreground_window_accessibility_only"})
 
     def _reference(self, ref, *, mutation=False):
         self._check_cancelled()
@@ -238,6 +299,8 @@ class DesktopControls:
         async with self._lock:
             if action not in ACTIONS or not isinstance(value, str) or len(value) > 1024 or "\0" in value:
                 raise DesktopControlError("DESKTOP_INVALID_ARGUMENT")
+            if action == "scroll" and value not in {"up", "down", "left", "right"}:
+                raise DesktopControlError("DESKTOP_INVALID_ARGUMENT")
             item = self._reference(ref, mutation=True)
             if action not in item["actions"]:
                 raise DesktopControlError("DESKTOP_UNSUPPORTED_ACTION")
@@ -251,9 +314,11 @@ class DesktopControls:
             property_name, expected = {
                 "check": ("checked", True), "uncheck": ("checked", False),
                 "select": ("selected", True), "set_value": ("value", value),
-                "focus": ("focused", True), "invoke": (None, None)}[action]
+                "focus": ("focused", True), "expand": ("expanded", True), "collapse": ("expanded", False),
+                "scroll": (None, None), "invoke": (None, None)}[action]
             if property_name and state.get(property_name) == expected:
                 return _json({"status": "already_satisfied", "action": action, "dispatched": False,
+                    "effect_state": "not_dispatched",
                     "postcondition": {"passed": True, "property": property_name,
                                       "actual": state.get(property_name), "expected": expected},
                     "task_verified": False})
@@ -262,8 +327,13 @@ class DesktopControls:
             # Mark before the await: an exception can mean uncertain delivery.
             # Never automatically resend an Invoke or toggle operation.
             self._mutated = True
-            result = await self.backend.request("act", target=deepcopy(item["target"]), action=action, value=value)
-            self._check_cancelled()
+            try:
+                result = await self.backend.request("act", target=deepcopy(item["target"]), action=action, value=value)
+            except DesktopControlError as error:
+                if error.code in {"DESKTOP_UNAVAILABLE", "DESKTOP_TIMEOUT", "DESKTOP_PROTOCOL", "DESKTOP_CANCELLED"}:
+                    error.effect_state = "uncertain"
+                raise
+            self._check_cancelled(effect_state="confirmed")
             if result.get("dispatched") is not True:
                 raise DesktopControlError("DESKTOP_PROTOCOL")
             try:
@@ -276,6 +346,7 @@ class DesktopControls:
                 actual, passed = None, False
             self._check_cancelled()
             return _json({"status": "executed", "action": action, "dispatched": True,
+                "effect_state": "confirmed",
                 "postcondition": {"passed": passed if property_name else None,
                                   "property": property_name, "actual": actual, "expected": expected},
                 "task_verified": False, "refresh_required": True})

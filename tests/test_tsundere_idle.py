@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QApplication
 from desktop_pet.animation_controller import AnimationState
 from desktop_pet.config import PetConfig, PROJECT_ROOT
 from desktop_pet.frame_animation import load_clip
-from desktop_pet.idle_behavior import DEFAULT_IDLE_ACTIONS, IdleBehaviorPolicy
+from desktop_pet.idle_behavior import DEFAULT_IDLE_ACTIONS, IDLE_DURATION_SECONDS, IdleBehaviorPolicy
 from desktop_pet.pet_controller import PetController
 from desktop_pet.pet_window import PetWindow
 from desktop_pet.placement import clamp_visible_position
@@ -120,7 +120,7 @@ class TsundereIdleTests(unittest.TestCase):
     def test_random_dispatch_plays_once_without_selecting_a_permanent_appearance(self):
         with patch.object(self.player, "play", wraps=self.player.play) as play:
             self.start_random_pose()
-        play.assert_called_once_with("idle_tsundere", once=True)
+        play.assert_called_once_with("idle_tsundere", once=True, duration_seconds=IDLE_DURATION_SECONDS)
         self.assertFalse(self.player._clip.manifest.loop)
         self.assertEqual(self.controller.appearance, "original")
         self.assert_face("neutral")
@@ -129,18 +129,24 @@ class TsundereIdleTests(unittest.TestCase):
         self.assertEqual(self.controller.appearance, "original")
         self.assert_face("neutral")
 
-    def test_player_uses_finer_static_pose_fades_with_the_same_hold_and_duration(self):
+    def test_player_extends_the_static_hold_to_the_common_idle_duration(self):
         self.start_random_pose()
         runtime = self.player._clip
         self.assertTrue(runtime.manifest.static_pose_idle)
-        self.assertEqual((len(runtime.frames), runtime.manifest.fps), (60, 24))
-        self.assertEqual(runtime.manifest.duration, self.clip.manifest.duration)
-        self.assertEqual(sum(frame == self.pose for frame in runtime.frames) / runtime.manifest.fps, 2)
+        self.assertEqual((len(runtime.frames), runtime.manifest.fps), (144, 24))
+        self.assertEqual(runtime.manifest.duration, IDLE_DURATION_SECONDS)
+        self.assertEqual(sum(frame == self.pose for frame in runtime.frames) / runtime.manifest.fps, 5.5)
         self.assertEqual(runtime.frames[0], self.neutral)
         self.assertEqual(runtime.frames[-1], self.neutral)
         self.assertEqual((len(self.clip.frames), self.clip.manifest.fps), (30, 12))
         self.finish()
         self.assert_face("neutral")
+
+    def test_manual_static_idle_preview_keeps_its_source_duration(self):
+        self.assertTrue(self.controller.play_asset_animation("idle_tsundere"))
+        self.assertTrue(self.player._clip.manifest.loop)
+        self.assertEqual(self.player._clip.manifest.duration, self.clip.manifest.duration)
+        self.assertEqual((len(self.player._clip.frames), self.player._clip.manifest.fps), (60, 24))
 
     def test_chat_interrupts_the_pose_and_restores_the_api_face(self):
         self.start_random_pose()

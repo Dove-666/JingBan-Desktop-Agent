@@ -1,0 +1,29 @@
+{
+  "name": "Pikafish",
+  "version": "2026-09-06",
+  "entry": "pikafish.exe",
+  "license": "GPL-3.0",
+  "source_url": "https://github.com/official-pikafish/Pikafish/tree/Pikafish-2026-09-06",
+  "archive_url": "https://github.com/official-pikafish/Pikafish/releases/download/Pikafish-2026-09-06/Pikafish.2026-09-06.7z",
+  "archive_sha256": "41952bbfe2520faceb5902c69e6ab4845cc999841d2b49a95cc1be7867a25e5b",
+  "archive_bytes": 53603424,
+  "original_executable": "Pikafish-Windows-x86-64-universal.exe",
+  "files": {
+    "pikafish.exe": {
+      "bytes": 6944256,
+      "sha256": "0d57d64c212e78f96cba9e5e4f140d8872f8faa42ea631a27ab6c5db08509da3"
+    },
+    "pikafish.nnue": {
+      "bytes": 50706378,
+      "sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e"
+    },
+    "AUTHORS": {
+      "bytes": 686,
+      "sha256": "0358f129f8f5c604c032916b8c315fec5bc3151ebdae51456b4fad27895abfbe"
+    },
+    "Copying.txt": {
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    }
+  }
+}

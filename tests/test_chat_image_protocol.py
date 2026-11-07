@@ -100,9 +100,12 @@ class ImageSyncContractTests(unittest.TestCase):
         user = self.store.append_message(self.cid, "user", "保留的图片问题", "user", metadata={"image_id": "a" * 64})
         operation_id = str(uuid4())
         self.sync.reserve_operation("phone", operation_id, {"method": "chat.send", "image_id": "a" * 64})
+        original_operation = self.sync.get_operation("phone", operation_id)
         snapshot = self.sync.snapshot(limit=1)
         with self.store._connection() as db:
             high = db.execute("SELECT high_seq FROM remote_sync_state").fetchone()[0]
+            original_journal = [tuple(row) for row in db.execute("SELECT * FROM remote_sync_changes ORDER BY seq")]
+            original_operations = [tuple(row) for row in db.execute("SELECT * FROM remote_sync_operations ORDER BY rowid")]
             db.execute("UPDATE remote_sync_schema SET version = 2")
             for operation in ("insert", "update"):
                 db.execute(f"DROP TRIGGER remote_sync_message_{operation}")
@@ -112,15 +115,25 @@ class ImageSyncContractTests(unittest.TestCase):
         restarted = ConversationStore(self.path)
         sync = RemoteSyncStore(restarted)
         restarted.initialize()
-        self.assertEqual(sync.snapshot()["watermark"], high)
-        self.assertEqual(sync.get_operation("phone", operation_id)["state"], "pending")
+        # v9/v10 append the current conversation's title-provenance projection
+        # for already-caught-up peers. This is not a replay of an operation or
+        # a rewrite of the immutable pre-upgrade journal.
+        upgraded_high = sync.snapshot()["watermark"]
+        self.assertEqual(upgraded_high, high + 1)
+        refresh = sync.pull(high)["changes"]
+        self.assertEqual(len(refresh), 1)
+        self.assertEqual((refresh[0]["entity"], refresh[0]["id"]), ("conversation", self.cid))
+        self.assertIs(refresh[0]["data"]["title_manual"], False)
+        self.assertEqual(sync.get_operation("phone", operation_id), original_operation)
         with self.assertRaises(SyncResetRequired):
             sync.snapshot(cursor=snapshot["next_cursor"])
         with restarted._connection() as db:
             self.assertEqual(db.execute("SELECT version FROM remote_sync_schema").fetchone()[0], REMOTE_SYNC_SCHEMA_VERSION)
+            self.assertEqual([tuple(row) for row in db.execute("SELECT * FROM remote_sync_changes WHERE seq <= ? ORDER BY seq", (high,))], original_journal)
+            self.assertEqual([tuple(row) for row in db.execute("SELECT * FROM remote_sync_operations ORDER BY rowid")], original_operations)
             db.execute("UPDATE messages SET metadata = json_set(metadata, '$.image_id', ?) WHERE id = ?",
                        ("b" * 64, user["id"]))
-        changes = sync.pull(high)["changes"]
+        changes = sync.pull(upgraded_high)["changes"]
         self.assertEqual(len(changes), 1)
         self.assertEqual(changes[0]["data"]["image_id"], "b" * 64)
         self.assertEqual(restarted.load_messages(self.cid)[0]["content"], "保留的图片问题")

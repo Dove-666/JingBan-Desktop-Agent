@@ -100,6 +100,7 @@ class PerceptionIntegrationTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(prefix="aura-perception-tests-")
         self.path = Path(self.directory.name) / "settings.ini"
         self.settings = isolated_settings(self.path, MemoryCredentialBackend())
+        self.settings.save_perception_settings(PerceptionSettings(enabled=False, allow_remote=False))
         self.pet = PetWindow(PetConfig())
         self.character = PetController(self.pet, self.settings, animation_directory=self.path.parent / "empty-animations")
         self.chat = ChatController(self.settings)

@@ -9,11 +9,16 @@ import com.aura.companion.transport.RpcTransportException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,13 +26,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 
 internal interface RpcGateway {
     val endpointId: String
@@ -54,7 +62,7 @@ private val AGENT_UNAVAILABLE_MESSAGES = setOf(
     "电脑已暂停，请恢复后使用 Agent。",
 )
 
-/** Foreground-driven repository. No service, hidden reconnect loop or second AI. */
+/** Shared repository for the visible app and its optional task-notification service. */
 class AppRepository internal constructor(
     context: Context,
     private val rpc: RpcGateway,
@@ -71,36 +79,94 @@ class AppRepository internal constructor(
 
     private val mutex = Mutex()
     private val directMutex = Mutex()
+    private class ConnectionOperation(val epoch: Any, val job: Job)
+    private val connectionLock = Any()
+    private var connectionEpoch = Any()
+    private var lastEstablishedConnection = Any()
+    private var activeConnection: ConnectionOperation? = null
+    @Volatile private var directJob: Job? = null
+    private data class OwnedDirectPreview(val requestId: String, val peerId: String?, val generation: String?,
+        val userId: String, val config: DirectApiConfig, val message: Message)
+    @Volatile private var directPreview: OwnedDirectPreview? = null
     private val configLock = Any()
     @Volatile private var directConfig: DirectApiConfig? = runCatching { apiVault.load() }.getOrNull()
+    @Volatile private var syncedPersona: SyncedPersona? = runCatching { apiVault.loadPersona() }.getOrNull()
+    @Volatile private var characterCatalog: CharacterCatalogCache? = runCatching { apiVault.loadCharacters() }.getOrNull()
+    private val knownSecretValues = linkedSetOf<String>().apply { addAll(directConfig?.knownSecrets().orEmpty()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val localReady = CompletableDeferred<Unit>()
     private val imageCache = ImageCache(context.applicationContext)
+    private val contextCache = ConversationContextCache(database)
     private val mutableState = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = mutableState.asStateFlow()
     private var lastImagesRefresh = 0L
     private var lastApiRefresh: Long? = null
     private var lastSyncStamp: Long? = null
+    private var lastContextRefresh: Long? = null
     private var cachedCapabilities: Set<String>? = null
     private var cachedDesktopAllowed: Boolean? = null
     private var cachedAgentAvailable = false
     private var cachedAgentUnavailableReason: String? = null
     private var cachedAgentBusy = false
     private var cachedAgentConversationId: String? = null
+    private var cachedAgentInteraction: AgentInteraction? = null
+    private var cachedArtifactOwner: Pair<String?, String?>? = null
+    private var cachedArtifacts: List<AgentArtifact> = emptyList()
+    private val artifactCache = File(context.applicationContext.cacheDir, "agent-deliveries")
     @Volatile private var directError: String? = null
 
     init { scope.launch {
         try {
+            // Only abandoned private delivery chunks; never touch chosen destinations.
+            artifactCache.listFiles()?.filter { it.name.startsWith("delivery-") && it.name.endsWith(".part") &&
+                it.lastModified() < System.currentTimeMillis() - 86_400_000L }?.forEach { it.delete() }
             database.recoverInterruptedDirectTurns()
+            synchronized(configLock) {
+                if (characterCatalog != null && currentCharacterCatalog() == null) clearCharacterCatalog()
+                if (syncedPersona != null && currentPersona() == null) clearSyncedPersona()
+                val persona = currentPersona()
+                val active = directConfig
+                if (persona != null && active != null && active.systemPrompt != active.redact(persona.systemPrompt)) {
+                    val updated = active.withPersona(persona)
+                    apiVault.save(updated); directConfig = updated
+                }
+            }
             val cached = directConfig
             if (cached != null && cached.source != ApiConfigSource.LOCAL && ((database.device()?.endpointId != null &&
                     cached.authorityId != database.device()?.endpointId) || database.getSetting("authorization_blocked") == "1")) clearDirectConfig()
             else if (cached != null) mutableState.update { it.copy(directApi = if (cached.source == ApiConfigSource.DESKTOP && database.device() == null)
-                cached.publicInfo().copy(available = false, message = "此配置来自原电脑，请先保存为手机独立模型或重新配对") else cached.publicInfo()) }
+                cached.publicInfo(boundarySecrets(cached)).copy(available = false, message = "此配置来自原电脑，请先保存为手机独立模型或重新配对") else cached.publicInfo(boundarySecrets(cached))) }
             refreshState()
         } catch (_: Exception) { mutableState.update { it.copy(error = "无法读取本地缓存，请检查手机存储空间") } }
         finally { localReady.complete(Unit) }
     } }
+
+    private fun boundarySecrets(config: DirectApiConfig? = null, extra: String? = null): List<String> = synchronized(configLock) {
+        knownSecretValues.addAll(directConfig?.knownSecrets().orEmpty())
+        knownSecretValues.addAll(config?.knownSecrets().orEmpty())
+        extra?.takeIf { it.isNotBlank() && it.length <= 16384 && it.none { c -> c.code < 32 || c.code == 127 } }
+            ?.let(knownSecretValues::add)
+        knownSecretValues.toList()
+    }
+
+    private fun ownsDirectPreview(owner: OwnedDirectPreview): Boolean {
+        val active = directConfig ?: return false
+        val original = owner.config
+        return owner.peerId == database.device()?.endpointId && owner.generation == database.conversationGeneration(owner.message.conversationId) &&
+            database.directTurnIsGenerating(owner.requestId, owner.message.conversationId, owner.userId, owner.message.id) &&
+            original.authorityId == active.authorityId && original.source == active.source && original.revision == active.revision &&
+            original.baseUrl == active.baseUrl && original.model == active.model && original.apiKey == active.apiKey &&
+            directPreview?.let { it.requestId == owner.requestId && it.message.id == owner.message.id &&
+                it.message.conversationId == owner.message.conversationId } == true
+    }
+
+    private fun currentDirectPreview(): Message? {
+        val owner = directPreview ?: return null
+        if (ownsDirectPreview(owner)) return owner.message
+        directPreview = null
+        directJob?.cancel()
+        return null
+    }
 
     private fun refreshState() {
         val conversations = database.conversations()
@@ -110,16 +176,31 @@ class AppRepository internal constructor(
             database.setSetting("selected_conversation", selected)
         }
         mutableState.update { it.copy(device = database.device(), conversations = conversations,
-            selectedConversationId = selected, messages = database.messages(selected), outbox = database.outbox(),
+            selectedConversationId = selected, messages = database.messages(selected).let { messages ->
+                currentDirectPreview()?.takeIf { preview -> preview.conversationId == selected }?.let { preview ->
+                    messages.filter { message -> message.id != preview.id } + preview
+                } ?: messages
+            }, outbox = database.outbox(),
             images = database.images(), pendingImages = database.pendingImages(),
             desktopAgentConversations = database.desktopAgentConversations(),
             lastSyncedAt = database.getSetting("last_synced_at")?.toLongOrNull(), historyPendingCount = database.historyPendingCount(),
             error = directError ?: it.error,
+            agentArtifacts = cachedArtifacts.takeIf { _ ->
+                cachedArtifactOwner == (database.device()?.endpointId to selected) &&
+                    it.connectionState == ConnectionState.CONNECTED && database.getSetting("authorization_blocked") != "1"
+            }.orEmpty(),
             desktopTaskAvailable = it.connectionState == ConnectionState.CONNECTED &&
                 database.getSetting("authorization_blocked") != "1" &&
                 cachedAgentAvailable && "agent.send" in cachedCapabilities.orEmpty(),
             desktopAgentBusy = it.connectionState == ConnectionState.CONNECTED && cachedAgentBusy,
             desktopAgentConversationId = cachedAgentConversationId,
+            agentInteraction = cachedAgentInteraction?.takeIf { interaction ->
+                it.connectionState == ConnectionState.CONNECTED && cachedAgentBusy &&
+                    interaction.authorityId == database.device()?.endpointId &&
+                    database.getSetting("authorization_blocked") != "1" && "agent.answer" in cachedCapabilities.orEmpty()
+            },
+            desktopSteeringAvailable = it.connectionState == ConnectionState.CONNECTED &&
+                "agent.steer" in cachedCapabilities.orEmpty() && database.getSetting("authorization_blocked") != "1",
             desktopTaskMessage = when {
                 it.connectionState == ConnectionState.UNAUTHORIZED -> "电脑授权已撤销，请重新配对后使用电脑 Agent"
                 it.connectionState != ConnectionState.CONNECTED -> "请先连接电脑；普通聊天仍使用手机模型"
@@ -128,6 +209,7 @@ class AppRepository internal constructor(
                 cachedAgentBusy -> "电脑 Agent 正在执行任务，可查看进度或停止当前任务"
                 else -> "本会话消息交给电脑 Agent，使用电脑端已启用的工具与任务上下文"
             }) }
+        publishCharacterState()
     }
 
     private suspend fun perform(refreshAfter: Boolean = true, silent: Boolean = false, block: suspend () -> Unit) = withContext(Dispatchers.IO) {
@@ -189,18 +271,66 @@ class AppRepository internal constructor(
         return response.optJSONObject("result") ?: throw RpcFailure("protocol_error", "电脑响应格式无效")
     }
 
-    suspend fun pair(pairInfo: String, deviceName: String) = perform {
+    private suspend fun connectionOperation(silent: Boolean = false,
+        block: suspend (ConnectionOperation) -> Unit) = supervisorScope {
+        val epoch = synchronized(connectionLock) { connectionEpoch }
+        // A user disconnect may cancel this child, never its foreground caller.
+        val work = async(Dispatchers.IO) {
+            val owner = ConnectionOperation(epoch, currentCoroutineContext()[Job]!!)
+            perform(refreshAfter = false, silent = silent) {
+                val admitted = synchronized(connectionLock) {
+                    if (epoch !== connectionEpoch) false
+                    else { activeConnection = owner; true }
+                }
+                if (!admitted) return@perform
+                try {
+                    currentCoroutineContext().ensureActive()
+                    block(owner)
+                    refreshState()
+                } finally {
+                    synchronized(connectionLock) { if (activeConnection === owner) activeConnection = null }
+                }
+            }
+        }
+        try { work.await() }
+        catch (cancelled: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            if (synchronized(connectionLock) { epoch === connectionEpoch }) throw cancelled
+        }
+    }
+
+    private suspend fun ensureConnectionCurrent(owner: ConnectionOperation) {
+        currentCoroutineContext().ensureActive()
+        if (synchronized(connectionLock) { owner.epoch !== connectionEpoch || activeConnection !== owner }) {
+            throw CancellationException("Connection request was superseded")
+        }
+    }
+
+    private suspend fun connectOwned(owner: ConnectionOperation, ticket: String) {
+        ensureConnectionCurrent(owner)
+        rpc.connect(ticket)
+        currentCoroutineContext().ensureActive()
+        val established = synchronized(connectionLock) {
+            if (owner.epoch !== connectionEpoch || activeConnection !== owner) false
+            else { lastEstablishedConnection = Any(); true }
+        }
+        if (!established) throw CancellationException("Connection request was superseded")
+    }
+
+    suspend fun pair(pairInfo: String, deviceName: String) = connectionOperation { owner ->
         val info = parsePairing(pairInfo)
         require(deviceName.trim().length in 1..80 && deviceName.none { it.code < 32 }) { "设备名称须为 1～80 个字符" }
         mutableState.update { it.copy(connectionState = ConnectionState.CONNECTING, error = null) }
-        rpc.connect(info.getString("ticket"))
+        connectOwned(owner, info.getString("ticket"))
         call("pair", JSONObject().put("code", info.getString("code")).put("name", deviceName.trim()))
+        ensureConnectionCurrent(owner)
         val desktopId = info.optString("endpoint_id").ifBlank { info.getString("ticket").take(80) }
         // Only the public ticket/IDs/name are persisted. Neither code nor the
         // original pairing URI/JSON is ever written to settings, logs or disk.
         database.saveDevice(DeviceInfo("我的电脑", desktopId, info.getString("ticket")), rpc.endpointId)
         cachedCapabilities = null
         synchronized(configLock) {
+            if (syncedPersona?.authorityId != desktopId) clearSyncedPersona()
             val active = directConfig
             if (active?.source == ApiConfigSource.LOCAL) {
                 if (active.desktopCache?.authorityId != desktopId) clearDesktopConfig()
@@ -212,16 +342,17 @@ class AppRepository internal constructor(
         refreshImagesInternal()
     }
 
-    suspend fun reconnect(silent: Boolean = false) = perform(silent = silent) {
+    suspend fun reconnect(silent: Boolean = false) = connectionOperation(silent) { owner ->
         val device = database.device() ?: throw IllegalArgumentException("请先在电脑生成配对信息")
         if (database.getSetting("authorization_blocked") == "1") {
             mutableState.update { it.copy(connectionState = ConnectionState.UNAUTHORIZED,
                 error = "授权已撤销，请手动重新配对；应用不会自动配对") }
-            return@perform
+            return@connectionOperation
         }
         mutableState.update { it.copy(connectionState = ConnectionState.CONNECTING, error = if (silent) directError else null) }
-        rpc.connect(device.ticket)
+        connectOwned(owner, device.ticket)
         val status = status()
+        ensureConnectionCurrent(owner)
         if (database.getSetting("selected_conversation") == null) {
             database.setSetting("selected_conversation", status.optionalString("current_conversation_id"))
         }
@@ -231,11 +362,23 @@ class AppRepository internal constructor(
         refreshImagesInternal()
     }
 
-    suspend fun disconnect() = perform {
-        rpc.close()
-        cachedCapabilities = null
-        mutableState.update { it.copy(connectionState = ConnectionState.DISCONNECTED, syncState = SyncState.IDLE,
-            connectionType = "unknown", error = null) }
+    suspend fun disconnect() {
+        currentCoroutineContext().ensureActive()
+        val epoch = Any()
+        val (previousConnection, previousJob) = synchronized(connectionLock) {
+            connectionEpoch = epoch
+            lastEstablishedConnection to activeConnection?.job
+        }
+        previousJob?.cancel()
+        perform(refreshAfter = false) {
+            if (synchronized(connectionLock) { epoch !== connectionEpoch ||
+                    previousConnection !== lastEstablishedConnection }) return@perform
+            rpc.close()
+            cachedCapabilities = null
+            mutableState.update { it.copy(connectionState = ConnectionState.DISCONNECTED, syncState = SyncState.IDLE,
+                connectionType = "unknown", error = null) }
+            refreshState()
+        }
     }
 
     suspend fun syncNow(forceConfig: Boolean = true) = synchronize(forceConfig, silent = false)
@@ -250,7 +393,10 @@ class AppRepository internal constructor(
     /** Foreground automatic sync: idle calls use one pull without rereading all local history. */
     suspend fun poll() = synchronize(forceConfig = false, silent = true)
 
-    private suspend fun status(): JSONObject = call("status").also { value ->
+    private suspend fun status(): JSONObject {
+      val expectedAuthority = database.device()?.endpointId
+      return call("status").also { value ->
+        require(expectedAuthority == database.device()?.endpointId) { "目标电脑已更换，请重新连接" }
         require(value.optInt("protocol_version", 1) == 1) { "电脑通信协议不兼容" }
         // A phone may update before its desktop. Refresh historical projections
         // when this particular paired desktop first supports process records,
@@ -266,6 +412,7 @@ class AppRepository internal constructor(
         val capabilities = value.optJSONArray("capabilities")
         cachedCapabilities = if (capabilities == null) emptySet() else (0 until capabilities.length())
             .map { capabilities.optString(it) }.toSet()
+        if ("context.get" !in cachedCapabilities.orEmpty()) contextCache.clear()
         cachedDesktopAllowed = value.optJSONObject("desktop_context")?.opt("available") as? Boolean
         cachedAgentAvailable = value.opt("agent_available") == true
         cachedAgentUnavailableReason = value.optionalString("agent_unavailable_reason")?.takeIf {
@@ -273,7 +420,18 @@ class AppRepository internal constructor(
         }
         cachedAgentBusy = value.optBoolean("agent_busy")
         cachedAgentConversationId = value.optionalString("agent_conversation_id")?.takeIf(::canonicalUuid)
+        cachedAgentInteraction = parseAgentInteraction(value.optJSONObject("agent_interaction"), expectedAuthority)
+            ?.takeIf { cachedAgentBusy && it.conversationId == cachedAgentConversationId }
+        refreshArtifacts(expectedAuthority)
         mutableState.update { it.copy(desktopAgentBusy = cachedAgentBusy, desktopAgentConversationId = cachedAgentConversationId,
+            agentArtifacts = cachedArtifacts.takeIf { _ -> cachedArtifactOwner == (expectedAuthority to database.getSetting("selected_conversation")) &&
+                it.connectionState == ConnectionState.CONNECTED && database.getSetting("authorization_blocked") != "1" }.orEmpty(),
+            agentInteraction = cachedAgentInteraction?.takeIf { interaction ->
+                it.connectionState == ConnectionState.CONNECTED && interaction.authorityId == database.device()?.endpointId &&
+                    database.getSetting("authorization_blocked") != "1" && "agent.answer" in cachedCapabilities.orEmpty()
+            },
+            desktopSteeringAvailable = it.connectionState == ConnectionState.CONNECTED &&
+                "agent.steer" in cachedCapabilities.orEmpty() && database.getSetting("authorization_blocked") != "1",
             desktopTaskAvailable = it.connectionState == ConnectionState.CONNECTED &&
                 database.getSetting("authorization_blocked") != "1" && cachedAgentAvailable && "agent.send" in cachedCapabilities.orEmpty(),
             desktopTaskMessage = when {
@@ -282,6 +440,7 @@ class AppRepository internal constructor(
                 cachedAgentBusy -> "电脑 Agent 正在执行任务，可查看进度或停止当前任务"
                 else -> "本会话消息交给电脑 Agent，使用电脑端已启用的工具与任务上下文"
             }) }
+      }
     }
 
     private suspend fun syncInternal(forceConfig: Boolean = false, initialStatus: JSONObject? = null): Boolean {
@@ -305,6 +464,12 @@ class AppRepository internal constructor(
         }
         if (database.hasUnqueuedDirectImports()) { database.prepareDirectImports(); changed = true }
         if (flushOutbox(freshStatus)) { changed = true; pullChanges() }
+        database.getSetting("selected_conversation")?.let { cid ->
+            val generation = database.conversationGeneration(cid)
+            if (forceConfig || changed || lastContextRefresh?.let { monotonicMillis() - it >= REFRESH_INTERVAL_MS } != false ||
+                contextCache.read(database.device()?.endpointId.orEmpty(), cid, generation) == null)
+                refreshConversationContext(cid)
+        }
         val now = monotonicMillis()
         if (forceConfig || changed || lastSyncStamp == null || now - lastSyncStamp!! >= REFRESH_INTERVAL_MS) {
             val stamp = System.currentTimeMillis()
@@ -345,7 +510,70 @@ class AppRepository internal constructor(
         finally { refreshState() }
     }
 
-    suspend fun selectConversation(id: String?) = localAction { database.setSetting("selected_conversation", id) }
+    suspend fun selectConversation(id: String?) {
+        localAction { database.setSetting("selected_conversation", id) }
+        if (state.value.connectionState == ConnectionState.CONNECTED && "artifact.list" in cachedCapabilities.orEmpty())
+            perform(silent = true) { refreshArtifacts(database.device()?.endpointId) }
+    }
+
+    private suspend fun refreshArtifacts(expectedAuthority: String?) {
+        val cid = database.getSetting("selected_conversation")
+        if (cid == null || !canonicalUuid(cid) || "artifact.list" !in cachedCapabilities.orEmpty()) {
+            cachedArtifacts = emptyList(); cachedArtifactOwner = null; return
+        }
+        val response = call("artifact.list", JSONObject().put("conversation_id", cid))
+        require(expectedAuthority == database.device()?.endpointId && cid == database.getSetting("selected_conversation")) {
+            "会话或目标电脑已更换，请重新选择文件"
+        }
+        cachedArtifacts = parseAgentArtifacts(response.optJSONArray("artifacts"))
+        cachedArtifactOwner = expectedAuthority to cid
+    }
+
+    /** Explicit click only. Chunks stay private until the complete file hash is verified. */
+    suspend fun downloadArtifact(conversationId: String, reference: String): DownloadedArtifact? {
+        localReady.await()
+        if (!desktopReady("artifact.get")) return null
+        val expectedAuthority = database.device()?.endpointId
+        val original = state.value.agentArtifacts.firstOrNull { it.reference == reference } ?: return null
+        var result: DownloadedArtifact? = null
+        perform {
+            status()
+            requireDesktopReady("artifact.get", expectedAuthority)
+            require(canonicalUuid(conversationId) && !database.isConversationDeleted(conversationId) &&
+                cachedArtifactOwner == (expectedAuthority to conversationId) && original in cachedArtifacts) { "文件已更新，请重新选择" }
+            artifactCache.mkdirs()
+            val temporary = File.createTempFile("delivery-", ".part", artifactCache)
+            try {
+                val digest = MessageDigest.getInstance("SHA-256")
+                var offset = 0L
+                temporary.outputStream().use { output ->
+                    do {
+                        requireDesktopReady("artifact.get", expectedAuthority)
+                        require(database.getSetting("selected_conversation") == conversationId) { "会话已切换，请重新选择文件" }
+                        val chunk = call("artifact.get", JSONObject().put("conversation_id", conversationId)
+                            .put("reference", reference).put("offset", offset).put("limit", 262144))
+                        require(parseAgentArtifact(chunk) == original && (chunk.opt("offset") is Int || chunk.opt("offset") is Long) &&
+                            chunk.getLong("offset") == offset && (chunk.opt("total_bytes") is Int || chunk.opt("total_bytes") is Long) &&
+                            chunk.getLong("total_bytes") == original.bytes) { "文件元信息发生变化，下载已停止" }
+                        val encoded = chunk.opt("data_base64") as? String ?: error("文件内容无效")
+                        require(encoded.length <= 349528 && encoded.length % 4 == 0 && encoded.matches(Regex("[A-Za-z0-9+/]*={0,2}"))) { "文件分块无效" }
+                        val bytes = Base64.decode(encoded, Base64.NO_WRAP)
+                        require(bytes.size <= 262144 && offset + bytes.size <= original.bytes) { "文件分块超出范围" }
+                        output.write(bytes); digest.update(bytes); offset += bytes.size
+                        val next = chunk.opt("next_offset")
+                        require(if (offset == original.bytes) next == null || next == JSONObject.NULL
+                            else bytes.isNotEmpty() && (next is Int || next is Long) && (next as Number).toLong() == offset) { "文件分块顺序无效" }
+                    } while (offset < original.bytes)
+                }
+                requireDesktopReady("artifact.get", expectedAuthority)
+                require(database.getSetting("selected_conversation") == conversationId) { "会话已切换，请重新选择文件" }
+                val actual = digest.digest().joinToString("") { "%02x".format(it) }
+                require(actual == original.sha256 && temporary.length() == original.bytes) { "文件校验未通过，请重新下载" }
+                result = DownloadedArtifact(original, temporary)
+            } finally { if (result == null) temporary.delete() }
+        }
+        return result
+    }
 
     suspend fun setDesktopAgentMode(conversationId: String, enabled: Boolean) = localAction {
         require(canonicalUuid(conversationId)) { "会话标识无效" }
@@ -356,21 +584,21 @@ class AppRepository internal constructor(
         localReady.await(); database.createConversation().also { refreshState() }
     }
 
-    suspend fun sendMessage(conversationId: String, text: String) {
+    suspend fun sendMessage(conversationId: String, text: String): Boolean {
         localReady.await()
         // Do not acquire the PC mutex before choosing the cached direct route:
         // a desktop reconnect may be waiting on its 30-second network timeout.
         val config = directConfig
         if (config != null && (config.source == ApiConfigSource.LOCAL || (config.authorityId == database.device()?.endpointId &&
                 database.getSetting("authorization_blocked") != "1"))) {
-            sendDirect(conversationId, text, config)
-            return
+            return sendDirect(conversationId, text, config)
         }
         if (database.getSetting("direct_api_blocked") == "1") {
             mutableState.update { it.copy(error = "电脑 API 配置无法安全用于手机，请检查 API 地址和配置后重新同步") }
-            return
+            return false
         }
         mutableState.update { it.copy(error = "请先配置手机模型，或连接电脑同步 API 配置；当前消息尚未发送") }
+        return false
     }
 
     /** Explicit legacy compatibility entry, never selected as a silent send fallback. */
@@ -393,7 +621,9 @@ class AppRepository internal constructor(
         perform {
             val checkedStatus = status()
             requireDesktopReady("agent.send", expectedAuthority)
-            require(!checkedStatus.optBoolean("agent_busy")) { "电脑 Agent 正在处理其他请求，请完成后重新发送" }
+            require(!checkedStatus.optBoolean("agent_busy") || permitsQueuedAgent(checkedStatus)) {
+                "电脑 Agent 正在处理其他请求，请完成后重新发送"
+            }
             val body = text.trim().ifEmpty { if (database.pendingImage(conversationId) != null) "请结合这张图片完成任务。" else "" }
             require(canonicalUuid(conversationId) && body.length in 1..8000) { "请输入 1～8000 字的电脑 Agent 请求，或先选择一张图片" }
             require(!database.isConversationDeleted(conversationId)) { "该会话已删除，请新建会话" }
@@ -433,6 +663,58 @@ class AppRepository internal constructor(
             pullChanges()
         }
         return cancelled
+    }
+
+    /** Explicit live answers are never queued, retried, or replayed after reconnect. */
+    suspend fun answerAgentInteraction(conversationId: String, interactionId: String, answer: JSONObject): Boolean {
+        localReady.await()
+        if (!desktopReady("agent.answer")) return false
+        val original = state.value.agentInteraction
+        val expectedAuthority = database.device()?.endpointId
+        if (original == null || original.id != interactionId || original.conversationId != conversationId) {
+            mutableState.update { it.copy(error = "问题已更新，请查看当前请求后再回答") }; return false
+        }
+        val cleaned = validatedAgentAnswer(original, answer) ?: run {
+            mutableState.update { it.copy(error = "答复格式无效") }; return false
+        }
+        var accepted = false
+        perform {
+            status()
+            requireDesktopReady("agent.answer", expectedAuthority)
+            require(canonicalUuid(conversationId) && !database.isConversationDeleted(conversationId)) { "会话已删除或无效" }
+            require(cachedAgentInteraction == original && original.authorityId == expectedAuthority) {
+                "问题或访问范围已更新，请重新确认当前请求"
+            }
+            val result = call("agent.answer", JSONObject().put("conversation_id", conversationId)
+                .put("interaction_id", interactionId).put("answer", cleaned))
+            accepted = result.opt("accepted") == true
+            if (accepted) cachedAgentInteraction = null
+            status()
+            pullChanges()
+        }
+        return accepted
+    }
+
+    /** Steering changes the running task at a step boundary, never via outbox. */
+    suspend fun steerDesktopTask(conversationId: String, text: String): Boolean {
+        localReady.await()
+        if (!desktopReady("agent.steer")) return false
+        val expectedAuthority = database.device()?.endpointId
+        val body = text.trim()
+        var accepted = false
+        perform {
+            status()
+            requireDesktopReady("agent.steer", expectedAuthority)
+            require(canonicalUuid(conversationId) && !database.isConversationDeleted(conversationId)) { "会话已删除或无效" }
+            require(body.length in 1..8000 && body.none { it.code < 32 && it != '\n' && it != '\t' }) { "请输入 1～8000 字的补充指令" }
+            require(cachedAgentBusy && cachedAgentConversationId == conversationId) { "当前会话没有正在执行的电脑任务" }
+            require(cachedAgentInteraction == null) { "请先回答任务中的待确认问题" }
+            val result = call("agent.steer", JSONObject().put("conversation_id", conversationId).put("text", body))
+            accepted = result.opt("accepted") == true
+            status()
+            pullChanges()
+        }
+        return accepted
     }
 
     /** A screenshot goes to the image library; it never fabricates a chat turn. */
@@ -477,49 +759,85 @@ class AppRepository internal constructor(
     }
 
     private suspend fun sendDirect(conversationId: String, text: String, config: DirectApiConfig,
-        legacyRequestId: String? = null, expectedAuthority: String = if (config.source == ApiConfigSource.DESKTOP) config.authorityId else routeAuthority()) = withContext(Dispatchers.IO) {
+        legacyRequestId: String? = null, expectedAuthority: String = if (config.source == ApiConfigSource.DESKTOP) config.authorityId else routeAuthority()): Boolean = withContext(Dispatchers.IO) {
         if (!directMutex.tryLock()) {
-            mutableState.update { it.copy(error = "手机模型正在回复，请等待本次请求完成") }; return@withContext
+            mutableState.update { it.copy(error = "手机模型正在回复，请等待本次请求完成") }; return@withContext false
         }
+        var admitted = false
         try {
             require(canonicalUuid(conversationId) && !database.isConversationDeleted(conversationId)) { "该会话已删除或无效，请新建会话" }
             val legacy = legacyRequestId?.let { database.operation(it) ?: throw IllegalArgumentException("原待发消息不存在") }
             val pending = if (legacy == null) database.pendingImage(conversationId) else null
+            val requestSecrets = boundarySecrets(config)
+            val requestConfig = config.withRedactionSecrets(requestSecrets)
             val body = text.trim().ifEmpty { if (pending != null) "请描述这张图片。" else "" }
-                .replace(config.apiKey, "[已隐藏密钥]")
+                .let { redactKnownText(it, requestSecrets) }
             require(body.length in 1..8000) { "请输入 1～8000 字的消息，或先选择一张图片" }
-            val history = database.messages(conversationId).filter { legacy == null || it.id !in setOf(legacy.item.requestId, legacy.item.messageId) }
+            val history = database.messages(conversationId, limit = null).filter { legacy == null || it.id !in setOf(legacy.item.requestId, legacy.item.messageId) }
+                .map { it.copy(content = redactKnownText(it.content, requestSecrets)) }
             val imageId = if (legacy != null) legacy.item.attachmentId else pending?.attachmentId
             val image = imageId?.let { loadDirectImage(it, required = true) }
-            val messages = directMessages(config, history, body, image) { loadDirectImage(it, required = false) }
+            val sharedContext = database.device()?.endpointId?.let { contextCache.read(it, conversationId, database.conversationGeneration(conversationId)) }
+            val messages = directMessages(requestConfig, history, body, image, sharedContext) { loadDirectImage(it, required = false) }
             val turn = database.beginDirectTurn(conversationId, body, imageId, expectedAuthority,
-                allowUnpaired = config.source == ApiConfigSource.LOCAL, legacyRequestId = legacyRequestId)
+                allowUnpaired = config.source == ApiConfigSource.LOCAL, legacyRequestId = legacyRequestId,
+                titleText = redactKnownText(text.trim(), requestSecrets))
+            admitted = true
             directError = null
-            mutableState.update { it.copy(directChatBusy = true, error = null) }
+            val owner = OwnedDirectPreview(turn.id, database.device()?.endpointId, database.conversationGeneration(conversationId), turn.userId, config,
+                Message(turn.assistantId, conversationId, "assistant", "", turn.userAt,
+                    source = "mobile_direct", replyTo = turn.userId, localState = "generating"))
+            directPreview = owner
+            mutableState.update { it.copy(directChatBusy = true, directChatConversationId = conversationId, error = null) }
             refreshState()
             // Owned by the repository, not the foreground polling/picker job.
-            scope.launch {
+            val partial = AtomicReference("")
+            val work = scope.launch(start = CoroutineStart.LAZY) {
                 try {
-                    val reply = directGateway.complete(config, messages)
-                    database.finishDirectTurn(turn.id, reply)
+                    if (!ownsDirectPreview(owner)) throw CancellationException("Phone request scope changed")
+                    val reply = directGateway.stream(requestConfig, messages) { update ->
+                        if (!ownsDirectPreview(owner)) { directPreview = null; directJob?.cancel(); return@stream }
+                        val safe = redactStreamingText(update.text, boundarySecrets(config))
+                        partial.set(safe)
+                        directPreview = owner.copy(message = owner.message.copy(content = safe))
+                        mutableState.update { current ->
+                            if (current.directChatConversationId != conversationId || current.selectedConversationId != conversationId) current
+                            else current.copy(messages = current.messages.filter { it.id != turn.assistantId } +
+                                listOfNotNull(currentDirectPreview()?.takeIf { it.id == turn.assistantId }))
+                        }
+                    }
+                    currentCoroutineContext().ensureActive()
+                    if (!ownsDirectPreview(owner)) throw CancellationException("Phone request scope changed")
+                    database.finishDirectTurn(turn.id, redactKnownText(reply, boundarySecrets(config)))
                     mutableState.update { it.copy(error = null) }
                 } catch (cancelled: CancellationException) {
-                    withContext(NonCancellable) { database.failDirectTurn(turn.id, "模型请求被中断，可能已计费；不会自动重发，请确认后重新发送") }
+                    withContext(NonCancellable) { database.failDirectTurn(turn.id, "回复已停止，已保留收到的文字；可能已计费，不会自动重发",
+                        partial = partial.get(), interrupted = true) }
                     throw cancelled
                 } catch (failure: DirectApiFailure) {
-                    database.failDirectTurn(turn.id, failure.safeMessage)
+                    database.failDirectTurn(turn.id, failure.safeMessage, partial = partial.get())
                     directError = failure.safeMessage
                     mutableState.update { it.copy(error = failure.safeMessage) }
                 } catch (_: Exception) {
                     val message = "模型请求未完成，可能已计费；不会自动重试或转交电脑，请确认后重新发送"
-                    database.failDirectTurn(turn.id, message)
+                    database.failDirectTurn(turn.id, message, partial = partial.get())
                     directError = message
                     mutableState.update { it.copy(error = message) }
                 } finally {
-                    mutableState.update { it.copy(directChatBusy = false) }
+                    directPreview = null; directJob = null
+                    mutableState.update { it.copy(directChatBusy = false, directChatConversationId = null) }
                     directMutex.unlock(); refreshState()
                 }
                 if (state.value.connectionState == ConnectionState.CONNECTED) poll()
+            }
+            directJob = work
+            work.start()
+            // Enrich future turns in the background; even a slow/offline PC
+            // cannot hold up the phone's API request or first streamed token.
+            scope.launch {
+                if (!mutex.tryLock()) return@launch
+                try { if (state.value.connectionState == ConnectionState.CONNECTED) refreshConversationContext(conversationId, body) }
+                finally { mutex.unlock() }
             }
         } catch (invalid: IllegalArgumentException) {
             directMutex.unlock()
@@ -529,6 +847,32 @@ class AppRepository internal constructor(
             if (failure is CancellationException) throw failure
             mutableState.update { it.copy(error = "无法保存手机聊天记录，请检查存储空间") }
         }
+        admitted
+    }
+
+    /** Stops exactly the phone turn shown in this conversation; never replays it. */
+    fun cancelDirectChat(conversationId: String) {
+        if (state.value.directChatConversationId == conversationId) directJob?.cancel()
+    }
+
+    /** Called by the serialized sync path. Phone chat never waits for a PC RPC. */
+    private suspend fun refreshConversationContext(conversationId: String, query: String = "") {
+        val authority = database.device()?.endpointId ?: return
+        if ("context.get" !in cachedCapabilities.orEmpty() || database.isConversationDeleted(conversationId) ||
+            database.getSetting("authorization_blocked") == "1") { contextCache.clear(conversationId); return }
+        val generation = database.conversationGeneration(conversationId)
+        val epoch = database.contextEpoch(conversationId)
+        lastContextRefresh = monotonicMillis()
+        try {
+            val params = JSONObject().put("conversation_id", conversationId).put("query", query.take(4000))
+            generation?.let { params.put("generation", it) }
+            val envelope = call("context.get", params)
+            require(authority == database.device()?.endpointId &&
+                generation == database.conversationGeneration(conversationId))
+            contextCache.replace(authority, conversationId, generation, envelope,
+                boundarySecrets(), expectedEpoch = epoch)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { contextCache.clear(conversationId) }
     }
 
     /** At most one current or explicitly referenced historical image is loaded. */
@@ -552,10 +896,11 @@ class AppRepository internal constructor(
         else database.device()?.endpointId ?: LOCAL_PHONE_AUTHORITY
 
     fun apiConfigDraft(): ApiConfigDraft = state.value.directApi.let { ApiConfigDraft(it.baseUrl, it.model, it.timeoutSeconds,
-        it.reasoningEffort, it.keySaved, it.source) }
+        it.reasoningEffort, it.keySaved, it.source, it.reasoningProfile, it.reasoningBudgetTokens, it.reasoningMetadata) }
 
     suspend fun saveDirectApiConfig(baseUrl: String, model: String, apiKey: String, timeoutSeconds: Int,
-        reasoningEffort: String): Boolean = withContext(Dispatchers.IO) {
+        reasoningEffort: String, reasoningProfile: String? = null, reasoningBudgetTokens: Int = 0,
+        reasoningMetadata: String? = null): Boolean = withContext(Dispatchers.IO) {
         localReady.await()
         try {
             val saved = synchronized(configLock) {
@@ -563,20 +908,28 @@ class AppRepository internal constructor(
             val key = apiKey.trim().ifBlank { previous?.apiKey ?: throw IllegalArgumentException("请输入 API 密钥；首次配置不能留空") }
             val value = JSONObject().put("version", 1).put("revision", UUID.randomUUID().toString()).put("base_url", baseUrl.trim())
                 .put("model", model.trim()).put("api_key", key).put("timeout_seconds", timeoutSeconds).put("reasoning_effort", reasoningEffort)
-                .put("system_prompt", previous?.systemPrompt ?: DEFAULT_PHONE_PROMPT)
+                .put("reasoning", ModelReasoning.selection(reasoningProfile ?: if (reasoningEffort == "default") "auto" else "legacy",
+                    reasoningEffort, reasoningBudgetTokens, reasoningMetadata?.let {
+                        runCatching { JSONObject(it) }.getOrElse { throw IllegalArgumentException("思考能力声明无效，请重新选择。") }
+                    }))
+                .put("system_prompt", redactKnownText(currentPersona()?.systemPrompt ?: previous?.systemPrompt ?: DEFAULT_PHONE_PROMPT,
+                    boundarySecrets(previous) + key))
             val validated = try { DirectApiConfig.fromRpc(value, LOCAL_PHONE_AUTHORITY, allowCleartextApi) }
                 catch (invalid: IllegalArgumentException) { throw IllegalArgumentException(invalid.message?.replace("电脑", "手机") ?: "手机模型配置无效") }
+            validated.requireSafePublicSettings(boundarySecrets(previous) + key)
             val backup = (if (previous?.source == ApiConfigSource.DESKTOP) previous else previous?.desktopCache)?.takeIf {
                 it.authorityId == database.device()?.endpointId && database.getSetting("authorization_blocked") != "1"
             }
             val saved = DirectApiConfig(validated.authorityId, validated.revision, validated.baseUrl, validated.model, validated.apiKey,
                 validated.systemPrompt, validated.timeoutSeconds, validated.reasoningEffort, validated.syncedAt, ApiConfigSource.LOCAL,
-                backup)
+                backup, reasoningProfile = validated.reasoningProfile, reasoningBudgetTokens = validated.reasoningBudgetTokens,
+                reasoningMetadata = validated.reasoningMetadata)
+            boundarySecrets(saved)
             apiVault.save(saved); directConfig = saved
             saved
             }
             database.setSetting("direct_api_blocked", null); directError = null
-            mutableState.update { it.copy(directApi = saved.publicInfo(), error = null) }; refreshState()
+            mutableState.update { it.copy(directApi = saved.publicInfo(boundarySecrets(saved)), error = null) }; refreshState()
             true
         } catch (invalid: IllegalArgumentException) { mutableState.update { it.copy(error = invalid.message ?: "手机模型配置无效") }; false }
         catch (_: Exception) { mutableState.update { it.copy(error = "无法加密保存手机模型配置，请检查存储空间后重试") }; false }
@@ -597,26 +950,240 @@ class AppRepository internal constructor(
     }
 
     private fun clearDesktopConfig(message: String = "手机独立模型，无需连接电脑即可对话") {
+        contextCache.clear()
         synchronized(configLock) {
+            clearSyncedPersona()
             val active = directConfig
             if (active?.source == ApiConfigSource.LOCAL) {
                 if (active.desktopCache != null) { val clean = active.withDesktopCache(null); apiVault.save(clean); directConfig = clean }
-                mutableState.update { it.copy(directApi = (directConfig ?: active).publicInfo().copy(message = message)) }
+                mutableState.update { it.copy(directApi = (directConfig ?: active).publicInfo(boundarySecrets()).copy(message = message)) }
             } else clearDirectConfig("电脑已撤销授权，已清除同步的 API 密钥；请配置手机模型或重新配对")
             }
+    }
+
+    private fun currentPersona(): SyncedPersona? = syncedPersona?.takeIf {
+        it.authorityId == database.device()?.endpointId && database.getSetting("authorization_blocked") != "1"
+    }
+
+    private fun clearSyncedPersona() {
+        clearCharacterCatalog()
+        if (syncedPersona == null) return
+        apiVault.clearPersona(); syncedPersona = null
+        directConfig?.takeIf { it.source == ApiConfigSource.LOCAL }?.let { active ->
+            val updated = active.withPersona(SyncedPersona(LOCAL_PHONE_AUTHORITY, "default", "鲸伴", DEFAULT_PHONE_PROMPT))
+            apiVault.save(updated); directConfig = updated
+        }
+    }
+
+    private fun syncPersona(result: JSONObject, authority: String) {
+        // Older desktops expose only system_prompt in the complete API config.
+        // Newer desktops also send persona when no usable desktop API exists.
+        val envelope = result.optJSONObject("persona") ?: if (result.optBoolean("available")) JSONObject()
+            .put("version", 1).put("revision", result.opt("revision")).put("name", "当前角色")
+            .put("system_prompt", result.opt("system_prompt")) else return
+        val secrets = boundarySecrets(extra = result.optString("api_key").takeIf { it.isNotBlank() })
+        val incoming = SyncedPersona.fromRpc(envelope, authority, secrets)
+        val previous = syncedPersona
+        if (previous == null || previous.authorityId != incoming.authorityId || previous.revision != incoming.revision ||
+            previous.systemPrompt != incoming.systemPrompt || previous.name != incoming.name) {
+            apiVault.savePersona(incoming); syncedPersona = incoming
+        }
+        directConfig?.let { active ->
+            if (active.systemPrompt != active.redact(incoming.systemPrompt)) {
+                val updated = active.withPersona(incoming)
+                apiVault.save(updated); directConfig = updated
+            }
+        }
+        publishCharacterState()
+    }
+
+    private fun currentCharacterCatalog(): CharacterCatalogCache? = characterCatalog?.takeIf {
+        it.authorityId == database.device()?.endpointId && database.getSetting("authorization_blocked") != "1"
+    }
+
+    private fun clearCharacterCatalog() {
+        apiVault.clearCharacters()
+        characterCatalog = null
+        mutableState.update { it.copy(characterCards = emptyList(), activeCharacterId = "default",
+            activeCharacterName = "鲸鱼娘", characterLibrarySupported = false, characterSyncBusy = false,
+            characterSyncError = null) }
+    }
+
+    private fun publishCharacterState() {
+        val catalog = currentCharacterCatalog()
+        val persona = currentPersona()
+        val secrets = boundarySecrets()
+        val sameRole = catalog != null && persona != null && catalog.active.persona.revision == persona.revision &&
+            catalog.active.persona.systemPrompt == persona.systemPrompt && catalog.active.persona.name == persona.name
+        val summaries = catalog?.items.orEmpty().map { card ->
+            card.copy(label = redactKnownText(card.label, secrets), name = redactKnownText(card.name, secrets))
+        }
+        mutableState.update { it.copy(characterCards = summaries,
+            activeCharacterId = if (sameRole) catalog!!.active.id else if (persona == null) "default" else null,
+            activeCharacterName = persona?.name?.let { name -> redactKnownText(name, secrets) } ?: "鲸鱼娘",
+            characterLibrarySupported = if (it.connectionState == ConnectionState.CONNECTED)
+                CHARACTER_CAPABILITIES.all { capability -> capability in cachedCapabilities.orEmpty() }
+                else catalog != null) }
+    }
+
+    /** Catalogs are read-only while offline; an unconfirmed switch never changes the local role. */
+    suspend fun refreshCharacters() = perform {
+        if (state.value.connectionState != ConnectionState.CONNECTED) {
+            publishCharacterState()
+            mutableState.update { it.copy(characterSyncError = "连接电脑后同步角色卡") }
+            return@perform
+        }
+        if (cachedCapabilities == null) status()
+        characterAction { refreshCharactersInternal(force = true) }
+    }
+
+    suspend fun selectCharacter(id: String) = perform {
+        characterAction {
+            require(state.value.connectionState == ConnectionState.CONNECTED) { "连接电脑后切换角色" }
+            require(validCharacterId(id)) { "请选择有效的角色卡" }
+            if (cachedCapabilities == null) status()
+            require(CHARACTER_CAPABILITIES.all { it in cachedCapabilities.orEmpty() }) { "请更新并重启电脑端后同步角色卡" }
+            if (currentCharacterCatalog() == null) refreshCharactersInternal(force = true)
+            val catalog = currentCharacterCatalog() ?: throw IllegalArgumentException("角色库尚未同步，请刷新后重试")
+            val digest: String? = if (id == "default") null else (catalog.items.firstOrNull { it.id == id }?.digest
+                ?: throw IllegalArgumentException("这张角色卡已不在角色库中，请刷新后重试"))
+            if (catalog.active.id == id && (id == "default" || catalog.active.digest == digest)) return@characterAction
+            val authority = catalog.authorityId
+            val owner = synchronized(connectionLock) { connectionEpoch }
+            val card = parseCharacterCard(call("character.get", JSONObject().put("id", id).apply {
+                if (digest != null) put("digest", digest)
+            }), authority, id, digest, boundarySecrets())
+            ensureCharacterOwner(owner, authority)
+            val result = call("character.select", JSONObject().put("id", id).put("digest", card.summary.digest)
+                .put("expected_revision", catalog.revision))
+            ensureCharacterOwner(owner, authority)
+            val ack = if (result.optBoolean("duplicate")) {
+                require(result.optString("state") == "complete") { "切换结果待确认，请刷新角色卡" }
+                val envelope = result.optJSONObject("result")
+                require(envelope?.optBoolean("ok") == true) { "切换结果待确认，请刷新角色卡" }
+                envelope!!.getJSONObject("result")
+            } else result
+            require(ack.opt("version") == 1 && ack.opt("applied") == true && ack.optString("active_id") == id) {
+                "切换结果待确认，请刷新角色卡"
+            }
+            characterDigest(ack, "revision", boundarySecrets())
+            refreshCharactersInternal(force = true)
+            if (currentCharacterCatalog()?.active?.id != id) {
+                mutableState.update { it.copy(characterSyncError = "电脑角色已再次更新，已同步最新角色") }
+            }
+        }
+    }
+
+    private suspend fun characterAction(block: suspend () -> Unit) {
+        mutableState.update { it.copy(characterSyncBusy = true, characterSyncError = null) }
+        try { block() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: RpcFailure) {
+            if (failure.code == "unauthorized") throw failure
+            if (failure.code == "character_conflict") {
+                try { refreshCharactersInternal(force = true) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (unauthorized: RpcFailure) { if (unauthorized.code == "unauthorized") throw unauthorized }
+                catch (_: Exception) { /* Preserve the previous valid role and shelf. */ }
+                mutableState.update { it.copy(characterSyncError = "电脑角色或角色库已更新，请重新选择") }
+            } else if (failure.code in setOf("character_missing", "character_unavailable", "invalid_request", "unknown_method")) {
+                mutableState.update { it.copy(characterSyncError = if (failure.code == "character_missing")
+                    "这张角色卡已不在电脑角色库中，请刷新后重试" else "角色卡暂时无法同步，请刷新后重试") }
+            } else {
+                mutableState.update { it.copy(characterSyncError = "切换结果待确认，重新连接后刷新角色卡") }
+                throw failure
+            }
+        } catch (invalid: IllegalArgumentException) {
+            // Locally generated validation strings only, never an arbitrary RPC/provider exception.
+            mutableState.update { it.copy(characterSyncError = invalid.message?.takeIf { message ->
+                message in CHARACTER_VALIDATION_MESSAGES
+            } ?: "角色卡同步数据无效，请刷新后重试") }
+        } catch (_: JSONException) {
+            // A malformed optional role response must not disable a valid phone API.
+            mutableState.update { it.copy(characterSyncError = "角色卡同步数据无效，请刷新后重试") }
+        } catch (failure: Exception) {
+            mutableState.update { it.copy(characterSyncError = "角色卡同步未完成，请重新连接后刷新") }
+            throw failure
+        } finally {
+            publishCharacterState()
+            mutableState.update { it.copy(characterSyncBusy = false) }
+        }
+    }
+
+    private fun ensureCharacterOwner(owner: Any, authority: String) {
+        if (synchronized(connectionLock) { owner !== connectionEpoch } || authority != database.device()?.endpointId ||
+            database.getSetting("authorization_blocked") == "1") throw CancellationException("Stale character response")
+    }
+
+    private suspend fun refreshCharactersInternal(force: Boolean = false, advertised: JSONObject? = null) {
+        if (!CHARACTER_CAPABILITIES.all { it in cachedCapabilities.orEmpty() }) {
+            publishCharacterState()
+            mutableState.update { it.copy(characterLibrarySupported = false,
+                characterSyncError = "请更新并重启电脑端后同步角色卡") }
+            return
+        }
+        val authority = database.device()?.endpointId ?: return
+        val owner = synchronized(connectionLock) { connectionEpoch }
+        val cached = currentCharacterCatalog()
+        val revision = advertised?.let {
+            require(it.opt("version") == 1) { "角色卡同步数据无效，请刷新后重试" }
+            characterDigest(it, "revision", boundarySecrets())
+        }
+        if (!force && revision != null && cached?.revision == revision) {
+            publishCharacterState()
+            return
+        }
+        val entries = mutableListOf<CharacterCardSummary>()
+        var offset = 0
+        var first: CharacterPage? = null
+        do {
+            val params = JSONObject().put("offset", offset).put("limit", 50)
+            first?.let { params.put("revision", it.revision) }
+            val page = parseCharacterPage(call("character.list", params), authority, offset, boundarySecrets())
+            currentCoroutineContext().ensureActive()
+            ensureCharacterOwner(owner, authority)
+            if (first == null) first = page
+            else require(page.revision == first.revision && page.total == first.total &&
+                page.active.id == first.active.id && page.active.digest == first.active.digest &&
+                page.active.persona.revision == first.active.persona.revision &&
+                page.active.persona.name == first.active.persona.name &&
+                page.active.persona.systemPrompt == first.active.persona.systemPrompt) { "角色库已变化，请刷新后重试" }
+            entries.addAll(page.items)
+            require(entries.size <= MAX_CHARACTER_ENTRIES && entries.map { it.id }.distinct().size == entries.size) {
+                "角色卡同步数据无效，请刷新后重试"
+            }
+            offset = page.nextOffset ?: break
+        } while (true)
+        val selected = requireNotNull(first)
+        require(selected.active.id == null || selected.active.id == "default" || entries.any {
+            it.id == selected.active.id && it.digest == selected.active.digest
+        }) { "角色库已变化，请刷新后重试" }
+        val incoming = CharacterCatalogCache(authority, selected.revision, entries.toList(), selected.active)
+        synchronized(configLock) { synchronized(connectionLock) {
+            ensureCharacterOwner(owner, authority)
+            apiVault.saveCharacters(incoming)
+            // The persona follows the shared role, while a phone's chosen API stays untouched.
+            syncPersona(JSONObject().put("persona", JSONObject().put("version", 1)
+                .put("name", selected.active.persona.name).put("revision", selected.active.persona.revision)
+                .put("system_prompt", selected.active.persona.systemPrompt)), authority)
+            characterCatalog = incoming
+        } }
+        publishCharacterState()
     }
 
     private fun keepConfigOrExplain(message: String, failure: Boolean = false) {
         synchronized(configLock) {
         val cached = directConfig
-        mutableState.update { it.copy(directApi = if (cached != null) cached.publicInfo().copy(
-            sync = if (failure) ApiConfigSyncState.ERROR else ApiConfigSyncState.READY, message = "$message；继续使用已保存的手机模型")
+        mutableState.update { it.copy(directApi = if (cached != null) cached.publicInfo(boundarySecrets(cached)).let { summary -> summary.copy(
+            sync = if (failure || !summary.available) ApiConfigSyncState.ERROR else ApiConfigSyncState.READY,
+            message = if (summary.available) "$message；继续使用已保存的手机模型" else "已保存的模型参数需要重新配置。") }
             else ApiConnectionInfo(sync = if (failure) ApiConfigSyncState.ERROR else ApiConfigSyncState.WAITING, message = "$message；请先配置手机模型")) }
         }
     }
 
     private fun clearDirectConfig(message: String = "请配置手机模型，或连接电脑自动同步 API 配置") {
         synchronized(configLock) {
+            boundarySecrets()
             apiVault.clear(); directConfig = null
             mutableState.update { it.copy(directApi = ApiConnectionInfo(message = message)) }
         }
@@ -630,6 +1197,7 @@ class AppRepository internal constructor(
     private suspend fun refreshApiConfigInternal(force: Boolean = true, initialStatus: JSONObject? = null,
         quiet: Boolean = false): JSONObject? {
         val device = database.device() ?: return initialStatus
+        val connectionOwner = synchronized(connectionLock) { connectionEpoch }
         val now = monotonicMillis()
         if (!force && lastApiRefresh?.let { now - it < REFRESH_INTERVAL_MS } == true) return initialStatus
         lastApiRefresh = now
@@ -643,7 +1211,20 @@ class AppRepository internal constructor(
                 return checkedStatus
             }
             val result = call("chat.config")
+            currentCoroutineContext().ensureActive()
+            if (synchronized(connectionLock) { connectionOwner !== connectionEpoch } ||
+                device.endpointId != database.device()?.endpointId || database.getSetting("authorization_blocked") == "1") {
+                throw CancellationException("Configuration response belongs to an old connection")
+            }
             require(result.optInt("version") == 1) { "电脑 API 配置版本不兼容，请更新两端应用" }
+            synchronized(configLock) { synchronized(connectionLock) {
+                if (connectionOwner !== connectionEpoch || device.endpointId != database.device()?.endpointId ||
+                    database.getSetting("authorization_blocked") == "1") throw CancellationException("Stale persona response")
+                syncPersona(result, device.endpointId)
+            } }
+            if (CHARACTER_CAPABILITIES.all { it in cachedCapabilities.orEmpty() }) {
+                characterAction { refreshCharactersInternal(advertised = result.optJSONObject("character_library")) }
+            } else publishCharacterState()
             if (!result.optBoolean("available")) {
                 keepConfigOrExplain("电脑暂未提供可用 API 配置")
                 database.setSetting("direct_api_blocked", null)
@@ -651,16 +1232,22 @@ class AppRepository internal constructor(
                 return checkedStatus
             }
             val config = DirectApiConfig.fromRpc(result, device.endpointId, allowCleartextApi)
-            synchronized(configLock) {
+            synchronized(configLock) { synchronized(connectionLock) {
+                if (connectionOwner !== connectionEpoch || device.endpointId != database.device()?.endpointId ||
+                    database.getSetting("authorization_blocked") == "1") throw CancellationException("Stale API response")
+                val privacyKeys = boundarySecrets(config)
+                config.requireSafePublicSettings(privacyKeys)
                 val previous = directConfig
                 val desktop = if (previous?.source == ApiConfigSource.LOCAL) previous.desktopCache else previous
                 if (desktop == null || desktop.authorityId != config.authorityId || desktop.revision != config.revision) {
-                    val active = if (previous?.source == ApiConfigSource.LOCAL) previous.withDesktopCache(config) else config
+                    val active = (if (previous?.source == ApiConfigSource.LOCAL) previous.withDesktopCache(config) else config)
+                        .let { candidate -> currentPersona()?.let(candidate::withPersona) ?: candidate }
+                    active.requireSafePublicSettings(privacyKeys)
                     apiVault.save(active); directConfig = active
                 }
-            }
+            } }
             database.setSetting("direct_api_blocked", null)
-            mutableState.update { it.copy(directApi = (directConfig ?: config).publicInfo()) }
+            mutableState.update { it.copy(directApi = (directConfig ?: config).publicInfo(boundarySecrets(config))) }
             return checkedStatus
         } catch (invalid: IllegalArgumentException) {
             database.setSetting("direct_api_blocked", if (directConfig == null) "1" else null)
@@ -776,7 +1363,8 @@ class AppRepository internal constructor(
                             throw RpcFailure("image_chat_unavailable", IMAGE_CHAT_UPDATE_REQUIRED)
                         }
                     }
-                    if (item.method == "agent.send" && checkedStatus?.optBoolean("agent_busy") == true) {
+                    if (item.method == "agent.send" && checkedStatus?.optBoolean("agent_busy") == true &&
+                        !permitsQueuedAgent(checkedStatus)) {
                         throw IllegalArgumentException("电脑 Agent 正在处理其他请求，请完成后重新发送")
                     }
                     if (item.method == "chat.send" && checkedStatus?.optBoolean("chat_busy") == true) {
@@ -797,7 +1385,11 @@ class AppRepository internal constructor(
                 refreshState()
                 val result = call(item.method, params, item.requestId)
                 touched = true
-                if (result.optBoolean("duplicate")) handleOperation(operation, result)
+                // Queue-capable hosts can return the durable ACK itself with
+                // duplicate=true. That is distinct from operation.get's
+                // {state,result} receipt and never authorizes a second send.
+                if (result.optBoolean("duplicate") && !(item.method == "agent.send" &&
+                    "agent.queue.v1" in cachedCapabilities.orEmpty() && result.opt("accepted") == true)) handleOperation(operation, result)
                 else acceptOperation(operation, result)
                 if (item.method in setOf("chat.send", "agent.send")) break // The desktop owns one AI generation at a time.
             } catch (cancelled: CancellationException) {
@@ -834,6 +1426,12 @@ class AppRepository internal constructor(
 
     private fun QueuedOperation.isDesktopAction(): Boolean = item.method in setOf("desktop.snapshot", "agent.send") ||
         (item.method == "chat.send" && params.optBoolean("desktop_context"))
+
+    /** Fresh host negotiation only; an offline phone outbox is not a PC queue. */
+    private fun permitsQueuedAgent(status: JSONObject?): Boolean = status?.opt("agent_available") == true &&
+        status.optJSONArray("capabilities")?.let { values ->
+            (0 until values.length()).any { values.opt(it) == "agent.queue.v1" }
+        } == true
 
     /** Upload has its own durable request ID, and is confirmed before chat is admitted. */
     private suspend fun uploadChatAttachment(requestId: String): Boolean {
@@ -885,6 +1483,13 @@ class AppRepository internal constructor(
             "chat.send", "agent.send" -> {
                 val messageId = result.getString("message_id")
                 require(canonicalUuid(messageId) && result.getString("conversation_id") == item.conversationId) { "电脑返回的消息归属无效" }
+                if (item.method == "agent.send" && "agent.queue.v1" in cachedCapabilities.orEmpty()) {
+                    require(result.opt("accepted") == true && canonicalUuid(result.optString("job_id")) &&
+                        result.optString("queue_state") in setOf("queued", "claimed", "running", "awaiting_user",
+                            "cancel_requested", "completed", "failed", "cancelled", "timeout", "blocked", "interrupted", "unknown") &&
+                        result.optString("execution_mode") == "agent" && result.optString("reply_delivery") == "sync.pull" &&
+                        messageId == stableMessageId(rpc.endpointId, item.requestId)) { "电脑队列返回的任务确认无效；请检查原任务状态" }
+                }
                 database.updateOutbox(item.requestId, "sent", messageId = messageId)
             }
             "image.upload" -> {
@@ -1028,8 +1633,13 @@ class AppRepository internal constructor(
         value.getInt("height"), value.optString("created_at"), uploadState = uploadState)
 
     companion object {
+        private val CHARACTER_CAPABILITIES = setOf("character.list", "character.get", "character.select")
+        private val CHARACTER_VALIDATION_MESSAGES = setOf("连接电脑后切换角色", "请选择有效的角色卡",
+            "请更新并重启电脑端后同步角色卡", "角色库尚未同步，请刷新后重试", "这张角色卡已不在角色库中，请刷新后重试",
+            "切换结果待确认，请刷新角色卡", "角色库已变化，请刷新后重试", "角色卡同步数据无效，请刷新后重试",
+            "角色卡已变化，请刷新后重新选择")
         private const val REFRESH_INTERVAL_MS = 30_000L
-        private const val DEFAULT_PHONE_PROMPT = "你是 AURA，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
+        private const val DEFAULT_PHONE_PROMPT = "你是鲸伴，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
         internal const val IMAGE_CHAT_UPDATE_REQUIRED = "电脑端尚不支持图文识别，请更新并重启电脑端后重试；图片和文字已保留，未发送。"
         internal fun canonicalUuid(value: String): Boolean = try { UUID.fromString(value).toString() == value } catch (_: IllegalArgumentException) { false }
 

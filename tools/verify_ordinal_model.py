@@ -39,7 +39,7 @@ def main():
     before = hashlib.sha256(ini.read_bytes()).hexdigest()
     manager = SettingsManager(QSettings(str(ini), QSettings.Format.IniFormat))
     settings = manager.load_agent_settings()
-    key = manager.get_agent_gui_api_key()
+    key = manager.get_api_key()
     if not key or not settings.gui_model or not shutil.which("node"):
         raise RuntimeError("CONFIGURED_VERIFIER_UNAVAILABLE")
     request = {"config": {"baseURL": settings.gui_base_url, "model": settings.gui_model, "apiKey": key}, "cases": []}

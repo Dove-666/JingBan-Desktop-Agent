@@ -5,12 +5,14 @@ from dataclasses import replace
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel,
+    QComboBox, QFormLayout, QHBoxLayout, QLabel,
     QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QSpinBox,
     QVBoxLayout, QWidget,
 )
 
+from .theme import style_widget
 from .perception_panel import _event_value
+from .settings_widgets import CollapsibleSection, SettingsToggle
 
 
 def _label(text="", name="hint"):
@@ -28,14 +30,14 @@ def _plain(value, limit=1200):
 class CameraPanel(QWidget):
     """Independent local preview and remote permission, both initially off."""
 
-    def __init__(self, controller, parent=None):
+    def __init__(self, controller, parent=None, *, embedded=False):
         super().__init__(parent)
         self.controller = controller
         self._preview_image = QImage()
         self._runtime_info = {}
         self._permission_changing = False
         self.setObjectName("cameraPanel")
-        self.setStyleSheet(
+        style_widget(self,
             "QPushButton#cameraEnabled { color: white; background: #253449; "
             "border: 1px solid #253449; padding: 9px 18px; border-radius: 7px; }"
             "QPushButton#cameraEnabled:hover { background: #172334; }"
@@ -51,11 +53,11 @@ class CameraPanel(QWidget):
         contents = QWidget()
         self.scroll.setWidget(contents)
         layout = QVBoxLayout(contents)
-        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setContentsMargins(*((0, 2, 6, 12) if embedded else (18, 18, 18, 18)))
         layout.setSpacing(14)
 
         heading = QHBoxLayout()
-        heading.addWidget(_label("摄像头识别", "sectionTitle"), 1)
+        heading.addWidget(_label("本地预览", "sectionTitle"), 1)
         self.enabled_button = QPushButton("开启摄像头")
         self.enabled_button.setObjectName("cameraEnabled")
         self.enabled_button.setCheckable(True)
@@ -63,7 +65,7 @@ class CameraPanel(QWidget):
         self.enabled_button.toggled.connect(self._enabled_toggled)
         heading.addWidget(self.enabled_button)
         layout.addLayout(heading)
-        layout.addWidget(_label("开启后显示本地实时预览；允许远程发送后，才会调用已配置 API 识别并评论画面。"))
+        layout.addWidget(_label("先在本地预览，允许发送后才由模型识别画面。"))
 
         self.runtime_label = _label("摄像头已关闭 · 不采集画面", "status")
         self.runtime_label.setObjectName("cameraRuntimeSummary")
@@ -105,11 +107,21 @@ class CameraPanel(QWidget):
         self.preview_status_label.setObjectName("cameraPreviewStatus")
         layout.addWidget(self.preview_status_label)
 
-        self.remote_checkbox = QCheckBox("允许发送摄像头画面给已配置 API")
+        self.remote_checkbox = SettingsToggle("允许发送摄像头画面给模型")
         self.remote_checkbox.setObjectName("cameraAllowRemote")
+        self.remote_checkbox.setToolTip("只适用于摄像头，独立于屏幕感知。关闭后立即停止远程分析。")
         self.remote_checkbox.toggled.connect(self._remote_toggled)
         layout.addWidget(self.remote_checkbox)
-        layout.addWidget(_label("这项许可只适用于摄像头，与屏幕感知独立。关闭后立即停止摄像头远程分析。"))
+        layout.addWidget(_label("此许可与屏幕感知独立。关闭后立即停止发送。"))
+
+        interaction = QFormLayout()
+        self.commentary_mode_combo = QComboBox()
+        self.commentary_mode_combo.setObjectName("cameraCommentaryMode")
+        self.commentary_mode_combo.setAccessibleName("摄像头互动风格")
+        self.commentary_mode_combo.addItem("陪伴评论", "companion")
+        self.commentary_mode_combo.addItem("只在重要时说话", "quiet")
+        interaction.addRow("互动风格", self.commentary_mode_combo)
+        layout.addLayout(interaction)
 
         actions = QHBoxLayout()
         self.observe_button = QPushButton("刷新本地画面")
@@ -127,48 +139,51 @@ class CameraPanel(QWidget):
         actions.addStretch()
         layout.addLayout(actions)
 
-        parameters = QGroupBox("识别与评论频率")
+        parameters = QWidget()
         form = QFormLayout(parameters)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.commentary_mode_combo = QComboBox()
-        self.commentary_mode_combo.setObjectName("cameraCommentaryMode")
-        self.commentary_mode_combo.addItem("陪伴评论", "companion")
-        self.commentary_mode_combo.addItem("只在重要时说话", "quiet")
-        form.addRow("互动风格", self.commentary_mode_combo)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.analysis_interval_input = self._spin("cameraAnalysisInterval", 30, 600)
         self.speech_cooldown_input = self._spin("cameraSpeechCooldown", 30, 1800)
         self.max_speeches_input = self._spin("cameraMaxSpeechesPerHour", 1, 30)
         form.addRow("远程分析最短间隔（秒）", self.analysis_interval_input)
         form.addRow("主动发言冷却（秒）", self.speech_cooldown_input)
         form.addRow("每小时主动发言上限", self.max_speeches_input)
-        form.addRow(_label("与屏幕感知共享主动发言次数和最近发言记录；本页限制适用于摄像头。手动评论不消耗主动发言次数。"))
+        form.addRow(_label("与屏幕感知共享主动发言次数；手动评论不消耗次数。"))
+        self.frequency_section = CollapsibleSection("更多选项", content=parameters)
+        self.frequency_section.setObjectName("cameraFrequencyOptions")
+        layout.addWidget(self.frequency_section)
         self.save_button = QPushButton("保存参数")
         self.save_button.setObjectName("saveCameraSettings")
         self.save_button.clicked.connect(self._save)
-        form.addRow(self.save_button)
-        layout.addWidget(parameters)
+        layout.addWidget(self.save_button, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.status_label = _label(getattr(controller, "status", "摄像头已关闭。"), "status")
         self.status_label.setAccessibleName("摄像头识别状态")
         layout.addWidget(self.status_label)
-        layout.addWidget(_label("当前画面详情"))
+        self.diagnostics_section = CollapsibleSection("运行详情")
+        self.diagnostics_section.setObjectName("cameraRuntimeDetails")
+        diagnostics_layout = QVBoxLayout(self.diagnostics_section.content)
+        diagnostics_layout.setContentsMargins(0, 4, 0, 4)
+        diagnostics_layout.addWidget(_label("当前画面详情"))
         self.details_view = QPlainTextEdit()
         self.details_view.setObjectName("cameraDetails")
         self.details_view.setReadOnly(True)
         self.details_view.setFixedHeight(95)
-        layout.addWidget(self.details_view)
+        diagnostics_layout.addWidget(self.details_view)
         history_row = QHBoxLayout()
         history_row.addWidget(_label("本次识别事件（最近 30 条）"), 1)
         self.reset_button = QPushButton("清空本次事件")
         self.reset_button.setObjectName("resetCameraSession")
         self.reset_button.clicked.connect(self._reset_session)
         history_row.addWidget(self.reset_button)
-        layout.addLayout(history_row)
+        diagnostics_layout.addLayout(history_row)
         self.history_view = QPlainTextEdit()
         self.history_view.setObjectName("cameraHistory")
         self.history_view.setReadOnly(True)
         self.history_view.setFixedHeight(130)
-        layout.addWidget(self.history_view)
+        diagnostics_layout.addWidget(self.history_view)
+        layout.addWidget(self.diagnostics_section)
         layout.addStretch()
 
         for signal, callback in (

@@ -5,6 +5,7 @@ package com.aura.companion.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.aura.companion.BuildConfig
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,14 +24,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -79,93 +83,136 @@ internal fun PairingDialog(state: UiState, actions: UiActions, initialPayload: S
 
 @Composable
 internal fun ConnectionSheet(state: UiState, actions: UiActions, onDismiss: () -> Unit,
-                             onQueue: () -> Unit, onPair: () -> Unit, onConfigureApi: () -> Unit) {
+                             onQueue: () -> Unit, onPair: () -> Unit, onConfigureApi: () -> Unit,
+                             onCharacterCards: () -> Unit = {}) {
+    var themeMenu by remember { mutableStateOf(false) }
+    val themes = listOf(ThemeMode.SYSTEM to "跟随系统", ThemeMode.LIGHT to "浅色", ThemeMode.DARK to "深色")
+    val themeLabel = themes.first { it.first == state.theme }.second
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = glassSheetColor(),
         contentColor = MaterialTheme.colorScheme.onSurface,
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), tonalElevation = 0.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).testTag("settings-sheet")
             .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("连接与外观", style = MaterialTheme.typography.headlineSmall,
+            verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Text("设置", style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.semantics { heading() })
-            state.notice?.let { InlineNotice(it) }
             LiquidSurface(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag("connection-setting"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(DesktopMonitorIcon, null, Modifier.size(22.dp))
-                        Text(if (state.paired) state.desktopName.ifBlank { "我的电脑" } else "还没有连接电脑",
-                            style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text(when (state.connection) {
-                        ConnectionState.CONNECTED -> "已连接 · " + when (state.sync) {
-                            SyncState.SYNCING -> "正在同步对话"
-                            SyncState.READY -> "对话已同步"
-                            SyncState.ERROR -> "同步需要重试"
-                            else -> "等待同步"
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(state.desktopName.ifBlank { "我的电脑" },
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(when (state.connection) {
+                                ConnectionState.CONNECTED -> "在线"
+                                ConnectionState.CONNECTING -> "连接中"
+                                ConnectionState.UNAUTHORIZED -> "需要重新配对"
+                                ConnectionState.ERROR -> "连接失败"
+                                ConnectionState.DISCONNECTED -> if (state.paired) "离线" else "未连接"
+                            }, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        ConnectionState.CONNECTING -> "正在连接电脑…"
-                        ConnectionState.UNAUTHORIZED -> "配对已失效，请在电脑端重新生成配对信息。"
-                        ConnectionState.ERROR -> "连接失败"
-                        else -> if (state.paired) "离线" else "尚未配对"
-                    }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (state.connectionDetail.isNotBlank()) Text(state.connectionDetail,
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (state.connection == ConnectionState.CONNECTED) {
-                        Text(when {
-                            state.desktopTaskRunning -> "电脑 Agent · 正在执行"
-                            state.desktopTaskBusy -> "电脑 Agent · 忙碌"
-                            state.desktopTaskAvailable -> "电脑 Agent · 可用"
-                            else -> "电脑 Agent · 未就绪"
-                        }, style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (!state.desktopTaskAvailable && state.desktopTaskMessage.isNotBlank())
-                            Text(state.desktopTaskMessage, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error)
-                    }
-                    if (state.queueSummary.isNotBlank()) Text(state.queueSummary,
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    if (state.historyPendingCount > 0) Text("${state.historyPendingCount} 条手机记录待同步到电脑",
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         when {
+                            state.connection == ConnectionState.CONNECTING ->
+                                TextButton(actions::disconnect, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text("取消")
+                                }
                             !state.paired || state.connection == ConnectionState.UNAUTHORIZED ->
-                                Button(onPair, modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text(if (state.paired) "重新配对" else "连接电脑")
+                                TextButton(onPair, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(if (state.paired) "重新配对" else "连接")
                                 }
                             state.connection == ConnectionState.CONNECTED ->
-                                OutlinedButton(actions::syncNow, enabled = state.sync != SyncState.SYNCING,
-                                    modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text(if (state.sync == SyncState.SYNCING) "正在同步记录" else "同步记录")
+                                TextButton(actions::disconnect, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text("断开")
                                 }
-                            state.connection != ConnectionState.CONNECTING ->
-                                Button(actions::reconnect, modifier = Modifier.heightIn(min = 48.dp)) { Text("重新连接") }
+                            else -> TextButton(actions::reconnect, modifier = Modifier.heightIn(min = 48.dp)) {
+                                Text("连接")
+                            }
                         }
-                        if (state.paired && state.connection in setOf(ConnectionState.CONNECTED, ConnectionState.CONNECTING)) {
-                            TextButton(actions::disconnect, modifier = Modifier.heightIn(min = 48.dp)) { Text("暂时断开") }
-                        }
-                        if (state.paired && state.connection != ConnectionState.UNAUTHORIZED) {
+                    }
+                    if (state.paired && state.connection != ConnectionState.UNAUTHORIZED) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            if (state.connection == ConnectionState.CONNECTED && state.sync == SyncState.ERROR) {
+                                TextButton(actions::syncNow, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text("重试同步")
+                                }
+                            }
                             TextButton(onPair, modifier = Modifier.heightIn(min = 48.dp)) { Text("更换配对") }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag("model-setting"),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("模型与 API", style = MaterialTheme.typography.titleMedium)
+                            Text(if (state.directApi.available) state.directApi.model.ifBlank { "未配置" } else "未配置",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        TextButton(onConfigureApi, modifier = Modifier.heightIn(min = 48.dp)) {
+                            Text("编辑")
+                        }
+                    }
+                    Surface(onClick = onCharacterCards, color = Color.Transparent,
+                        shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().testTag("character-setting")) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("角色卡", style = MaterialTheme.typography.titleMedium)
+                                Text(state.activeCharacterName.ifBlank { "鲸鱼娘" },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                        }
+                    }
+                    if (state.queue.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("pending-messages-setting"),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text("待处理消息", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            TextButton(onQueue, modifier = Modifier.heightIn(min = 48.dp)) {
+                                Text("查看 (${state.queue.size})")
+                            }
+                        }
+                    }
+                    if (state.paired) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("任务完成提醒", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Switch(checked = state.taskNotificationsEnabled, onCheckedChange = actions::setTaskNotifications,
+                                modifier = Modifier.semantics { contentDescription = "电脑任务完成提醒" })
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("appearance-setting"),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("外观", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Box {
+                            TextButton(onClick = { themeMenu = true }, modifier = Modifier.heightIn(min = 48.dp).semantics {
+                                contentDescription = "选择外观"
+                                stateDescription = themeLabel
+                            }) {
+                                Text(themeLabel)
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.KeyboardArrowDown, null, Modifier.size(18.dp))
+                            }
+                            DropdownMenu(expanded = themeMenu, onDismissRequest = { themeMenu = false },
+                                shape = RoundedCornerShape(16.dp), containerColor = glassSheetColor()) {
+                                themes.forEach { (mode, label) ->
+                                    DropdownMenuItem(text = { Text(label) },
+                                        onClick = { themeMenu = false; actions.setTheme(mode) })
+                                }
+                            }
                         }
                     }
                 }
             }
-            if (state.queue.isNotEmpty()) TextButton(onQueue, Modifier.heightIn(min = 48.dp)) {
-                Text("查看待处理内容 (${state.queue.size})")
-            }
-            ApiSettingsCard(state.directApi, onConfigureApi)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Text("外观", style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(ThemeMode.SYSTEM to "跟随系统", ThemeMode.LIGHT to "浅色", ThemeMode.DARK to "深色")
-                    .forEach { (mode, label) ->
-                        FilterChip(selected = state.theme == mode, onClick = { actions.setTheme(mode) },
-                            label = { Text(label) }, modifier = Modifier.heightIn(min = 48.dp))
-                    }
-            }
+            Text(BuildConfig.VERSION_NAME, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.CenterHorizontally).testTag("app-version"))
         }
     }
 }

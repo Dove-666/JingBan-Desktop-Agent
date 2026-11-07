@@ -5,20 +5,33 @@ import json
 import os
 from pathlib import Path
 import unittest
-from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu --disable-gpu-compositing")
 
 from PySide6.QtCore import QEvent, QUrl
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication
 
 from desktop_pet.ui.chat_panel import ChatPanel, safe_execution
 from tests.test_assistant_ui import AssistantUiChat, click_dom, eval_js, layout_metrics, make_panel, wait_js, wait_until
 
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / "artifacts" / "agent_execution_ui"
-SNAPSHOTS = Path(__file__).resolve().parents[1] / "artifacts" / "companion-1.9.0" / "desktop-screens"
+ARTIFACTS = Path(__file__).resolve().parents[1] / "artifacts" / "agent_ux_20261107"
+SNAPSHOTS = ARTIFACTS / "desktop-screens"
+
+
+def save_rendered_snapshot(panel, path):
+    """Reject an empty compositor surface before accepting visual evidence."""
+    shot = panel.web_view.grab()
+    if shot.isNull():
+        raise AssertionError("The rendered chat snapshot is empty")
+    sampled = shot.toImage().scaled(100, 100)
+    colors = {sampled.pixel(x, y) for y in range(100) for x in range(100)}
+    if len(colors) < 16:
+        raise AssertionError("The WebEngine compositor returned a blank snapshot")
+    if not shot.save(str(path)):
+        raise AssertionError("Could not save rendered snapshot: " + str(path))
 
 
 def execution(state="completed"):
@@ -86,8 +99,13 @@ class ExecutionUiTests(unittest.TestCase):
         self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.app.processEvents()
 
-    def test_completed_trace_has_one_disclosure_and_context_remains_inspectable(self):
+    def test_completed_trace_shows_only_concrete_operations_without_context_controls(self):
         chat, panel = self.panel()
+        trace = chat.messages[-1]["metadata"]["execution"]
+        for index, label in enumerate(("开始处理任务", "正在分派执行器", "正在生成回复", "已完成内部总结")):
+            trace["events"].append({"id": f"internal-{index}", "elapsed_ms": 17000 + index,
+                                    "kind": "summary" if index == 3 else "progress", "label": label, "status": "completed"})
+        chat.messages_changed.emit()
         self.assertEqual(eval_js(panel, "document.querySelector('[data-testid=execution-record]').closest('[data-message-id]').dataset.messageId"), "execution-assistant")
         self.assertEqual(eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').getAttribute('aria-expanded')"), "false")
         self.assertIn("用时 1分20秒 · 2项操作", eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').textContent"))
@@ -97,30 +115,34 @@ class ExecutionUiTests(unittest.TestCase):
         wait_js(panel, "Boolean(document.querySelector('[data-testid=execution-content]'))")
         QTest.qWait(200)
         self.assertEqual(eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').getAttribute('aria-expanded')"), "true")
-        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-event').length"), 3)
-        click_dom(panel, "[data-testid=request-context] summary")
-        wait_js(panel, "Boolean(document.querySelector('[data-testid=request-context-content]'))")
-        self.assertTrue(eval_js(panel, "Boolean(document.querySelector('[data-testid=execution-content] [data-testid=request-context]'))"))
-        content = eval_js(panel, "document.querySelector('[data-testid=request-context-content]').textContent")
-        self.assertIn("跟随模型", content)
-        self.assertIn("由模型服务管理", content)
-        self.assertIn("只处理本轮明确请求", content)
-        self.assertEqual(eval_js(panel, "document.querySelectorAll('.context-messages li').length"), 3)
-        with patch.object(panel, "_show_context_budget") as settings:
-            click_dom(panel, "[data-testid=context-settings]")
-            wait_until(lambda: settings.called)
-        settings.assert_called_once()
+        self.assertEqual(eval_js(panel, "Array.from(document.querySelectorAll('.execution-event-title > span'),node=>node.textContent)"),
+                         ["打开桌面应用", "整理演示内容"])
+        text = eval_js(panel, "document.body.innerText")
+        for internal in ("已整理本次请求", "开始处理任务", "正在分派执行器", "正在生成回复", "已完成内部总结",
+                         "上下文", "跟随模型", "由模型服务管理", "只处理本轮明确请求"):
+            self.assertNotIn(internal, text)
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('[data-testid=request-context], [data-testid=request-context-content], [data-testid=context-settings]').length"), 0)
+        self.assertFalse(panel.web_state()["canBudget"])
+
+    def test_legacy_handoff_operation_uses_neutral_pause_caption(self):
+        chat, panel = self.panel("needs_user")
+        chat.messages[0]["metadata"]["execution"]["events"][1]["label"] = "需要手动接手"
+        chat.messages_changed.emit()
+        click_dom(panel, "[data-testid=execution-toggle]")
+        wait_js(panel, "document.querySelector('.execution-event-title > span')?.textContent === '操作已暂停'")
+        self.assertNotIn("接手", eval_js(panel, "document.body.innerText"))
+        self.assertIn("未完成", eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').textContent"))
 
     def test_event_offsets_are_relative_to_start_with_accessible_status(self):
         chat, panel = self.panel("running")
         self.assertIn("进行中", eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').getAttribute('aria-label')"))
         self.assertEqual(eval_js(panel, "Array.from(document.querySelectorAll('.execution-event time'),node=>node.textContent)"),
-                         ["+00:00", "+00:07", "+00:15"])
-        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-event time')[1].getAttribute('aria-label')"), "任务开始后 7秒")
+                         ["+00:07", "+00:15"])
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-event time')[0].getAttribute('aria-label')"), "任务开始后 7秒")
         self.assertEqual(eval_js(panel, "Array.from(document.querySelectorAll('.execution-marker'),node=>node.getAttribute('aria-label'))"),
-                         ["已完成", "已完成", "进行中"])
+                         ["已完成", "进行中"])
         self.assertTrue(eval_js(panel, "Boolean(document.querySelector('.execution-toggle .spin'))"))
-        self.assertIn("时间从任务开始计", eval_js(panel, "document.querySelector('.execution-heading').textContent"))
+        self.assertEqual("执行过程", eval_js(panel, "document.querySelector('.execution-heading').textContent"))
 
     def test_process_replaces_duplicate_composer_status_but_errors_and_stop_remain(self):
         chat, panel = self.panel("running")
@@ -171,11 +193,33 @@ class ExecutionUiTests(unittest.TestCase):
 
     def test_failed_cancelled_and_needs_user_records_remain_available(self):
         chat, panel = self.panel("failed")
-        for state, caption in (("failed", "未完成"), ("cancelled", "已停止"), ("needs_user", "需要你接手"), ("interrupted", "已中断")):
+        for state, caption in (("failed", "未完成"), ("cancelled", "已停止"), ("needs_user", "未完成"), ("interrupted", "已中断")):
             chat.messages[0]["metadata"]["execution"]["state"] = state
             chat.messages_changed.emit()
             wait_js(panel, "document.querySelector('[data-testid=execution-record]').dataset.executionState===" + json.dumps(state))
             self.assertIn(caption, eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').textContent"))
+            self.assertNotIn("接手", eval_js(panel, "document.body.innerText"))
+
+    def test_legacy_failed_reply_cannot_expose_optimistic_success_body(self):
+        chat, panel = self.panel()
+        message = chat.messages[-1]
+        optimistic = "已经完成演示文稿，保存成功，请查看桌面的结果。"
+        ARTIFACTS.mkdir(parents=True, exist_ok=True)
+        SNAPSHOTS.mkdir(parents=True, exist_ok=True)
+        for state in ("failed", "needs_user"):
+            for prefix in ("任务尚未确认完成。", "任务尚未通过验收：存在未完成步骤、工具失败或产物校验问题。"):
+                message["metadata"]["execution"]["state"] = state
+                message["content"] = prefix + "\n\n" + optimistic
+                original = message["content"]
+                chat.messages_changed.emit()
+                wait_js(panel, "document.querySelector('[data-message-id=execution-assistant] .markdown')?.textContent === '未完成：执行结果检查未通过。'")
+                visible = eval_js(panel, "document.body.innerText")
+                self.assertNotIn(optimistic, visible)
+                self.assertNotIn("接手", visible)
+                self.assertNotIn("上下文", visible)
+                self.assertEqual(message["content"], original, "Rendering must preserve archived source text")
+            QTest.qWait(200)
+            save_rendered_snapshot(panel, SNAPSHOTS / f"desktop-chat-{state}.png")
 
     def test_bridge_allowlist_and_plain_text_prevent_private_or_active_payloads(self):
         chat, panel = self.panel()
@@ -190,8 +234,8 @@ class ExecutionUiTests(unittest.TestCase):
         for private in ("PRIVATE_REASONING_PAYLOAD", "OPAQUE_PRIVATE_CREDENTIAL", "PRIVATE_STRUCTURED_KEY", "PRIVATE_PIXELS", "data:image"):
             self.assertNotIn(private, serialized)
         click_dom(panel, "[data-testid=execution-toggle]")
-        click_dom(panel, "[data-testid=request-context] summary")
-        wait_js(panel, "Boolean(document.querySelector('[data-testid=request-context-content]'))")
+        wait_js(panel, "Boolean(document.querySelector('[data-testid=execution-content]'))")
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('[data-testid=request-context]').length"), 0)
         self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-record img,.execution-record script').length"), 0)
         self.assertFalse(eval_js(panel, "Boolean(window.EXECUTED)"))
 
@@ -201,9 +245,7 @@ class ExecutionUiTests(unittest.TestCase):
         SNAPSHOTS.mkdir(parents=True, exist_ok=True)
         # DOM readiness can precede the first WebEngine paint in offscreen Qt.
         QTest.qWait(250)
-        collapsed = panel.web_view.grab()
-        self.assertFalse(collapsed.isNull())
-        self.assertTrue(collapsed.save(str(SNAPSHOTS / "desktop-chat-completed.png")))
+        save_rendered_snapshot(panel, SNAPSHOTS / "desktop-chat-completed.png")
         metrics = []
         for width in (980, 450, 375):
             panel.resize(width, 800)
@@ -220,15 +262,9 @@ class ExecutionUiTests(unittest.TestCase):
             self.assertLessEqual(current["bodyWidth"], current["width"] + 1)
             self.assertEqual(eval_js(panel, "getComputedStyle(document.querySelector('.markdown')).fontSize"), "16px")
             self.assertEqual(eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').getAttribute('aria-expanded')"), "true")
-            self.assertTrue(panel.web_view.grab().save(str(SNAPSHOTS / f"desktop-chat-process-{width}.png")))
+            save_rendered_snapshot(panel, SNAPSHOTS / f"desktop-chat-process-{width}.png")
             metrics.append(current)
-        click_dom(panel, "[data-testid=request-context] summary")
-        wait_js(panel, "Boolean(document.querySelector('[data-testid=request-context-content]'))")
-        panel.resize(980, 900)
-        QTest.qWait(350)
-        eval_js(panel, "document.querySelector('[data-testid=request-context] summary').scrollIntoView({block:'start'})")
-        QTest.qWait(350)
-        self.assertTrue(panel.web_view.grab().save(str(SNAPSHOTS / "desktop-chat-context.png")))
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('[data-testid=request-context], [data-testid=context-settings]').length"), 0)
         (ARTIFACTS / "layout_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
         (SNAPSHOTS / "layout_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
@@ -239,20 +275,50 @@ class NativeExecutionTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
         cls.app.setQuitOnLastWindowClosed(False)
 
-    def test_native_recovery_can_expand_trace_and_text_context(self):
+    def test_native_recovery_shows_concrete_operations_without_context(self):
         chat = ExecutionChat()
+        for index, label in enumerate(("开始处理任务", "正在分派执行器", "正在生成回复", "已完成内部总结")):
+            chat.messages[-1]["metadata"]["execution"]["events"].append(
+                {"id": f"internal-{index}", "elapsed_ms": 17000 + index, "kind": "summary" if index == 3 else "progress",
+                 "label": label, "status": "completed"})
         panel = ChatPanel(chat)
         try:
             panel._render_messages()
             self.assertEqual(panel.transcript.toPlainText().count("用时 1分20秒"), 1)
             panel._open_event(QUrl("aura-execution:execution-assistant"))
-            self.assertIn("执行过程", panel.transcript.toPlainText())
+            text = panel.transcript.toPlainText()
+            self.assertIn("打开桌面应用", text)
+            self.assertIn("整理演示内容", text)
+            self.assertNotIn("已整理本次请求", text)
+            for internal in ("开始处理任务", "正在分派执行器", "正在生成回复", "已完成内部总结"):
+                self.assertNotIn(internal, text)
+            self.assertNotIn("上下文", text)
             panel._open_event(QUrl("aura-context:execution-assistant"))
-            self.assertIn("只处理本轮明确请求", panel.transcript.toPlainText())
-            with patch.object(QMessageBox, "information") as information:
-                panel._show_context_budget()
-            information.assert_called_once()
-            self.assertEqual(panel.context_budget_button.text(), "上下文：跟随模型")
+            self.assertNotIn("只处理本轮明确请求", panel.transcript.toPlainText())
+            self.assertTrue(panel.context_budget_button.isHidden())
+        finally:
+            panel.deleteLater()
+            self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def test_native_legacy_failure_hides_optimistic_success_and_handoff(self):
+        chat = ExecutionChat()
+        panel = ChatPanel(chat)
+        try:
+            for state in ("failed", "needs_user"):
+                for prefix in ("任务尚未确认完成。", "任务尚未通过验收：存在未完成步骤、工具失败或产物校验问题。"):
+                    chat.messages[-1]["metadata"]["execution"]["state"] = state
+                    chat.messages[-1]["content"] = prefix + "\n\n已经保存成功，请查看完成结果。"
+                    panel._render_messages()
+                    text = panel.transcript.toPlainText()
+                    self.assertIn("未完成：执行结果检查未通过。", text)
+                    self.assertNotIn("已经保存成功", text)
+                    self.assertNotIn("接手", text)
+                    self.assertNotIn("上下文", text)
+            chat.messages[-1]["metadata"]["execution"]["events"][1]["label"] = "需要手动接手"
+            panel._render_messages()
+            panel._open_event(QUrl("aura-execution:execution-assistant"))
+            self.assertIn("操作已暂停", panel.transcript.toPlainText())
+            self.assertNotIn("接手", panel.transcript.toPlainText())
         finally:
             panel.deleteLater()
             self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)

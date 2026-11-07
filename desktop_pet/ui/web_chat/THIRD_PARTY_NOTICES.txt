@@ -1,7 +1,7 @@
-AURA offline chat frontend - third-party notices
+鲸伴 offline chat frontend - third-party notices
 
 This frontend uses the real @assistant-ui/react package and its runtime and primitives.
-UI layout and CSS are maintained locally by AURA. The notices below cover the installed
+UI layout and CSS are maintained locally by 鲸伴. The notices below cover the installed
 runtime dependency graph; some listed modules may be removed by production tree shaking.
 No frontend dependency makes a network request on behalf of this application.
 
@@ -5291,10 +5291,10 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ==============================================================================
-AURA GlassSurface: adapted SVG refraction sources
+鲸伴 GlassSurface: adapted SVG refraction sources
 
 --- PROVENANCE.txt ---
-AURA GlassSurface attribution and implementation notes
+鲸伴 GlassSurface attribution and implementation notes
 =====================================================
 
 Local implementation:
@@ -5315,7 +5315,7 @@ Upstream SVG RGB channel displacement / screen-combination reference:
   https://github.com/rdev/liquid-glass-react/blob/ac48eab18d1f7f444ae30002d240cae29c863a21/src/index.tsx
   License: MIT (LICENSE-rdev in this directory), Copyright 2025 MAX ROVENSKY.
 
-AURA modifications:
+鲸伴 modifications:
 - React 19 component with ordinary div attributes; existing layout is retained.
 - Edge-only rounded-rectangle normal map, capped at 160,000 pixels / 640 pixels per axis.
 - No WebGL, external assets, package dependencies, pointer capture or continuous animation.

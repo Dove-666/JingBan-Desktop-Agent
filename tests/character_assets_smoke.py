@@ -13,7 +13,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 from PySide6.QtCore import QEvent, QPoint, QThreadPool, Qt
 from PySide6.QtGui import QFont, QFontDatabase, QImage, QPainter
-from PySide6.QtWidgets import QApplication, QPushButton, QScrollArea
+from PySide6.QtWidgets import QApplication, QComboBox, QPushButton, QScrollArea
 
 from desktop_pet.application_controller import ApplicationController
 from desktop_pet.config import DEFAULT_IMAGE, PetConfig, PROJECT_ROOT
@@ -51,7 +51,11 @@ def main():
             result["topmost_window"] = bool(pet.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
             result["original_status"] = controller.appearance_status
             assert pet._source.size().width() == pet._source.size().height() == 1024
-            panel.appearance_combo.setCurrentIndex(panel.appearance_combo.findData("tsundere"))
+            assert panel.findChild(QComboBox, "staticCharacterCombo") is None
+            for name, label in (("idle_tsundere", "傲娇"), ("idle_sleepy", "困倦")):
+                index = panel.asset_animation_combo.findData(name)
+                assert index >= 0 and panel.asset_animation_combo.itemText(index) == label
+            assert controller.set_static_character("tsundere")
             assert controller.appearance == "tsundere"
             result["tsundere_status"] = controller.appearance_status
             result["scales"] = []

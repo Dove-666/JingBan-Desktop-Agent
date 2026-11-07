@@ -55,11 +55,10 @@ class AuraUiTest {
     @Test fun welcome_has_clear_pairing_action_and_no_demo_conversation() {
         val actions = RecordingActions()
         compose.setContent { AuraApp(UiState(theme = ThemeMode.LIGHT), actions) }
-        compose.onNodeWithText("连接我的电脑").assertIsDisplayed()
-        compose.onNodeWithText("把陪伴，\n带在身边。").assertIsDisplayed()
-        compose.onNodeWithContentDescription("消息内容").assertDoesNotExist()
+        compose.onNodeWithText("连接电脑").assertIsDisplayed()
+                compose.onNodeWithContentDescription("消息内容").assertDoesNotExist()
         capture("01-welcome-light.png")
-        compose.onNodeWithText("连接我的电脑").performClick()
+        compose.onNodeWithText("连接电脑").performClick()
         compose.onNodeWithText("完整配对链接").assertIsDisplayed()
         assertTrue(actions.pairings.isEmpty())
     }
@@ -73,7 +72,7 @@ class AuraUiTest {
         assertTrue(actions.pairings.isEmpty())
         assertEquals(1, actions.consumed)
         capture("02-pairing-prefill.png")
-        compose.onNodeWithText("连接电脑").performClick()
+        compose.onNode(hasText("连接电脑") and hasAnyAncestor(isDialog())).performClick()
         compose.runOnIdle { assertEquals(listOf(payload), actions.pairings) }
     }
 
@@ -104,10 +103,10 @@ class AuraUiTest {
         val actions = RecordingActions()
         compose.setContent { AuraApp(fixtureState(offline = true), actions) }
         compose.onAllNodesWithText("电脑暂时离线 · 消息会保留").assertCountEquals(0)
-        compose.onNodeWithText("尚未发送 · 可在待处理消息中继续").assertIsDisplayed()
+        compose.onNodeWithText("待发送").assertIsDisplayed()
         compose.onNodeWithContentDescription("消息内容").performTextInput("离线验收消息")
         compose.onNodeWithContentDescription("发送消息").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("配置手机模型").assertIsDisplayed()
+        compose.onNodeWithTag("app-settings").assertIsDisplayed()
         compose.runOnIdle { assertTrue(actions.sent.isEmpty()) }
         capture("03-offline-history.png", hideKeyboard = true)
     }
@@ -116,7 +115,7 @@ class AuraUiTest {
         val actions = RecordingActions()
         compose.setContent { AuraApp(fixtureState(), actions) }
         compose.onNodeWithContentDescription("打开对话历史").performClick()
-        compose.onNodeWithText("搜索对话").performTextInput("第二段")
+        compose.onNodeWithContentDescription("搜索对话").performTextInput("第二段")
         compose.onNodeWithText("第二段验收记录").performClick()
         compose.runOnIdle { assertEquals(listOf("qa-second"), actions.selected) }
     }
@@ -130,7 +129,7 @@ class AuraUiTest {
         }
         compose.setContent { AuraApp(fixtureState().copy(theme = ThemeMode.DARK), RecordingActions()) }
         compose.onNodeWithContentDescription("消息内容").assertIsDisplayed()
-        compose.onNodeWithContentDescription("配置手机模型").assertIsDisplayed()
+        compose.onNodeWithTag("app-settings").assertIsDisplayed()
         capture("04-conversation-dark.png")
     }
 
@@ -143,16 +142,21 @@ class AuraUiTest {
         }
         compose.onNodeWithContentDescription("消息内容").assertIsDisplayed()
         compose.onNodeWithContentDescription("打开对话历史").assertIsDisplayed()
-        compose.onNodeWithText("尚未发送 · 可在待处理消息中继续").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("待发送").performScrollTo().assertIsDisplayed()
         capture("05-type-scale-130.png")
     }
 
     @Test fun offline_pet_controls_do_not_queue_expired_actions() {
-        compose.setContent { AuraApp(fixtureState(offline = true), RecordingActions()) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("桌宠控制") and hasAnyAncestor(isPopup())).performClick()
-        compose.onNodeWithText("开心").assertIsNotEnabled()
-        capture("06-pet-controls-offline.png")
+        val actions = RecordingActions()
+        compose.setContent { AuraApp(fixtureState(offline = true), actions) }
+        compose.onNodeWithContentDescription("打开对话历史").performClick()
+        compose.onNodeWithTag("drawer-settings").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("settings-sheet").assertIsDisplayed()
+        compose.onNodeWithText("桌宠控制").assertDoesNotExist()
+        compose.onNodeWithText("图片收件箱").assertDoesNotExist()
+        compose.onNodeWithText("查看电脑桌面").assertDoesNotExist()
+        compose.runOnIdle { assertTrue(actions.desktopRequests.isEmpty()); assertEquals(0, actions.screenshotRequests) }
+        capture("06-minimal-settings-offline.png")
     }
 
     @Test fun local_attachment_is_decoded_as_a_thumbnail_and_visible_in_the_image_list() {
@@ -163,16 +167,15 @@ class AuraUiTest {
         }
         file.outputStream().use { source.compress(Bitmap.CompressFormat.PNG, 100, it) }
         source.recycle()
-        val state = fixtureState().copy(images = listOf(UiImage("qa-image", "缩略图验收.png",
-            "2048 × 1024", "已发送到电脑", file.absolutePath)))
-        compose.setContent { AuraApp(state, RecordingActions()) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("图片收件箱") and hasAnyAncestor(isPopup())).performClick()
-        compose.waitUntil(5000) {
-            compose.onAllNodesWithContentDescription("缩略图验收.png的缩略图").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText("已发送到电脑").assertIsDisplayed()
-        capture("07-image-inbox.png")
+        val actions = RecordingActions()
+        val state = fixtureState().copy(messages = listOf(UiMessage("qa-large-image", MessageRole.USER,
+            "这张图片是什么？", attachmentId = "qa-image", attachmentUri = file.absolutePath)))
+        compose.setContent { AuraApp(state, actions) }
+        compose.waitUntil(5000) { compose.onAllNodesWithContentDescription("消息中的图片").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithContentDescription("消息中的图片").assertIsDisplayed()
+        compose.onNodeWithContentDescription("预览消息图片").performClick()
+        compose.runOnIdle { assertEquals(listOf("qa-image"), actions.openedImages) }
+        capture("07-large-image-inline.png")
     }
 
     @Test fun assistant_markdown_is_readable_and_code_has_its_own_copy_action() {
@@ -182,7 +185,7 @@ class AuraUiTest {
         compose.onNodeWithText("标题验收").assertIsDisplayed()
         compose.onNodeWithText("复制代码").performClick()
         compose.onNodeWithText("已复制").assertIsDisplayed()
-        compose.onNodeWithText("复制回复").assertIsDisplayed()
+        compose.onNodeWithContentDescription("复制回复").assertIsDisplayed()
         capture("08-markdown-light.png")
     }
 
@@ -191,8 +194,7 @@ class AuraUiTest {
         val state = fixtureState(offline = true).copy(queue = listOf(UiQueueItem("qa-request",
             "丢弃前可以复制的验收内容", QueueStatus.NEEDS_ATTENTION, detail = "原会话已删除")))
         compose.setContent { AuraApp(state, actions) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("待处理消息 (1)") and hasAnyAncestor(isPopup())).performClick()
+        openPendingQueue(1)
         compose.onNodeWithText("丢弃前可以复制的验收内容").assertIsDisplayed()
         compose.onNodeWithText("需要手动处理").assertIsDisplayed()
         compose.onNodeWithText("复制内容").performClick()
@@ -308,22 +310,17 @@ class AuraUiTest {
             message = "电脑暂时离线，已保存的配置仍可使用。"))
         compose.setContent { AuraApp(state, RecordingActions()) }
         openConnectionSettings()
-        compose.onNodeWithText("模型与 API").assertIsDisplayed()
+        compose.onNodeWithTag("model-setting").assertIsDisplayed()
         compose.onNodeWithText("验收模型").assertIsDisplayed()
-        compose.onNodeWithText("电脑同步 · 已配置").assertIsDisplayed()
-        compose.onNodeWithText("https://example.invalid/v1").assertDoesNotExist()
+        compose.onNodeWithText("配置详情").assertDoesNotExist()
+        compose.onNodeWithText("电脑同步 · 已配置").assertDoesNotExist()
         compose.onNodeWithText("密钥已安全保存").assertDoesNotExist()
-        compose.onNodeWithText("配置详情").performScrollTo().performClick()
-        compose.onNodeWithText("https://example.invalid/v1").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("配置更新时间 · 今天 11:30").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("密钥已安全保存").performScrollTo().assertIsDisplayed()
-        compose.onAllNodesWithText("使用已保存配置 · 同步待重试").assertCountEquals(1)
+        compose.onNodeWithText("配置更新时间", substring = true).assertDoesNotExist()
         compose.onAllNodesWithText("fixture-only", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("https://", substring = true).assertCountEquals(0)
         capture("15-api-settings-safe-summary.png")
-        compose.onNodeWithText("收起配置详情").performScrollTo().performClick()
-        compose.onNodeWithText("https://example.invalid/v1").assertDoesNotExist()
-        compose.onNodeWithText("密钥已安全保存").assertDoesNotExist()
-        capture("35-settings-compact.png")
+        compose.onNodeWithText("编辑").performClick()
+        compose.onNodeWithText("手机模型配置").assertIsDisplayed()
     }
 
     @Test fun history_sync_queue_describes_records_without_regenerating_a_reply() {
@@ -331,8 +328,7 @@ class AuraUiTest {
             historyPendingCount = 1, queue = listOf(UiQueueItem("qa-record-sync", "手机上已经完成的对话",
                 QueueStatus.QUEUED, isHistorySync = true)))
         compose.setContent { AuraApp(state, RecordingActions()) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("待处理消息 (1)") and hasAnyAncestor(isPopup())).performClick()
+        openPendingQueue(1)
         compose.onNodeWithText("记录等待同步").assertIsDisplayed()
         compose.onNodeWithText("手机上已经完成的对话").assertIsDisplayed()
         compose.onAllNodesWithText("等待电脑回复").assertCountEquals(0)
@@ -357,12 +353,7 @@ class AuraUiTest {
                 useUnmergedTree = true).assertCountEquals(0)
             assertEquals(inputBounds, input.fetchSemanticsNode().boundsInRoot)
             assertEquals(messageBounds, message.fetchSemanticsNode().boundsInRoot)
-            val status = when (state.value.connection) {
-                ConnectionState.CONNECTED -> "在线"
-                ConnectionState.CONNECTING -> "连接中"
-                else -> "离线"
-            }
-            assertConnectionStatus(status)
+            compose.onNodeWithTag("app-settings").assertIsEnabled()
             compose.onNodeWithTag("conversation-title").assertTextEquals("界面验收记录")
         }
         assertQuietLayout()
@@ -370,29 +361,44 @@ class AuraUiTest {
             directApi = ready.directApi.copy(sync = ApiConfigSyncState.SYNCING)) }
         assertQuietLayout()
         capture("17-quiet-chat-during-auto-sync.png")
-        compose.runOnIdle { state.value = ready }
-        assertQuietLayout()
         for (connection in listOf(ConnectionState.CONNECTING, ConnectionState.DISCONNECTED, ConnectionState.CONNECTED)) {
             compose.runOnIdle { state.value = ready.copy(connection = connection, historyPendingCount = 3) }
             assertQuietLayout()
         }
-
-        // Status and the explicit sync action remain available in settings.
         openConnectionSettings()
-        compose.onNodeWithText("同步记录").performScrollTo().assertIsEnabled().performClick()
-        compose.runOnIdle {
-            assertEquals(1, actions.syncRequests)
-            state.value = ready.copy(sync = SyncState.SYNCING)
-        }
-        compose.onNodeWithText("正在同步记录").performScrollTo().assertIsNotEnabled()
-        capture("18-manual-sync-settings.png")
+        compose.onNodeWithText("同步记录").assertDoesNotExist()
+        compose.runOnIdle { state.value = ready.copy(sync = SyncState.ERROR) }
+        compose.onNodeWithText("重试同步").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(1, actions.syncRequests); state.value = ready.copy(sync = SyncState.SYNCING) }
+        compose.onNodeWithText("重试同步").assertDoesNotExist()
+        capture("18-sync-error-recovery-settings.png")
+    }
+
+    @Test fun connection_can_be_cancelled_before_pairing_and_during_phone_streaming() {
+        val actions = RecordingActions()
+        val state = mutableStateOf(UiState(connection = ConnectionState.CONNECTING, pairing = true,
+            directApi = directApiFixture(), directChatBusy = true, theme = ThemeMode.LIGHT))
+        compose.setContent { AuraApp(state.value, actions) }
+        compose.onNodeWithTag("app-settings").assertIsEnabled().performClick()
+        compose.onNodeWithText("取消").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(1, actions.disconnectRequests) }
+        compose.runOnIdle { state.value = state.value.copy(paired = true) }
+        compose.onNodeWithText("取消").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(2, actions.disconnectRequests) }
+        compose.runOnIdle { state.value = state.value.copy(connection = ConnectionState.CONNECTED, pairing = false) }
+        compose.onNodeWithText("取消").assertDoesNotExist()
+        compose.onNodeWithText("断开").performScrollTo().assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals(3, actions.disconnectRequests) }
+        compose.runOnIdle { state.value = state.value.copy(connection = ConnectionState.DISCONNECTED, paired = false) }
+        compose.onNodeWithText("取消").assertDoesNotExist()
+        compose.onNodeWithText("断开").assertDoesNotExist()
     }
 
     @Test fun unpaired_welcome_has_an_independent_model_setup_without_requiring_a_computer() {
         compose.setContent { AuraApp(UiState(theme = ThemeMode.LIGHT), RecordingActions()) }
-        compose.onNodeWithText("配置模型，直接聊天").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("配置模型").performScrollTo().assertIsDisplayed()
         capture("19-independent-model-welcome.png")
-        compose.onNodeWithText("配置模型，直接聊天").performClick()
+        compose.onNodeWithText("配置模型").performClick()
         compose.onNodeWithText("手机模型配置").assertIsDisplayed()
         val address = compose.onNode(hasSetTextAction() and hasText("API 地址"))
         assertTrue(address.fetchSemanticsNode().config[SemanticsProperties.EditableText].text.isEmpty())
@@ -434,8 +440,7 @@ class AuraUiTest {
                 attachmentName = "已选择图片.png", canSendOnPhone = true),
             UiQueueItem("qa-unknown", "送达情况未知的旧问题", QueueStatus.UNKNOWN, canSendOnPhone = true)))
         compose.setContent { AuraApp(state, actions) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("待处理消息 (2)") and hasAnyAncestor(isPopup())).performClick()
+        openPendingQueue(2)
         compose.onAllNodesWithText("手机直接发送").assertCountEquals(1)
         compose.onNodeWithText("图片 · 已选择图片.png").assertIsDisplayed()
         compose.onNodeWithText("手机直接发送").performScrollTo().performClick()
@@ -463,9 +468,8 @@ class AuraUiTest {
         compose.setContent { AuraApp(state.value, actions) }
         compose.onNodeWithText("电脑 Agent").performClick()
         compose.runOnIdle { assertTrue(actions.desktopRequests.isEmpty()); assertEquals(0, actions.screenshotRequests) }
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("查看电脑桌面") and hasAnyAncestor(isPopup())).assertIsEnabled().performClick()
-        compose.runOnIdle { assertEquals(1, actions.screenshotRequests) }
+        compose.onNodeWithText("查看电脑桌面").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, actions.screenshotRequests) }
         compose.onNodeWithContentDescription("消息内容").performTextInput("请打开电脑上的记事本")
         compose.onNodeWithContentDescription("发送消息").performClick()
         compose.runOnIdle { assertEquals(listOf("请打开电脑上的记事本"), actions.desktopRequests); assertTrue(actions.sent.isEmpty()) }
@@ -501,8 +505,10 @@ class AuraUiTest {
         // IME inset animation cannot move the chip between pointer down and up.
         compose.onNodeWithText("电脑 Agent").assertIsEnabled()
             .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        connectionSheetHeading().assertDoesNotExist()
+        openConnectionSettings()
         connectionSheetHeading().assertIsDisplayed()
-        compose.onNodeWithText("重新连接").assertIsEnabled().performClick()
+        compose.onNodeWithText("连接").assertIsEnabled().performClick()
         compose.runOnIdle {
             assertEquals(1, actions.reconnectRequests)
             assertTrue(actions.desktopRequests.isEmpty())
@@ -636,6 +642,8 @@ class AuraUiTest {
                 detail = "正在执行电脑工具", desktopAgent = true))))
         val actions = RecordingActions(onMode = { state.value = state.value.copy(desktopAgentMode = it) })
         compose.setContent { AuraApp(state.value, actions) }
+        compose.onNodeWithText("正在执行电脑工具").assertDoesNotExist()
+        compose.onNodeWithText("详情").performClick()
         compose.onNodeWithText("正在执行电脑工具").assertIsDisplayed()
         compose.onNodeWithText("原始任务活动不显示在输入区").assertDoesNotExist()
         compose.onNodeWithText("原始错误不显示在输入区").assertDoesNotExist()
@@ -655,22 +663,25 @@ class AuraUiTest {
             UiMessage("qa-agent-request", MessageRole.USER, "整理文档", MessageStatus.PENDING,
                 detail = "正在读取目录", desktopAgent = true),
             UiMessage("qa-agent-reply", MessageRole.ASSISTANT, "请确认保存位置。", desktopAgent = true))), RecordingActions()) }
-        compose.onNodeWithText("电脑任务执行中…").assertIsDisplayed()
+        compose.onNodeWithText("正在处理…").assertIsDisplayed()
+        compose.onNodeWithText("正在读取目录").assertDoesNotExist()
+        compose.onNodeWithText("详情").performClick()
         compose.onNodeWithText("正在读取目录").assertIsDisplayed()
-        compose.onNodeWithText("AURA · 电脑 Agent").assertIsDisplayed()
+        compose.onNode(hasText("鲸伴") and hasAnyAncestor(hasTestTag("message-qa-agent-reply"))).assertIsDisplayed()
         compose.onNodeWithText("正在思考…").assertDoesNotExist()
     }
 
-    @Test fun empty_liquid_conversation_suggestions_stage_a_draft_without_sending() {
+    @Test fun empty_conversation_preserves_freeform_input_without_extra_actions() {
         val actions = RecordingActions()
         compose.setContent { AuraApp(fixtureState().copy(messages = emptyList(),
             directApi = directApiFixture()), actions) }
-        compose.onNodeWithText("今天，想聊点什么？").assertIsDisplayed()
-        compose.onNodeWithText("陪我聊一会儿").performClick()
-        compose.onNodeWithContentDescription("消息内容").assertTextContains("陪我聊一会儿")
+        compose.onNodeWithText("今天想聊什么？").assertIsDisplayed()
+        compose.onNodeWithText("陪我聊一会儿").assertDoesNotExist()
+        compose.onNodeWithContentDescription("消息内容").performTextInput("由用户自由输入的内容")
+        compose.onNodeWithContentDescription("消息内容").assertTextContains("由用户自由输入的内容")
         compose.onNodeWithContentDescription("发送消息").assertIsEnabled()
         compose.runOnIdle { assertTrue(actions.sent.isEmpty()); assertTrue(actions.desktopRequests.isEmpty()) }
-        capture("26-liquid-empty-light.png", hideKeyboard = true)
+        capture("26-minimal-empty-light.png", hideKeyboard = true)
     }
 
     @Test fun liquid_mode_pills_keep_full_touch_targets_and_selection_with_large_type() {
@@ -697,7 +708,7 @@ class AuraUiTest {
         compose.onNodeWithText("查看电脑桌面").assertDoesNotExist()
         compose.runOnIdle { assertTrue(actions.desktopRequests.isEmpty()); assertEquals(0, actions.screenshotRequests) }
         // Inspect rendered pixels, since semantics alone cannot detect inherited black text on dark glass.
-        for (node in listOf(compose.onNodeWithText("今天，想聊点什么？"),
+        for (node in listOf(compose.onNodeWithText("今天想聊什么？"),
             compose.onNodeWithTag("conversation-title"),
             compose.onNodeWithContentDescription("打开对话历史"),
             compose.onNodeWithContentDescription("添加图片"))) {
@@ -718,7 +729,7 @@ class AuraUiTest {
         compose.setContent { AuraApp(state.value, RecordingActions()) }
         compose.onNodeWithTag("conversation-title").assertTextEquals("界面验收记录")
         compose.onNodeWithText("我的电脑（在线）").assertDoesNotExist()
-        compose.onNodeWithTag("connection-status").assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithTag("app-settings").assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
         assertConnectionStatus("在线")
         compose.onNodeWithText("验收模型").assertDoesNotExist()
@@ -736,8 +747,7 @@ class AuraUiTest {
         compose.onNodeWithText("发送消息").assertDoesNotExist() // Icon-only action has an accessible description.
         compose.onNodeWithContentDescription("发送消息").assertIsNotEnabled()
         capture("30-minimal-offline-light.png", hideKeyboard = true)
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("查看电脑桌面") and hasAnyAncestor(isPopup())).assertIsNotEnabled()
+        compose.onNodeWithText("查看电脑桌面").assertDoesNotExist()
     }
 
     @Test fun title_updates_with_renames_switching_and_new_chat_and_ellipsizes_at_large_type() {
@@ -761,7 +771,7 @@ class AuraUiTest {
         compose.onNodeWithTag("conversation-title").performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertTrue(layouts.single().lineCount == 1 && layouts.single().isLineEllipsized(0))
         capture("36-topic-header-light-type150.png", hideKeyboard = true)
-        compose.onNodeWithTag("connection-status").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
+        compose.onNodeWithTag("app-settings").assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
         connectionSheetHeading().assertIsDisplayed()
         compose.runOnIdle { assertEquals(0, actions.reconnectRequests); assertTrue(actions.desktopRequests.isEmpty()) }
         capture("38-connection-sheet-light-type150.png", hideKeyboard = true)
@@ -771,7 +781,7 @@ class AuraUiTest {
         compose.onNodeWithTag("conversation-title").assertTextEquals("第二段验收记录")
         newConversationFromMenu()
         compose.onNodeWithTag("conversation-title").assertTextEquals("新对话")
-        compose.onNodeWithTag("connection-status").assertIsDisplayed()
+        compose.onNodeWithTag("app-settings").assertIsDisplayed()
         capture("37-topic-new-chat-light-type150.png", hideKeyboard = true)
     }
 
@@ -793,8 +803,14 @@ class AuraUiTest {
                     if (it.config.contains(SemanticsProperties.Text)) it.config[SemanticsProperties.Text] else emptyList()
                 }
                 .map { it.text }.filter { it.isNotBlank() }.toSet()
-            assertEquals(setOf("手机聊天", "电脑 Agent",
-                if (sample.desktopAgentMode) "告诉电脑 Agent 下一步…" else "发消息给 AURA"), labels)
+            val placeholder = when {
+                sample.desktopAgentMode && sample.desktopTaskRunning && sample.canSteerDesktop -> "补充当前任务…"
+                sample.desktopAgentMode && !sample.desktopTaskAvailable ->
+                    if (sample.connection == ConnectionState.CONNECTED) "电脑 Agent 暂不可用" else "电脑离线，连接后可执行任务"
+                sample.desktopAgentMode -> "告诉电脑 Agent 下一步…"
+                else -> "发消息给 鲸伴"
+            }
+            assertEquals(setOf("手机聊天", "电脑 Agent", placeholder), labels)
         }
     }
 
@@ -824,7 +840,7 @@ class AuraUiTest {
         }
         compose.onNodeWithTag("execution-events").assertDoesNotExist()
         compose.onNodeWithTag("execution-running-icon", useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithText("已完成 · 12 秒").assertIsDisplayed()
+        assertExecutionState("已完成")
         compose.onNodeWithText("已经检查 C 盘占用，只整理了建议，没有清理文件。").assertIsDisplayed()
         capture("32-execution-completed-collapsed.png", hideKeyboard = true)
         compose.onNodeWithTag("execution-toggle").performClick()
@@ -860,13 +876,14 @@ class AuraUiTest {
                         execution = process.value))), RecordingActions())
             }
         }
-        compose.onNodeWithText("未完成 · 23 秒").assertIsDisplayed()
-        compose.onNodeWithText("本次任务已停止，已完成的操作会保留。").assertIsDisplayed()
+        assertExecutionState("未完成")
+        compose.onNodeWithText("本次任务已停止，已完成的操作会保留。").assertDoesNotExist()
         compose.onNodeWithTag("execution-events").assertDoesNotExist()
         compose.onNodeWithTag("execution-running-icon", useUnmergedTree = true).assertDoesNotExist()
         capture("34-execution-failed-dark-type150.png", hideKeyboard = true)
         compose.onNodeWithTag("execution-toggle").performClick()
         compose.onNodeWithTag("execution-events").assertIsDisplayed()
+        compose.onNodeWithTag("execution-detail").assertTextContains("已完成的操作会保留", substring = true)
         for ((index, status) in listOf("cancelled", "needs_user", "interrupted").withIndex()) {
             compose.runOnIdle { process.value = process.value.copy(state = status,
                 startedAt = "2026-11-01T10:00:0${index + 1}+00:00") }
@@ -907,7 +924,7 @@ class AuraUiTest {
         compose.runOnIdle { process.value = process.value.copy(state = "completed", durationMs = 4300) }
         compose.mainClock.advanceTimeBy(32)
         compose.onNodeWithTag("execution-running-icon", useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithText("已完成 · 4 秒").assertIsDisplayed()
+        assertExecutionState("已完成")
         compose.mainClock.autoAdvance = true
     }
 
@@ -937,13 +954,12 @@ class AuraUiTest {
             UiExecutionStep("step-2", "tool", "查看目录信息", "running", 2100)))
 
     private fun openConnectionSettings() {
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNode(hasText("连接与外观") and hasAnyAncestor(isPopup())).performClick()
+        compose.onNodeWithTag("app-settings").performClick()
     }
 
     private fun newConversationFromMenu() {
-        compose.onNodeWithContentDescription("更多选项").performClick()
-        compose.onNodeWithContentDescription("新建对话").performClick()
+        compose.onNodeWithContentDescription("打开对话历史").performClick()
+        compose.onNodeWithText("新建对话").performClick()
     }
 
     private fun dismissConnectionSheet() {
@@ -951,14 +967,104 @@ class AuraUiTest {
         compose.waitForIdle()
     }
 
-    private fun connectionSheetHeading() = compose.onNode(hasText("连接与外观") and
+    private fun connectionSheetHeading() = compose.onNode(hasText("设置") and
         SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
 
     private fun assertConnectionStatus(prefix: String) {
-        compose.onNodeWithTag("connection-status").assertIsDisplayed().assert(
-            SemanticsMatcher("Computer connection status starts with $prefix") {
-                it.config[SemanticsProperties.StateDescription].startsWith(prefix)
-            })
+        // Header state changes must not add extra controls or move the topic.
+        compose.onNodeWithTag("app-settings").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("connection-status").assertDoesNotExist()
+    }
+
+    private fun openPendingQueue(count: Int) {
+        openConnectionSettings()
+        compose.onNodeWithTag("pending-messages-setting").performScrollTo()
+        compose.onNodeWithText("查看 ($count)").performClick()
+    }
+
+    private fun assertExecutionState(expected: String) {
+        compose.onNodeWithTag("execution-toggle").assert(SemanticsMatcher("Execution state contains $expected") {
+            it.config[SemanticsProperties.StateDescription].contains(expected)
+        })
+    }
+
+    @Test fun live_file_access_card_requires_explicit_review_and_never_uses_composer_text_as_approval() {
+        val actions = RecordingActions()
+        compose.setContent { AuraApp(fixtureState().copy(desktopAgentMode = true, desktopTaskRunning = true,
+            desktopTaskAvailable = true, canSteerDesktop = true,
+            agentInteraction = UiAgentInteraction("grant-1", "file_access", "读取这份文件吗？", "qa-first",
+                resource = UiAgentFileResource("C:\\Selected\\input.csv", "read", false))), actions) }
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-interaction"))
+        compose.onNodeWithTag("agent-resource-path").assertTextContains("C:\\Selected\\input.csv")
+        compose.onNodeWithContentDescription("消息内容").performTextInput("普通草稿不能批准访问")
+        assertTrue(actions.agentAnswers.isEmpty())
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        compose.waitForIdle()
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-interaction"))
+        compose.onNodeWithTag("agent-allow-access").performScrollTo().performClick()
+        assertEquals(listOf("grant-1" to UiAgentAnswer.Permission(true)), actions.agentAnswers)
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-interaction"))
+        compose.onNodeWithTag("agent-allow-access").assertIsNotEnabled()
+        capture("46-agent-file-access.png", hideKeyboard = true)
+    }
+
+    @Test fun live_question_accepts_freeform_and_options_but_disappears_in_another_conversation() {
+        val actions = RecordingActions()
+        val state = mutableStateOf(fixtureState().copy(desktopAgentMode = true, desktopTaskRunning = true,
+            desktopTaskAvailable = true, agentInteraction = UiAgentInteraction("question-1", "question",
+                "选择哪个方案？", "qa-first", options = listOf("保留原件", "另存副本"))))
+        compose.setContent { AuraApp(state.value, actions) }
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-interaction"))
+        compose.onNodeWithTag("agent-answer-input").performTextInput("先看一下文件内容")
+        compose.onNodeWithTag("agent-answer-input").assert(SemanticsMatcher.expectValue(
+            SemanticsProperties.EditableText, androidx.compose.ui.text.AnnotatedString("先看一下文件内容")))
+        // Typing opens the IME. Wait for the native inset transition before a
+        // physical click, so scrolling cannot move the button between down/up.
+        compose.runOnUiThread {
+            compose.activity.currentFocus?.clearFocus()
+            WindowInsetsControllerCompat(compose.activity.window, compose.activity.window.decorView)
+                .hide(WindowInsetsCompat.Type.ime())
+        }
+        SystemClock.sleep(350)
+        compose.waitForIdle()
+        compose.onNode(hasText("继续") and hasAnyAncestor(hasTestTag("agent-interaction")))
+            .performScrollTo().assertIsEnabled().performClick()
+        compose.waitUntil(5_000) { actions.agentAnswers.isNotEmpty() }
+        assertEquals("question-1" to UiAgentAnswer.Text("先看一下文件内容"), actions.agentAnswers.single())
+        compose.runOnIdle { state.value = state.value.copy(agentInteraction = state.value.agentInteraction!!.copy(id = "question-2")) }
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-interaction"))
+        compose.onNodeWithText("另存副本").performClick()
+        assertEquals("question-2" to UiAgentAnswer.Text("另存副本"), actions.agentAnswers.last())
+        compose.runOnIdle { state.value = state.value.copy(selectedConversationId = "qa-second") }
+        compose.onNodeWithTag("agent-interaction").assertDoesNotExist()
+    }
+
+    @Test fun running_task_can_receive_a_correction_without_starting_a_second_task() {
+        val actions = RecordingActions()
+        compose.setContent { AuraApp(fixtureState().copy(desktopAgentMode = true, desktopTaskRunning = true,
+            desktopTaskAvailable = true, canSteerDesktop = true), actions) }
+        compose.onNodeWithContentDescription("消息内容").performTextInput("先别发送，另存一份")
+        compose.onNodeWithContentDescription("停止电脑任务").assertIsDisplayed()
+        compose.onNodeWithContentDescription("补充指令").performClick()
+        assertEquals(listOf("先别发送，另存一份"), actions.steering)
+        assertTrue(actions.desktopRequests.isEmpty())
+        compose.onNodeWithContentDescription("消息内容").assert(SemanticsMatcher.expectValue(
+            SemanticsProperties.EditableText, androidx.compose.ui.text.AnnotatedString("")))
+    }
+
+    @Test fun delivery_file_is_saved_only_after_explicit_click_and_shows_download_state() {
+        val actions = RecordingActions()
+        val artifact = UiAgentArtifact("artifact_" + "a".repeat(64), "验收报告.docx", 2048)
+        val state = mutableStateOf(fixtureState().copy(agentArtifacts = listOf(artifact)))
+        compose.setContent { AuraApp(state.value, actions) }
+        compose.onNodeWithTag("conversation-messages").performScrollToNode(hasTestTag("agent-artifact"))
+        compose.onNodeWithText("验收报告.docx").assertIsDisplayed()
+        assertTrue(actions.savedArtifacts.isEmpty())
+        compose.onNodeWithText("保存").performClick()
+        compose.runOnIdle { assertEquals(listOf(artifact.reference), actions.savedArtifacts) }
+        compose.runOnIdle { state.value = state.value.copy(artifactDownloading = artifact.reference) }
+        compose.onNodeWithText("保存").assertDoesNotExist()
+        capture("47-agent-artifact.png", hideKeyboard = true)
     }
 
     private fun directApiFixture() = UiDirectApi(available = true,
@@ -1039,6 +1145,7 @@ private class RecordingActions(private val onConsume: () -> Unit = {},
     var removed = 0
     var syncRequests = 0
     var reconnectRequests = 0
+    var disconnectRequests = 0
     var savedConfig: UiApiConfigInput? = null
     val phoneQueueSends = mutableListOf<String>()
     val retried = mutableListOf<String>()
@@ -1046,12 +1153,22 @@ private class RecordingActions(private val onConsume: () -> Unit = {},
     var desktopResult: ((Boolean) -> Unit)? = null
     var screenshotRequests = 0
     var stopRequests = 0
+    val agentAnswers = mutableListOf<Pair<String, UiAgentAnswer>>()
+    val steering = mutableListOf<String>()
+    val savedArtifacts = mutableListOf<String>()
+    override fun saveArtifact(reference: String) { savedArtifacts += reference }
+    override fun answerAgentInteraction(id: String, answer: UiAgentAnswer, onAccepted: (Boolean) -> Unit) {
+        agentAnswers += id to answer; onAccepted(true)
+    }
+    override fun steerDesktopTask(text: String, onAccepted: (Boolean) -> Unit) {
+        steering += text; onAccepted(true)
+    }
     override fun setDesktopAgentMode(enabled: Boolean) { onMode(enabled) }
     override fun cancelDesktopTask() { stopRequests++ }
     override fun pair(payload: String) { pairings += payload }
     override fun consumePairInfo() { consumed++; onConsume() }
     override fun reconnect() { reconnectRequests++ }
-    override fun disconnect() = Unit
+    override fun disconnect() { disconnectRequests++ }
     override fun syncNow() { syncRequests++ }
     override fun selectConversation(id: String) { selected += id; onSelect(id) }
     override fun newConversation() { onNew() }

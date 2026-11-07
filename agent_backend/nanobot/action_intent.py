@@ -32,7 +32,7 @@ _EXPLANATORY = re.compile(
     r"recommend\b|compare\b|review\b|translate\b|summari[sz]e\b|list\b|"
     r"research\b|find\b|search\b)", re.I)
 _ZH_ACTIONS = (
-    r"打开|启动|进入|访问|关闭|切换到|最大化|最小化|刷新|"
+    r"打开|启动|进入|访问|关闭|切换到|最大化|最小化|刷新|播放|"
     r"点击|单击|双击|右键|左键|点开|点按|点(?:一?下)|"
     r"点赞|点(?:个|一个|一下)?赞|取消点赞|"
     r"勾选|取消勾选|选中|取消选中|选取|"
@@ -47,7 +47,7 @@ _EN_DIRECT = re.compile(
     r"^(?:open|launch|start|close|click|double[ -]?click|right[ -]?click|"
     r"left[ -]?click|tap|type|enter|paste|press|drag|scroll|swipe|"
     r"check|uncheck|tick|untick|select|deselect|maximi[sz]e|minimi[sz]e|"
-    r"navigate\s+to|switch\s+to|go\s+to|visit|refresh|like|unlike)\b", re.I)
+    r"navigate\s+to|switch\s+to|go\s+to|visit|refresh|like|unlike|play)\b", re.I)
 _EN_SETTING = re.compile(
     r"^(?:set|enable|disable|turn\s+on|turn\s+off)\b.{0,160}"
     r"\b(?:checkbox|check\s+box|toggle|switch|field|input|button|window|setting|mode|option)\b", re.I)
@@ -83,3 +83,23 @@ def requires_gui_evidence(task: str) -> bool:
                 or _EN_DIRECT.match(value) or _EN_SETTING.match(value)):
             return True
     return False
+
+
+def requires_visible_desktop(task: str) -> bool:
+    """Add an outcome guard for clearly user-visible work, never grant input.
+
+    Background research remains valid in the temporary browser. A request to
+    leave a video playing or operate the user's current page needs actual
+    desktop evidence instead of a headless tab which closes at task end.
+    """
+    if not isinstance(task, str) or len(task) > 12000:
+        return False
+    visible = re.compile(
+        r"(?:我(?:的|当前的)|当前|正在用的).{0,15}(?:浏览器|页面|网页|窗口|桌面)"
+        r"|(?:打开|点开|播放).{0,50}(?:视频|电影|音乐)"
+        r"|(?:视频|电影|音乐).{0,25}(?:播放|一直开着|保持打开)"
+        r"|点赞|取消点赞"
+        r"|\b(?:my|current|visible)\s+(?:browser|page|tab|window|desktop)\b"
+        r"|\b(?:open|play)\b.{0,60}\b(?:video|movie|music)\b", re.I)
+    return any(requires_gui_evidence(clause) and visible.search(clause)
+               for clause in _CLAUSES.split(unicodedata.normalize("NFKC", task)))

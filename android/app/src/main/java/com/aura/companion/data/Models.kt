@@ -17,11 +17,15 @@ data class ApiConnectionInfo(
     val keySaved: Boolean = false,
     val timeoutSeconds: Int = 30,
     val reasoningEffort: String = "default",
+    val reasoningProfile: String = "auto",
+    val reasoningBudgetTokens: Int = 0,
+    val reasoningMetadata: String? = null,
 )
 
 /** Editable public fields only. The key is supplied separately for a single save. */
 data class ApiConfigDraft(val baseUrl: String = "", val model: String = "", val timeoutSeconds: Int = 30,
-    val reasoningEffort: String = "default", val keySaved: Boolean = false, val source: ApiConfigSource = ApiConfigSource.NONE)
+    val reasoningEffort: String = "default", val keySaved: Boolean = false, val source: ApiConfigSource = ApiConfigSource.NONE,
+    val reasoningProfile: String = "auto", val reasoningBudgetTokens: Int = 0, val reasoningMetadata: String? = null)
 
 data class DeviceInfo(val name: String, val endpointId: String, val ticket: String) {
     val id: String get() = endpointId
@@ -109,10 +113,20 @@ data class AppState(
     val lastSyncedAt: Long? = null,
     val directApi: ApiConnectionInfo = ApiConnectionInfo(),
     val directChatBusy: Boolean = false,
+    val directChatConversationId: String? = null,
     val historyPendingCount: Int = 0,
     val desktopTaskAvailable: Boolean = false,
     val desktopTaskMessage: String = "请先连接电脑后使用电脑 Agent",
     val desktopAgentBusy: Boolean = false,
     val desktopAgentConversationId: String? = null,
+    val agentInteraction: AgentInteraction? = null,
+    val desktopSteeringAvailable: Boolean = false,
+    val agentArtifacts: List<AgentArtifact> = emptyList(),
     val desktopAgentConversations: Set<String> = emptySet(),
+    val characterCards: List<CharacterCardSummary> = emptyList(),
+    val activeCharacterId: String? = "default",
+    val activeCharacterName: String = "鲸鱼娘",
+    val characterSyncBusy: Boolean = false,
+    val characterSyncError: String? = null,
+    val characterLibrarySupported: Boolean = false,
 )

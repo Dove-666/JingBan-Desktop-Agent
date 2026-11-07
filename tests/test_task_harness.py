@@ -94,13 +94,15 @@ class TaskHarnessTests(unittest.TestCase):
             with self.subTest(finish=status), self.assertRaises(HarnessError):
                 self.harness.finish_task(status)
 
-    def test_unfinished_plan_cannot_be_erased_by_empty_or_nonempty_replacement(self):
+    def test_unfinished_plan_can_be_replaced_with_audited_supersession(self):
         self.harness.update_plan([{"content": "read material", "status": "in_progress"},
                                   {"content": "check result", "status": "pending"}])
-        for steps in ([], [{"content": "unrelated done", "status": "completed"}],
-                      [{"content": "read material", "status": "completed"}]):
-            with self.subTest(steps=steps), self.assertRaises(HarnessError):
-                self.harness.update_plan(steps)
+        result = json.loads(self.harness.update_plan(
+            [{"content": "read actual supplied material", "status": "in_progress"}],
+            reason="The earlier filename was only a candidate."))
+        self.assertEqual(len(result["superseded"]), 2)
+        self.assertTrue(all(item["status"] == "superseded" for item in result["superseded"]))
+        self.assertEqual(self.harness.plan[0]["content"], "read actual supplied material")
         self.assert_blocked()
 
     def test_completed_plan_can_be_replaced_and_normal_qa_needs_no_fake_tools(self):
@@ -285,7 +287,7 @@ class TaskHarnessTests(unittest.TestCase):
         self.assertEqual(self.harness.finalize("done")[1], "completed")
 
     def test_unrelated_success_does_not_wash_away_missing_material_error(self):
-        self.harness.record_failure("read_file", {"path": "missing.txt"})
+        self.harness.record_failure("read_file", {"path": "missing.txt"}, classification="required")
         self.wrote("other.txt", "other input")
         self.harness.record_success("read_file", {"path": "other.txt"}, self.files.read("other.txt"))
         self.harness.record_success("system_info", {}, "{}")

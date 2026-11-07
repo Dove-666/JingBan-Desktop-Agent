@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -18,7 +19,7 @@ from PySide6.QtCore import QEvent, QSettings, QThreadPool
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication
 
-from desktop_pet.agents import AgentError, AgentResult, AgentSettings
+from desktop_pet.agents import AgentError, AgentResult, AgentService, AgentSettings
 from desktop_pet.agents.service import _ERROR_MESSAGES as AGENT_ERRORS
 from desktop_pet.api_client import ApiClient, ApiError, ChatReply, parse_reply
 from desktop_pet.chat_controller import ChatController
@@ -61,7 +62,8 @@ class FakeApi(ApiClient):
         self.cancelled = []
 
     def complete_context(self, settings, key, messages, *, output_tokens=1024,
-                         cancellation_event=None, allow_agent_routing=False):
+                         cancellation_event=None, allow_agent_routing=False,
+                         on_delta=None, on_context_exceeded=None):
         self.calls.append({"settings": settings, "messages": messages,
                            "allow_agent_routing": allow_agent_routing,
                            "cancellation_event": cancellation_event})
@@ -344,9 +346,8 @@ class AgentChatRoutingTests(unittest.TestCase):
         self.assertEqual(self.chat.messages[-1]["content"], self.api.reply)
 
     def test_natural_screen_control_and_presentation_commands_reach_computer_agent(self):
-        self.settings.save_agent_gui_api_key(GUI_KEY)
         self.settings.save_agent_settings(replace(self.settings.load_agent_settings(),
-            computer_enabled=True, gui_model="fixture-vision"))
+            computer_enabled=True))
         self.chat.refresh_agent_settings()
         self.api.route = {"kind": "computer", "task": "模型改写的目标"}
         cases = ["操控我的屏幕，用wps制作一个简单的ppt", "控制我的电脑，用WPS制作演示文稿",
@@ -403,7 +404,7 @@ class AgentChatRoutingTests(unittest.TestCase):
         self.assertEqual(emotions.at(emotions.count() - 1)[0], "happy")
         self.assertFalse(any(item["content"] == self.api.reply for item in archived if item["role"] == "assistant"))
 
-    def test_missing_gui_configuration_fails_before_agent_or_execution_reservation(self):
+    def test_disabled_computer_permission_fails_before_agent_or_execution_reservation(self):
         self.api.route = {"kind": "computer", "task": "打开浏览器"}
         self.assertTrue(self.chat.send("帮我打开浏览器"))
         self.finish()
@@ -415,34 +416,65 @@ class AgentChatRoutingTests(unittest.TestCase):
         self.assertEqual(self.chat.error_action, "settings")
         self.assertTrue(self.chat.message_retry_state(self.chat.current_conversation_id, archived[0]["id"])["available"])
 
-    def test_configured_gui_routes_with_separate_credential(self):
-        configured = replace(self.settings.load_agent_settings(), computer_enabled=True, gui_model="ui-tars-fixture")
+    def test_gui_route_readiness_and_queue_reuse_global_api_despite_old_separate_config(self):
+        configured = replace(self.settings.load_agent_settings(), computer_enabled=True,
+                             gui_base_url="https://old-gui.example.invalid/v1",
+                             gui_model="old-ui-tars-fixture", gui_provider="ui-tars-1.0",
+                             gui_coordinate_profile="native")
         self.settings.save_agent_settings(configured)
         self.settings.save_agent_gui_api_key(GUI_KEY)
         self.chat.refresh_agent_settings()
+        api = self.settings.load_api_settings()
+        self.assertTrue(self.chat._capture_agent_queue_policy())
+        policy = self.chat._current_agent_queue_policy()
+        self.assertEqual(policy["key"], KEY)
+        self.assertEqual(policy["gui_key"], KEY)
+        self.assertEqual(policy["agent"].gui_base_url, api.base_url)
+        self.assertEqual(policy["agent"].gui_model, api.model)
+        with patch.object(AgentService, "readiness", return_value={"available": True}) as readiness:
+            self.assertTrue(self.chat.agent_readiness()["available"])
+        current_settings, current_key, current_context = readiness.call_args.args
+        self.assertEqual(current_settings.gui_base_url, api.base_url)
+        self.assertEqual(current_settings.gui_model, api.model)
+        self.assertEqual(current_key, KEY)
+        self.assertEqual(current_context["api"], api)
+        self.assertEqual(current_context["gui_api_key"], KEY)
         self.api.route = {"kind": "computer", "task": "模型描述，不作为实际任务"}
         self.assertTrue(self.chat.send("帮我打开浏览器"))
         self.finish()
         self.assertEqual(len(self.agent.calls), 1)
         self.assertEqual(self.agent.calls[0]["request"].kind, "computer")
-        self.assertEqual(self.agent.calls[0]["context"]["gui_api_key"], GUI_KEY)
+        execution = self.agent.calls[0]
+        self.assertEqual(execution["key"], KEY)
+        self.assertEqual(execution["context"]["api"], api)
+        self.assertEqual(execution["context"]["gui_api_key"], KEY)
+        self.assertEqual(execution["settings"].gui_base_url, api.base_url)
+        self.assertEqual(execution["settings"].gui_model, api.model)
+        self.assertEqual((execution["settings"].gui_provider,
+                          execution["settings"].gui_coordinate_profile), ("ui-tars-1.5", "pixel"))
+        trace = self.chat.messages[-1]["metadata"]["execution"]
+        self.assertEqual(trace["context"]["agent_model"], api.model)
+        self.assertEqual(trace["context"]["gui_model"], api.model)
 
-    def test_gui_enabled_without_saved_key_cannot_reserve_or_execute(self):
-        configured = replace(self.settings.load_agent_settings(), computer_enabled=True, gui_model="ui-tars-fixture")
+    def test_gui_enabled_without_separate_model_or_key_uses_global_configuration(self):
+        self.assertEqual(self.settings.get_agent_gui_api_key(), "")
+        configured = replace(self.settings.load_agent_settings(), computer_enabled=True)
         self.settings.save_agent_settings(configured)
         self.chat.refresh_agent_settings()
         self.api.route = {"kind": "computer", "task": "打开浏览器"}
         self.assertTrue(self.chat.send("帮我打开浏览器"))
         self.finish()
-        self.assertEqual(self.agent.calls, [])
-        self.assertIn("API Key", self.chat.error)
+        self.assertEqual(len(self.agent.calls), 1)
+        execution = self.agent.calls[0]
+        self.assertEqual(execution["context"]["gui_api_key"], KEY)
+        self.assertEqual(execution["settings"].gui_model, self.settings.load_api_settings().model)
+        self.assertEqual(self.chat.error, "")
         archived = self.chat.store.load_messages(self.chat.current_conversation_id)
-        self.assertFalse(archived[0]["metadata"].get("agent_execution_started", False))
+        self.assertTrue(archived[0]["metadata"].get("agent_execution_started", False))
 
     def test_gui_needs_user_status_reaches_saved_reply_and_speech_without_reexecution(self):
-        configured = replace(self.settings.load_agent_settings(), computer_enabled=True, gui_model="ui-tars-fixture")
+        configured = replace(self.settings.load_agent_settings(), computer_enabled=True)
         self.settings.save_agent_settings(configured)
-        self.settings.save_agent_gui_api_key(GUI_KEY)
         self.chat.refresh_agent_settings()
         self.api.route = {"kind": "computer", "task": "模型的任务建议"}
         self.agent.result = AgentResult("登录页已打开，请在窗口中完成验证。", "surprised",
@@ -453,7 +485,7 @@ class AgentChatRoutingTests(unittest.TestCase):
         conversation_id = self.chat.current_conversation_id
         archived = self.chat.store.load_messages(conversation_id)
         saved = archived[-1]
-        self.assertIn("任务尚未确认完成", saved["content"])
+        self.assertEqual(saved["content"], self.agent.result.reply)
         self.assertNotIn("需要你接手完成当前步骤", saved["content"])
         self.assertIn(self.agent.result.reply, saved["content"])
         self.assertEqual(saved["metadata"]["emotion"], "surprised")
@@ -675,6 +707,7 @@ class AgentChatRoutingTests(unittest.TestCase):
 
     def test_saved_gui_key_is_redacted_before_tool_delegation_and_final_reply(self):
         self.settings.save_agent_gui_api_key(GUI_KEY)
+        self.chat.refresh_agent_queue_policy()
         self.agent.result = AgentResult("任务模型错误回显：" + GUI_KEY, "neutral")
         self.assertTrue(self.chat.send("帮我创建一个测试文件，误粘贴资料：" + GUI_KEY))
         self.finish()

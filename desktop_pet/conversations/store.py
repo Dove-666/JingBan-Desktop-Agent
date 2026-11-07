@@ -8,25 +8,32 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
 import threading
 from typing import Iterator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from .chronology import register_timestamp_order
-from ..chat_images import IMAGE_ERRORS
+from ..chat_images import IMAGE_ERRORS, IMAGE_ID
 from ..agents.service import _ERROR_MESSAGES as AGENT_ERRORS
 from ..execution_trace import normalize_execution, merge_execution, interrupted_execution
 from ..agent_presentation import AGENT_ACTIVITY, public_agent_trace_sql
 
 
 SCHEMA_VERSION = 3
-REMOTE_SYNC_SCHEMA_VERSION = 7
+REMOTE_SYNC_SCHEMA_VERSION = 11
 REMOTE_SYNC_MAX_CHANGES = 10000
 REMOTE_SYNC_MAX_CHANGE_BYTES = 32 * 1024 * 1024
 REMOTE_SYNC_PRUNE_BATCH = 512
+
+_IMAGE_REFERENCE_SOURCES = """SELECT 'message' AS source_kind, m.id AS source_id,
+    m.id AS message_id, m.conversation_id, m.metadata FROM messages AS m
+    UNION ALL SELECT 'event', e.id, m.id, e.conversation_id, e.metadata
+    FROM screen_events AS e LEFT JOIN messages AS m
+    ON m.screen_event_id=e.id AND m.conversation_id=e.conversation_id"""
 
 
 def maintain_remote_sync(connection: sqlite3.Connection) -> None:
@@ -76,6 +83,12 @@ def remote_sync_projection(entity: str, prefix: str = "") -> str:
     else:
         raise ValueError("Unknown synchronization entity")
     pairs = [f"'{name}', {column(name)}" for name in fields]
+    if entity == "conversation":
+        # Keep this a JSON boolean, rather than SQLite's integer 0/1. Peers
+        # must distinguish an explicitly automatic title from an older host
+        # which did not publish title provenance at all.
+        pairs.append("'title_manual', json(CASE WHEN " + column("title_manual")
+                     + " = 1 THEN 'true' ELSE 'false' END)")
     if entity == "message":
         metadata = column("metadata")
         status = f"json_extract({metadata}, '$.request_status')"
@@ -83,6 +96,7 @@ def remote_sync_projection(entity: str, prefix: str = "") -> str:
         # CASE must guard json_extract itself: older damaged metadata must not
         # make otherwise unrelated local archive writes start failing.
         pairs.append("'request_status', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
+                     + status + " = 'queued' THEN 'pending' WHEN "
                      + status + " IN ('pending','failed','complete','cancelled','interrupted') THEN "
                      + status + " END END")
         pairs.append("'reply_to', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
@@ -131,6 +145,23 @@ def _identifier(value: str) -> str:
         raise StoreError("会话或消息标识无效。")
     if any(ord(char) < 32 for char in value):
         raise StoreError("会话或消息标识无效。")
+    return value
+
+
+def _queued_identifier(value: str) -> str:
+    try:
+        parsed = UUID(value) if isinstance(value, str) and len(value) == 36 else None
+        if parsed is None or parsed.int == 0 or str(parsed) != value:
+            raise ValueError()
+    except (ValueError, TypeError, AttributeError):
+        raise StoreError("排队任务标识无效。") from None
+    return value
+
+
+def _queued_scope(value: str) -> str:
+    if (not isinstance(value, str) or len(value) != 64
+            or any(char not in "0123456789abcdef" for char in value)):
+        raise StoreError("排队任务授权范围无效。")
     return value
 
 
@@ -245,10 +276,10 @@ class ConversationStore:
             raise StoreError("远程同步数据库来自更新版本，请升级程序后再打开。")
         if version == REMOTE_SYNC_SCHEMA_VERSION:
             return
-        if version in (1, 2, 3, 4, 5, 6):
+        if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10):
             if version == 1:
                 ConversationStore._migrate_remote_retention(connection)
-            ConversationStore._migrate_remote_image_refs(connection)
+            ConversationStore._migrate_remote_image_refs(connection, publish_conversations=True)
             return
         statements = (
             """CREATE TABLE remote_sync_changes (
@@ -354,23 +385,43 @@ class ConversationStore:
                            (2,))
 
     @staticmethod
-    def _migrate_remote_image_refs(connection: sqlite3.Connection) -> None:
-        """Refresh message projection: image refs plus current safe Agent fields.
+    def _migrate_remote_image_refs(connection: sqlite3.Connection, *,
+                                   publish_conversations: bool = False) -> None:
+        """Refresh public projections without rewriting immutable journal rows.
 
-        v7 refreshes installed SQL triggers for the bounded public execution
-        trace as well as current safe error/activity labels for paired peers.
+        v11 publishes direct-request delegation labels in existing traces.
+        v10 maps queued to wire pending and refreshes startup error labels;
+        v9 publishes boolean title provenance. Already caught-up clients
+        receive conversation and public execution records; old journal payloads, operation
+        receipts, tombstones and archive data remain unchanged.
         """
         connection.execute("DELETE FROM remote_sync_snapshots")
-        after = remote_sync_projection("message", "NEW.")
-        before = remote_sync_projection("message", "OLD.")
-        for operation in ("insert", "update"):
-            connection.execute(f"DROP TRIGGER remote_sync_message_{operation}")
-            condition = f" WHEN {before} IS NOT {after}" if operation == "update" else ""
-            connection.execute(f"""CREATE TRIGGER remote_sync_message_{operation}
-                AFTER {operation.upper()} ON messages{condition}
-                BEGIN INSERT INTO remote_sync_changes
-                    (entity, entity_id, conversation_id, deleted, payload)
-                    VALUES ('message', NEW.id, NEW.conversation_id, 0, {after}); END""")
+        for entity, table in (("message", "messages"), ("conversation", "conversations")):
+            after = remote_sync_projection(entity, "NEW.")
+            before = remote_sync_projection(entity, "OLD.")
+            cid = "NEW.id" if entity == "conversation" else "NEW.conversation_id"
+            for operation in ("insert", "update"):
+                connection.execute(f"DROP TRIGGER remote_sync_{entity}_{operation}")
+                condition = f" WHEN {before} IS NOT {after}" if operation == "update" else ""
+                connection.execute(f"""CREATE TRIGGER remote_sync_{entity}_{operation}
+                    AFTER {operation.upper()} ON {table}{condition}
+                    BEGIN INSERT INTO remote_sync_changes
+                        (entity, entity_id, conversation_id, deleted, payload)
+                        VALUES ('{entity}', NEW.id, {cid}, 0, {after}); END""")
+        if publish_conversations:
+            projection = remote_sync_projection("conversation")
+            connection.execute(f"""INSERT INTO remote_sync_changes
+                (entity, entity_id, conversation_id, deleted, payload)
+                SELECT 'conversation', id, id, 0, {projection} FROM conversations ORDER BY id""")
+            message_projection = remote_sync_projection("message", "record.")
+            connection.execute(f"""INSERT INTO remote_sync_changes
+                (entity, entity_id, conversation_id, deleted, payload)
+                SELECT 'message', record.id, record.conversation_id, 0, {message_projection} FROM messages AS record
+                WHERE CASE WHEN json_valid(record.metadata)
+                    THEN json_extract(record.metadata, '$.request_status') = 'queued' ELSE 0 END
+                    OR json_type({message_projection}, '$.agent_trace') = 'object'
+                ORDER BY record.id""")
+            maintain_remote_sync(connection)
         connection.execute("UPDATE remote_sync_schema SET version = ? WHERE id = 1",
                            (REMOTE_SYNC_SCHEMA_VERSION,))
 
@@ -535,6 +586,182 @@ class ConversationStore:
                     event["comment"] = message["content"]
                     message["screen_event"] = event
             return messages
+
+    def image_reference_summary(self, image_ids) -> dict[str, dict[str, int]]:
+        """Worker-only reference counts, without returning archive identities."""
+        return self._image_reference_state(image_ids, include_revision=False)
+
+    def image_reference_snapshot(self, image_ids) -> dict[str, dict[str, int | str]]:
+        """Counts and an opaque digest of each exact message/CID reference set."""
+        return self._image_reference_state(image_ids, include_revision=True)
+
+    def _image_reference_state(self, image_ids, *, include_revision):
+        """Worker-only counts across archive metadata, without reading text.
+
+        Optional root references may be absent/null. A present pair follows
+        the existing protocol: an array of objects with a required image_id.
+        Ambiguous or corrupt references fail closed before returning counts.
+        """
+        if (not isinstance(image_ids, (list, tuple)) or len(image_ids) > 50
+                or any(not isinstance(value, str) or not IMAGE_ID.fullmatch(value) for value in image_ids)):
+            raise StoreError("图片引用查询参数无效。")
+        wanted = tuple(dict.fromkeys(image_ids))
+        if not wanted:
+            return {}
+        damaged = "聊天记录图片引用信息损坏，暂时无法确认图片使用情况。"
+        sources = "WITH sources AS (" + _IMAGE_REFERENCE_SOURCES + ")"
+        with self._connection() as connection:
+            # SELECT does not start a transaction in Python's default SQLite
+            # mode. Pin one read snapshot for validation and the final counts.
+            connection.execute("BEGIN")
+            invalid_json = connection.execute(sources + """ SELECT EXISTS(
+                SELECT 1 FROM sources WHERE CASE WHEN json_valid(metadata)
+                THEN json_type(metadata) IS NOT 'object' ELSE 1 END)""").fetchone()[0]
+            if invalid_json:
+                raise StoreError(damaged)
+            invalid_reference = connection.execute(sources + """,
+                fields AS (SELECT s.source_kind,s.source_id,j.key,j.type,j.atom,j.value,
+                    instr(json_extract(s.metadata,j.fullkey,j.fullkey),?) AS has_nul
+                    FROM sources AS s,json_each(s.metadata) AS j
+                    WHERE j.key IN ('image_id','context_image_id','desktop_image_id','context_image_pair')),
+                pairs AS (SELECT f.source_kind,f.source_id,p.key AS pair_index,p.type,p.value
+                    FROM fields AS f,json_each(CASE WHEN f.key='context_image_pair' AND f.type='array'
+                        THEN f.value ELSE '[]' END) AS p WHERE f.key='context_image_pair'),
+                pair_ids AS (SELECT p.source_kind,p.source_id,p.pair_index,j.type,j.atom,
+                    instr(json_extract(p.value,j.fullkey,j.fullkey),?) AS has_nul
+                    FROM pairs AS p LEFT JOIN json_each(CASE WHEN p.type='object'
+                        THEN p.value ELSE '{}' END) AS j ON j.key='image_id')
+                SELECT EXISTS(
+                    SELECT 1 FROM fields WHERE
+                        (key IN ('image_id','context_image_id','desktop_image_id') AND NOT
+                            (type='null' OR (type='text' AND length(atom)=64
+                                AND length(CAST(atom AS BLOB))=64 AND atom NOT GLOB '*[^0-9a-f]*' AND has_nul=0)))
+                        OR (key='context_image_pair' AND type NOT IN ('null','array'))
+                    UNION ALL SELECT 1 FROM fields GROUP BY source_kind,source_id,key HAVING count(*)>1
+                    UNION ALL SELECT 1 FROM pairs WHERE type IS NOT 'object'
+                    UNION ALL SELECT 1 FROM pair_ids WHERE type IS NOT 'text'
+                        OR length(atom)!=64 OR length(CAST(atom AS BLOB))!=64 OR atom GLOB '*[^0-9a-f]*' OR has_nul!=0
+                    UNION ALL SELECT 1 FROM pair_ids
+                        GROUP BY source_kind,source_id,pair_index HAVING count(*)>1)""", (r"\u0000", r"\u0000")).fetchone()[0]
+            if invalid_reference:
+                raise StoreError(damaged)
+            placeholders = ",".join("(?)" for _ in wanted)
+            reference_cte = ("WITH wanted(image_id) AS (VALUES " + placeholders + "), sources AS ("
+                + _IMAGE_REFERENCE_SOURCES + """), refs AS (
+                    SELECT s.message_id,s.conversation_id,j.atom AS image_id
+                    FROM sources AS s,json_each(s.metadata) AS j
+                    WHERE j.key IN ('image_id','context_image_id','desktop_image_id') AND j.type='text'
+                    UNION ALL SELECT s.message_id,s.conversation_id,i.atom
+                    FROM sources AS s,json_each(s.metadata) AS f,
+                        json_each(CASE WHEN f.key='context_image_pair' AND f.type='array'
+                            THEN f.value ELSE '[]' END) AS p,json_each(p.value) AS i
+                    WHERE f.key='context_image_pair' AND i.key='image_id' AND i.type='text')""")
+            rows = connection.execute(reference_cte + """ SELECT w.image_id,count(DISTINCT r.message_id) AS message_count,
+                    count(DISTINCT r.conversation_id) AS conversation_count,
+                    max(CASE WHEN r.image_id IS NOT NULL AND r.message_id IS NULL THEN 1 ELSE 0 END) AS orphan
+                FROM wanted AS w LEFT JOIN refs AS r ON r.image_id=w.image_id GROUP BY w.image_id""", wanted).fetchall()
+            if any(row["orphan"] for row in rows):
+                raise StoreError("图片引用关系无法确认，请保留聊天记录后重试。")
+            counts = {row["image_id"]: {"message_count": row["message_count"],
+                      "conversation_count": row["conversation_count"]} for row in rows}
+            if include_revision:
+                hashers = {image_id: hashlib.sha256(b"aura.image-reference-set.v1\0") for image_id in wanted}
+                for image_id, hasher in hashers.items():
+                    encoded = image_id.encode("utf-8")
+                    hasher.update(len(encoded).to_bytes(8, "big"))
+                    hasher.update(encoded)
+                # Stream only identity columns. Length prefixes distinguish
+                # arbitrary legacy IDs without a delimiter collision, while
+                # DISTINCT removes duplicate paths for the same message.
+                for reference in connection.execute(reference_cte + """
+                    SELECT DISTINCT r.image_id,r.message_id,r.conversation_id
+                    FROM refs AS r JOIN wanted AS w ON w.image_id=r.image_id
+                    ORDER BY r.image_id,r.message_id,r.conversation_id""", wanted):
+                    hasher = hashers[reference["image_id"]]
+                    for name in ("image_id", "message_id", "conversation_id"):
+                        encoded = _identifier(reference[name]).encode("utf-8")
+                        hasher.update(len(encoded).to_bytes(8, "big"))
+                        hasher.update(encoded)
+                for image_id, hasher in hashers.items():
+                    counts[image_id]["reference_revision"] = hasher.hexdigest()
+            return {image_id: counts[image_id] for image_id in wanted}
+
+    def read_conversation_generation(self, conversation_id: str) -> str | None:
+        """Read the same first-message identity without materializing history.
+
+        Timestamp normalization and rowid tie-breaking must match load_messages:
+        imports may use different UTC offsets or arrive out of chronological
+        order. This is an observation, not a new execution authorization.
+        """
+        _identifier(conversation_id)
+        with self._connection() as connection:
+            row = connection.execute("""SELECT id FROM messages WHERE conversation_id = ?
+                ORDER BY aura_timestamp(created_at) ASC, rowid ASC LIMIT 1""", (conversation_id,)).fetchone()
+            return row[0] if row is not None else None
+
+    def read_message(self, conversation_id: str, message_id: str) -> dict | None:
+        """Read one exact host queue identity using an operation-owned connection."""
+        _queued_identifier(conversation_id)
+        _queued_identifier(message_id)
+        with self._connection() as connection:
+            return _decoded(connection.execute("SELECT * FROM messages WHERE conversation_id = ? AND id = ?",
+                (conversation_id, message_id)).fetchone())
+
+    def save_queued_agent_message(self, conversation_id: str, message_id: str, content: str, *,
+                                  origin_peer_id: str, operation_id: str,
+                                  authorization_scope: str, settings_scope: str,
+                                  image_id: str | None = None,
+                                  created_at: str | None = None) -> dict:
+        """Persist host-approved queue origin atomically; never mint a grant.
+
+        Remote imports cannot set this private origin. Retries must match its
+        immutable identity and return the existing row without overwriting a
+        newer execution/status/result. Existing conversations only.
+        """
+        _queued_identifier(conversation_id)
+        _queued_identifier(message_id)
+        _queued_identifier(operation_id)
+        for value in (origin_peer_id, authorization_scope, settings_scope):
+            _queued_scope(value)
+        if image_id is not None:
+            _queued_scope(image_id)
+        _text(content)
+        timestamp = _text(created_at) if created_at is not None else _now()
+        try:
+            content.encode("utf-8")
+            timestamp.encode("utf-8")
+        except UnicodeError:
+            raise StoreError("排队消息文本格式无效。") from None
+        origin = {"version": 1, "peer_id": origin_peer_id, "request_id": operation_id,
+                  "authorization_scope": authorization_scope, "settings_scope": settings_scope}
+        metadata = {"request_status": "queued", "execution_mode": "agent", "agent_queue_origin": origin}
+        if image_id is not None:
+            metadata["image_id"] = image_id
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            if not connection.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone():
+                raise StoreError("排队任务对应的会话不存在。")
+            if connection.execute("""SELECT 1 FROM remote_sync_tombstones
+                    WHERE (entity = 'message' AND entity_id = ?)
+                        OR (entity = 'conversation' AND entity_id = ?) LIMIT 1""",
+                    (message_id, conversation_id)).fetchone():
+                raise StoreError("已删除的排队消息不能恢复。")
+            existing = _decoded(connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone())
+            if existing is not None:
+                previous = existing["metadata"]
+                if (existing["conversation_id"] != conversation_id or existing["role"] != "user"
+                        or existing["source"] != "user" or existing.get("screen_event_id") is not None
+                        or existing["content"] != content or previous.get("execution_mode") != "agent"
+                        or previous.get("agent_queue_origin") != origin or previous.get("image_id") != image_id):
+                    raise StoreError("排队消息身份或内容发生冲突。")
+                return existing
+            connection.execute("""INSERT INTO messages
+                (id, conversation_id, role, content, created_at, source, metadata)
+                VALUES (?, ?, 'user', ?, ?, 'user', ?)""",
+                (message_id, conversation_id, content, timestamp, _metadata(metadata)))
+            self._touch(connection, conversation_id, timestamp)
+            return _decoded(connection.execute("SELECT * FROM messages WHERE id = ? AND conversation_id = ?",
+                (message_id, conversation_id)).fetchone())
 
     def append_message(self, conversation_id: str, role: str, content: str, source: str,
                        *, message_id: str | None = None, metadata: dict | None = None,

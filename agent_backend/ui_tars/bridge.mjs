@@ -1,5 +1,6 @@
 /** UI-TARS protocol controller. This module never imports a native operator. */
-import { sanitizeVerification, verificationReport } from './goal-verifier.mjs';
+import { sanitizeFeedback, sanitizeVerification, verificationReport } from './goal-verifier.mjs';
+import { validateStructuredObservations } from './structured-observations.mjs';
 export const PROTOCOL_VERSION = 1;
 export const PROVIDERS = Object.freeze({
   'ui-tars-1.5': '1.5',
@@ -73,12 +74,18 @@ export function validateRun(message) {
     throw error('INVALID_REQUEST', 'config.apiKey must be a single-line string.');
   }
   text(message.task, 'task', 16000); // Validate without rewriting the authorized original.
+  const subtask = message.subtask === undefined ? undefined : text(message.subtask, 'subtask', 8000);
   const referenceContext = message.reference_context ?? message.referenceContext ?? '';
   if (typeof referenceContext !== 'string') throw error('INVALID_REQUEST', 'reference_context must be text.');
+  let structuredObservations;
+  try { structuredObservations = validateStructuredObservations(message.structured_observations); }
+  catch { throw error('INVALID_REQUEST', 'Host structured observations do not match the bounded evidence schema.'); }
   return {
     id: message.id,
     task: message.task,
+    ...(subtask && { subtask }),
     referenceContext,
+    structuredObservations,
     config: { baseURL: url.toString(), apiKey, model: text(raw.model, 'config.model', 256), provider, coordinateProfile },
     options: {
       // Zero is the wire sentinel for unlimited turns. Infinity stays inside
@@ -95,7 +102,7 @@ export function validateRun(message) {
 // SDK errors can contain the serialized OpenAI client. Never pass their text or stack out.
 const SAFE_ERRORS = Object.freeze({
   SDK_UNAVAILABLE: 'UI-TARS SDK or the native Windows operator is unavailable. Run the local dependency probe.',
-  UNSUPPORTED_PLATFORM: 'This AURA GUI bridge currently supports Windows only.',
+  UNSUPPORTED_PLATFORM: 'The Jingban GUI bridge currently supports Windows only.',
   STEP_LIMIT: 'The GUI task reached its configured step limit.',
   SCREENSHOT_FAILED: 'UI-TARS could not capture the desktop.',
   DESKTOP_LOCKED: 'The desktop is locked or a secure desktop is active. Unlock or finish the secure prompt locally.',
@@ -106,6 +113,7 @@ const SAFE_ERRORS = Object.freeze({
   CONTEXT_LENGTH_EXCEEDED: 'The complete GUI task context exceeds the model service window. Context was not silently truncated or retried.',
   ACTION_FAILED: 'The GUI action could not be executed.',
   UNSUPPORTED_ACTION: 'The model requested an unsupported GUI action.',
+  NO_PROGRESS: 'The same action against an unchanged observation produced no new evidence. Re-observe and choose a different approach.',
   SDK_FAILED: 'The GUI task failed inside UI-TARS.',
 });
 
@@ -117,6 +125,9 @@ export class BridgeController {
     this.clearTimer = clearTimer;
     this.active = null;
     this.closed = false;
+    this.sessionEvidence = null;
+    this.sessionTask = null;
+    this.sessionOwner = null;
   }
 
   send(event) { this.emit({ protocol: PROTOCOL_VERSION, ...event }); }
@@ -132,7 +143,7 @@ export class BridgeController {
     if (message?.type === 'ping') { this.ready(id); return; }
     if (message?.type === 'abort') {
       if (!id || this.active?.id !== id) {
-        this.send({ type: 'error', id, code: 'NOT_RUNNING', message: 'No matching GUI task is running.' });
+        if (message.quiet !== true) this.send({ type: 'error', id, code: 'NOT_RUNNING', message: 'No matching GUI task is running.' });
       } else {
         this.abort('cancelled');
       }
@@ -173,7 +184,14 @@ export class BridgeController {
 
   async execute(run, current) {
     try {
-      current.handle = await this.createAgent({ ...run, signal: current.controller.signal,
+      // Explicit host subcalls use <parent-id>:<action-digest>. A steering
+      // correction changes authorization text, not the identity of actual past
+      // observations. Legacy direct callers remain scoped to their task text.
+      const owner = run.id.includes(':') ? run.id.slice(0, run.id.lastIndexOf(':')) : run.task;
+      if (this.sessionOwner !== owner) this.sessionEvidence = null;
+      this.sessionOwner = owner;
+      this.sessionTask = run.task;
+      current.handle = await this.createAgent({ ...run, priorEvidence: this.sessionEvidence, signal: current.controller.signal,
         onEvent: (event) => {
           if (this.active !== current || current.reason) return;
           current.steps = Math.max(current.steps, Number.isInteger(event.step) ? event.step : 0);
@@ -189,6 +207,7 @@ export class BridgeController {
         } });
       if (current.reason) current.handle.stop?.();
       const result = await current.handle.run(run.task);
+      if (result?.__evidence) this.sessionEvidence = result.__evidence;
       let status = current.reason ?? result?.status;
       if (!['completed', 'cancelled', 'timed_out', 'needs_user'].includes(status)) {
         throw error('SDK_FAILED', SAFE_ERRORS.SDK_FAILED);
@@ -204,14 +223,21 @@ export class BridgeController {
           status === 'timed_out' ? 'GUI 操作已超时停止。' : 'GUI 操作已停止。';
       }
       if (run.config.apiKey) summary = summary.split(run.config.apiKey).join('[redacted]');
-      this.send({ type: 'final', id: run.id, status, summary, steps: current.steps, verification });
+      const effectState = ['not_dispatched', 'confirmed', 'uncertain'].includes(result?.effect_state) ? result.effect_state : undefined;
+      const feedback = sanitizeFeedback(result?.feedback, run.config.apiKey);
+      this.send({ type: 'final', id: run.id, status, summary, steps: current.steps, verification,
+        ...(effectState && { effect_state: effectState }),
+        ...(feedback && { feedback }),
+        ...(Number.isSafeInteger(result?.actions_dispatched) && result.actions_dispatched >= 0 ? { actions_dispatched: result.actions_dispatched } : {}) });
     } catch (exception) {
       if (current.reason) {
         this.send({ type: 'final', id: run.id, status: current.reason,
           summary: current.reason === 'timed_out' ? 'GUI 操作已超时停止。' : 'GUI 操作已停止。', steps: current.steps });
       } else {
         const code = Object.hasOwn(SAFE_ERRORS, exception?.code) ? exception.code : 'SDK_FAILED';
-        this.send({ type: 'error', id: run.id, code, message: SAFE_ERRORS[code], steps: current.steps });
+        this.send({ type: 'error', id: run.id, code, message: SAFE_ERRORS[code], steps: current.steps,
+          ...(['not_dispatched', 'confirmed', 'uncertain'].includes(exception?.effect_state) ? { effect_state: exception.effect_state } : {}),
+          ...(Number.isSafeInteger(exception?.actions_dispatched) && exception.actions_dispatched >= 0 ? { actions_dispatched: exception.actions_dispatched } : {}) });
       }
     } finally {
       if (current.timer !== null) this.clearTimer(current.timer);
@@ -221,5 +247,5 @@ export class BridgeController {
     }
   }
 
-  close() { this.closed = true; this.abort('cancelled'); }
+  close() { this.closed = true; this.sessionEvidence = null; this.sessionTask = null; this.sessionOwner = null; this.abort('cancelled'); }
 }

@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, fields, replace
+from dataclasses import asdict, dataclass, field, fields, is_dataclass, replace
 import math
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from .contracts import AgentValidationError
+from ..bundle_runtime import bundled_python_executable, frozen_workspace_root
 
 
 GUI_CREDENTIAL_ACCOUNT = "agent-gui-api-key"
 GUI_PROVIDERS = ("ui-tars-1.5", "ui-tars-1.0", "doubao-1.5-15b", "doubao-1.5-20b")
+_SHARED_GUI_FIELDS = frozenset(("gui_provider", "gui_coordinate_profile", "gui_base_url", "gui_model"))
 _PREFIX = "agents/"
 _ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_PYTHON = str(_ROOT / "agent_backend" / "nanobot" / ".venv" / "Scripts" / "python.exe")
+DEFAULT_PYTHON = str(bundled_python_executable() or _ROOT / "agent_backend" / "nanobot" / ".venv" / "Scripts" / "python.exe")
 AGENT_WORKSPACE_ROOT = _ROOT / "agent_workspace"
+
+
+def agent_workspace_root():
+    return frozen_workspace_root() or AGENT_WORKSPACE_ROOT
 
 
 def _valid_text(value, *, maximum=2048, empty=True):
@@ -45,10 +51,10 @@ def validate_api(base_url, model, *, require_model=True):
 class AgentSettings:
     enabled: bool = True
     tools_enabled: bool = True
-    computer_enabled: bool = False
+    computer_enabled: bool = True
     backend: str = "nanobot"
     python_executable: str = DEFAULT_PYTHON
-    workspace: str = str(AGENT_WORKSPACE_ROOT)
+    workspace: str = field(default_factory=lambda: str(agent_workspace_root()))
     timeout_seconds: float = 0.0  # Zero means no whole-task deadline; Stop still applies.
     max_steps: int = 0  # Zero means no iteration limit; timeout/Stop still apply.
     gui_provider: str = "ui-tars-1.5"
@@ -65,7 +71,7 @@ class AgentSettings:
         for value in (self.python_executable, self.workspace):
             if not _valid_text(value) or (value and not Path(value).is_absolute()):
                 raise AgentValidationError("Agent Python 和工作目录必须是绝对路径，或留空。")
-        if self.workspace and not Path(self.workspace).resolve().is_relative_to(AGENT_WORKSPACE_ROOT.resolve()):
+        if self.workspace and not Path(self.workspace).resolve().is_relative_to(agent_workspace_root().resolve()):
             raise AgentValidationError("Agent 工作目录必须位于项目的 agent_workspace 文件夹内。")
         if self.python_executable:
             executable = Path(self.python_executable)
@@ -88,12 +94,31 @@ class AgentSettings:
         validate_api(self.gui_base_url, self.gui_model, require_model=False)
 
 
-def load_agent_settings(store) -> AgentSettings:
+def shared_api_settings(settings: AgentSettings, api) -> AgentSettings:
+    """Derive computer-operation routing from the one global API snapshot.
+
+    No preferences or credentials are read or written here. Legacy GUI fields
+    remain a compatible internal data shape, never a second runtime route.
+    """
+    if not isinstance(settings, AgentSettings):
+        raise AgentValidationError("Agent 设置类型无效。")
+    values = asdict(api) if is_dataclass(api) else api
+    if not isinstance(values, dict):
+        raise AgentValidationError("Agent 模型配置格式无效。")
+    base_url, model = values.get("base_url"), values.get("model")
+    validate_api(base_url, model, require_model=False)
+    return replace(settings, gui_provider="ui-tars-1.5", gui_coordinate_profile="pixel",
+                   gui_base_url=base_url, gui_model=model)
+
+
+def load_agent_settings(store, *, api=None) -> AgentSettings:
     """Read a QSettings-compatible store, disabling malformed configuration."""
     defaults = AgentSettings()
     values = {}
     try:
         for field in fields(defaults):
+            if api is not None and field.name in _SHARED_GUI_FIELDS:
+                continue
             default = getattr(defaults, field.name)
             value = store.value(_PREFIX + field.name, default)
             if type(default) is bool:
@@ -107,6 +132,8 @@ def load_agent_settings(store) -> AgentSettings:
                 value = float(value)
             values[field.name] = value
         result = AgentSettings(**values)
+        if api is not None:
+            result = shared_api_settings(result, api)
         result.validate()
         return result
     except Exception:
@@ -114,7 +141,7 @@ def load_agent_settings(store) -> AgentSettings:
         return replace(defaults, enabled=False)
 
 
-def save_agent_settings(store, settings: AgentSettings, *, known_secrets=()) -> None:
+def save_agent_settings(store, settings: AgentSettings, *, known_secrets=(), api=None) -> None:
     """Write only validated public fields; never persist a key or provider body."""
     if not isinstance(settings, AgentSettings):
         raise AgentValidationError("Agent 设置类型无效。")
@@ -123,8 +150,12 @@ def save_agent_settings(store, settings: AgentSettings, *, known_secrets=()) -> 
     if any(isinstance(value, str) and any(secret and secret in value for secret in known_secrets)
            for value in values.values()):
         raise AgentValidationError("Agent 非密钥设置中包含 API Key，未保存。")
+    if api is not None:
+        shared_api_settings(settings, api).validate()
     try:
         for key, value in values.items():
+            if api is not None and key in _SHARED_GUI_FIELDS:
+                continue
             store.setValue(_PREFIX + key, value)
         if hasattr(store, "sync"):
             store.sync()

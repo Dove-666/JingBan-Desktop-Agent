@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QStackedWidget, QTabWidget, QVBoxLayout, QWidget,
 )
 
-from .. import APP_REVISION
+from .theme import apply_titlebar, color, current_theme, style_widget
 from .assistant_panel import ASSISTANT_STYLE, AssistantChatPanel as ChatPanel
 from .styles import PANEL_STYLE
 from .settings_controls import SettingsControlsMixin, _hint
@@ -18,17 +18,7 @@ from .window_chrome import WindowChrome
 class _HideOnCloseWindow(QWidget):
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        # Keep utility-window title bars consistent with the white surfaces.
-        import sys
-        if sys.platform == "win32":
-            import ctypes
-            use_dark_titlebar = ctypes.c_int(0)
-            handle = ctypes.c_void_p(int(self.winId()))
-            for attribute in (20, 19):
-                result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    handle, attribute, ctypes.byref(use_dark_titlebar), ctypes.sizeof(use_dark_titlebar))
-                if result == 0:
-                    break
+        apply_titlebar(self)
 
     def closeEvent(self, event) -> None:
         self.hide()
@@ -52,22 +42,18 @@ class DebugPanel(SettingsControlsMixin, _HideOnCloseWindow):
         self.settings_manager = settings_manager
         self.chat_controller = chat_controller
         self.setObjectName("debugPanel")
-        self.setWindowTitle(f"鲸鱼娘 · 调试面板 · {APP_REVISION}")
+        self.setWindowTitle("鲸伴")
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.setMinimumSize(620, 580)
         self.resize(730, 740)
-        self.setStyleSheet(PANEL_STYLE)
+        style_widget(self, PANEL_STYLE)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 22, 24, 22)
         layout.setSpacing(14)
-        title = QLabel("鲸鱼娘控制台")
+        title = QLabel("鲸伴控制台")
         title.setObjectName("title")
         heading = QHBoxLayout()
         heading.addWidget(title, 1)
-        self.revision_label = QLabel(f"日常体验版 {APP_REVISION.rsplit('-', 1)[-1].upper()}")
-        self.revision_label.setObjectName("runtimeRevision")
-        self.revision_label.setToolTip(APP_REVISION)
-        heading.addWidget(self.revision_label)
         layout.addLayout(heading)
         subtitle = QLabel("调整角色、配置聊天服务，随时回到桌面继续互动。")
         subtitle.setObjectName("subtitle")
@@ -117,11 +103,11 @@ class ChatWindow(_HideOnCloseWindow):
         self.setProperty("auraCustomChrome", True)
         self._restore_maximized = False
         self.setObjectName("chatWindow")
-        self.setWindowTitle("和鲸鱼娘聊天")
+        self.setWindowTitle("和鲸鱼娘聊天 - 鲸伴")
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.setMinimumSize(420, 420)
         self.resize(1060, 760)
-        self.setStyleSheet(PANEL_STYLE + ASSISTANT_STYLE + "\nQWidget#chatWindow { background: transparent; }\n")
+        style_widget(self, PANEL_STYLE + ASSISTANT_STYLE + "\nQWidget#chatWindow { background: transparent; }\n")
         layout = QVBoxLayout(self)
         margin = WindowChrome.FRAME_MARGIN
         layout.setContentsMargins(margin, margin, margin, margin)
@@ -147,7 +133,7 @@ class ChatWindow(_HideOnCloseWindow):
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor("#ffffff"))
+        painter.setBrush(QColor(color("window")))
         radius = 0 if self.isMaximized() or self.isFullScreen() else WindowChrome.CORNER_RADIUS
         painter.drawRoundedRect(QRectF(self.rect()), radius, radius)
 
@@ -192,14 +178,14 @@ class ChatWindow(_HideOnCloseWindow):
         self.settings_page.show_section(section)
         self.pages.setCurrentWidget(self.settings_page)
         self.chrome.raise_controls()
-        self.setWindowTitle("设置 · 鲸鱼娘")
+        self.setWindowTitle("设置 · 鲸伴")
         return True
 
     def show_chat(self):
         # Keep the same web view, history, scroll position and per-session drafts.
         self.pages.setCurrentWidget(self.chat_panel)
         self.chrome.raise_controls()
-        self.setWindowTitle("和鲸鱼娘聊天")
+        self.setWindowTitle("和鲸鱼娘聊天 - 鲸伴")
 
     def _open_settings_conversation(self, conversation_id):
         if conversation_id:

@@ -1,0 +1,68 @@
+{
+  "status": "passed",
+  "action": "idle_heart_cheeks",
+  "title": "待机 · 捧脸心动",
+  "generation_submissions": 1,
+  "charge_cny": 1.5,
+  "source_native_frames_segmented": 124,
+  "runtime_frames": 68,
+  "runtime_fps": 12,
+  "canvas": [
+    1024,
+    1024
+  ],
+  "bridge_frames": 6,
+  "regression": {
+    "tests": 149,
+    "seconds": 107.835,
+    "passed": true
+  },
+  "native_windows": {
+    "passed": true,
+    "report": "runtime/native_qa/verification.json"
+  },
+  "real_asset_smoke": {
+    "passed": true,
+    "report": "runtime/real_playback/result.json"
+  },
+  "mouth_verification": {
+    "all_native_frames_opaque": true,
+    "all_sampled_frames_opaque": true,
+    "native_rendered_mouth_checks": 4,
+    "gif_dark_warm_to_gray_pixels": 0,
+    "gif_light_warm_to_gray_pixels": 0,
+    "maximum_preview_mean_mouth_channel_error": 10.666666666666666
+  },
+  "old_asset_files_unchanged": 643,
+  "production_settings_changed": false,
+  "production_process_restarted": false,
+  "art_package": "美术资产/鲸鱼娘_捧脸心动_20261103",
+  "changed_source_files": [
+    {
+      "path": "desktop_pet/frame_animation.py",
+      "sha256": "8bf3aebe8f40b71d9e068d15f5aca5ef7ee76f8fa682ca4ebe75c48c7f13d06c"
+    },
+    {
+      "path": "desktop_pet/idle_behavior.py",
+      "sha256": "84c70bde41cd5eacb5d4ce2ddd58bde7953c41aaae81ed68a44fd806d64e15c0"
+    },
+    {
+      "path": "tests/test_frame_animation.py",
+      "sha256": "a61da70568dcfd4026bcefd34b7607d853caef3ae485cd819e93b38690b5cf1e"
+    },
+    {
+      "path": "tests/test_idle_behavior_integration.py",
+      "sha256": "f2ea95338d18f14b910161b78e73d2dc291432ab58346207925e73e14a08753f"
+    },
+    {
+      "path": "tools/asset_pipeline/gif_palette.py",
+      "sha256": "ddb939461229d2455766a843b618535c1681efc4e0705fcf6c0d2c78e33a1188"
+    },
+    {
+      "path": "tests/test_gif_palette.py",
+      "sha256": "823add916e3e1b58c921632a46e72b0aa50ed982675979911c50123a3c84f5f1"
+    }
+  ],
+  "related_fixed_issue": "../idle_hands_on_hips_mouth_fix_20261103/report.html",
+  "preview_test_note": "The initial brightness-only GIF check flagged 24 lip-edge dark-red pixels [80,43,45]. Independent pixel/visual audit showed all were one-pixel antialias edges, not gray or interior holes. Final checks require hue retention throughout and no dark pixels in eroded mouth interiors; both delivered GIFs passed. The initial criterion and evidence are preserved."
+}

@@ -1,0 +1,32 @@
+{
+  "name": "idle_typing_work",
+  "label": "认真打字",
+  "status": "passed",
+  "frame_count": 68,
+  "fps": 12,
+  "canvas": [
+    1024,
+    1024
+  ],
+  "source_native_frames": 124,
+  "sampled_frames": 62,
+  "derived_endpoint_frames": 6,
+  "duration_seconds": 5.666666666666667,
+  "source_video_sha256": "25ce597a5422a3569b5eb3798616b2fb46097d1d39a8557bb79ec665c8c25c01",
+  "paid_submissions": 1,
+  "allocated_charge_cny": 1.5,
+  "old_asset_files_unchanged": 716,
+  "art_package_exact_runtime_files": 73,
+  "native_qa": "artifacts\\idle_typing_work_20261103\\runtime\\native_qa_v2\\verification.json",
+  "native_manual_loops": 2,
+  "native_scale_levels": [
+    50,
+    75,
+    100,
+    125,
+    150,
+    200
+  ],
+  "drag_and_auto_idle_passed": true,
+  "gif_generated": false
+}

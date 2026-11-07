@@ -57,6 +57,19 @@ class LazyMemoryService:
     def __getattr__(self, name):
         return lambda *args, **kwargs: getattr(self._get(), name)(*args, **kwargs)
 
+    def load_state_snapshot(self):
+        instance = self._get()
+        snapshot = getattr(instance, "load_state_snapshot", None)
+        if callable(snapshot):
+            return snapshot()
+        settings, credentials = instance.load_settings(), instance.credential_status()
+        reader = getattr(instance, "configuration_status", None)
+        try:
+            overview = reader() if callable(reader) else {}
+        except AttributeError:
+            overview = {}
+        return settings, credentials, overview
+
     def set_automatic_enabled(self, enabled, *, cancelled=None):
         if enabled:
             return self._get().set_automatic_enabled(True, cancelled=cancelled)
@@ -179,6 +192,9 @@ class MemoryController(QObject):
         self._update_readiness()
 
     def _load_state(self):
+        snapshot = getattr(self.service, "load_state_snapshot", None)
+        if callable(snapshot):
+            return snapshot()
         settings, credentials = self.service.load_settings(), self.service.credential_status()
         return settings, credentials, self._read_configuration_overview()
 

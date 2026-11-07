@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$SdkPath = 'E:\Android\Sdk',
     [string]$JdkPath = 'E:\Biancheng',
     [string]$SigningDirectory = 'E:\Android\keys',
@@ -42,7 +42,7 @@ try {
     $env:AURA_ANDROID_STORE_PASSWORD = [Text.Encoding]::UTF8.GetString($passwordBytes)
     [Array]::Clear($passwordBytes, 0, $passwordBytes.Length)
     if (-not (Test-Path -LiteralPath $keyPath)) {
-        & (Join-Path $JdkPath 'bin\keytool.exe') -genkeypair -keystore $keyPath -storetype PKCS12 -alias aura-companion -keyalg RSA -keysize 3072 -validity 10000 -dname 'CN=AURA Companion, OU=Personal Development, O=AURA' -storepass:env AURA_ANDROID_STORE_PASSWORD -keypass:env AURA_ANDROID_STORE_PASSWORD
+        & (Join-Path $JdkPath 'bin\keytool.exe') -genkeypair -keystore $keyPath -storetype PKCS12 -alias aura-companion -keyalg RSA -keysize 3072 -validity 10000 -dname 'CN=Jingban Companion, OU=Personal Development, O=Jingban' -storepass:env AURA_ANDROID_STORE_PASSWORD -keypass:env AURA_ANDROID_STORE_PASSWORD
         if ($LASTEXITCODE -ne 0) { throw 'Could not create the local APK signing key.' }
     }
     Push-Location $projectDirectory
@@ -59,10 +59,10 @@ try {
         $releaseVersion = $releaseMetadata.elements[0].versionName
         if ($releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Unexpected release version metadata.' }
         foreach ($architecture in @('arm64-v8a', 'armeabi-v7a', 'x86_64')) {
-            Copy-Item -LiteralPath (Join-Path $projectDirectory "app\build\outputs\apk\release\app-$architecture-release.apk") -Destination (Join-Path $delivery "AURA-$releaseVersion-$architecture.apk") -Force
+            Copy-Item -LiteralPath (Join-Path $projectDirectory "app\build\outputs\apk\release\app-$architecture-release.apk") -Destination (Join-Path $delivery "鲸伴-$releaseVersion-$architecture.apk") -Force
         }
-        Copy-Item -LiteralPath (Join-Path $projectDirectory 'app\build\outputs\apk\release\app-universal-release.apk') -Destination (Join-Path $delivery "AURA-$releaseVersion-universal.apk") -Force
-        Get-ChildItem -LiteralPath $delivery -Filter "AURA-$releaseVersion-*.apk" | Select-Object Name,Length
+        Copy-Item -LiteralPath (Join-Path $projectDirectory 'app\build\outputs\apk\release\app-universal-release.apk') -Destination (Join-Path $delivery "鲸伴-$releaseVersion-universal.apk") -Force
+        Get-ChildItem -LiteralPath $delivery -Filter "鲸伴-$releaseVersion-*.apk" | Select-Object Name,Length
     } finally { Pop-Location }
 } finally {
     $env:JAVA_HOME = $previousJava

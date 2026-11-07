@@ -10,12 +10,13 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from PySide6.QtCore import QEvent, QThreadPool, Qt, QTextBoundaryFinder
+from PySide6.QtCore import QEvent, QThreadPool, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication
 
 from desktop_pet.application_controller import ApplicationController
 from desktop_pet.config import PetConfig
+from desktop_pet.bubble import LONG_REPLY_NOTICE
 from desktop_pet.perception.settings import PerceptionSettings
 from desktop_pet.settings_manager import ApiSettings
 from tests.mock_api import MockApiServer
@@ -34,6 +35,7 @@ class ChatSpeechDeliveryTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(prefix="aura-chat-speech-")
         self.path = Path(self.directory.name)
         self.settings = isolated_settings(self.path / "settings.ini", MemoryCredentialBackend())
+        self.settings.save_perception_settings(PerceptionSettings(enabled=False, allow_remote=False))
         self.memory_patch = patch("desktop_pet.application_controller.MemoryService", return_value=DisabledTestMemory())
         self.memory_patch.start()
         self.session = ApplicationController(PetConfig(), settings=self.settings)
@@ -119,29 +121,28 @@ class ChatSpeechDeliveryTests(unittest.TestCase):
             self.assertEqual(self.bubble._speech_sequence, sequence)
             self.assertFalse(self.bubble.isVisible())
 
-    def test_long_multiline_reply_preserves_all_content_and_graphemes_across_pages(self):
+    def test_long_multiline_reply_uses_compact_bubble_and_preserves_complete_archive(self):
         reply = ("第一段：中文与鲸鱼🐳，家人👨‍👩‍👧‍👦一起看海。\n"
                  "第二段保留换行和组合字 e\u0301。\n\n") * 20
         with MockApiServer() as server:
             self.configure(server)
             self.session.pet_controller.set_scale(50)
             message = self.send_reply(server, reply, "neutral")
-            self.assertEqual(self.bubble._text, reply.strip())
+            self.assertEqual(self.bubble._text, LONG_REPLY_NOTICE)
             self.assertEqual(message["content"], reply.strip())
-            self.assertEqual("".join(self.bubble._pages), reply.strip())
-            self.assertGreater(len(self.bubble._pages), 1)
-            finder = QTextBoundaryFinder(QTextBoundaryFinder.BoundaryType.Grapheme, reply.strip())
-            offset = 0
-            for index, page in enumerate(self.bubble._pages):
-                self.assertEqual(self.bubble._page_text, page)
-                self.assertEqual(self.bubble._layout.text(), page.replace("\n", "\u2028"))
-                self.assertTrue(self.bubble._body_rect.contains(self.bubble._text_rect))
-                self.assertLessEqual(self.bubble._layout.boundingRect().height(), self.bubble._text_rect.height() + 1)
-                offset += len(page.encode("utf-16-le")) // 2
-                finder.setPosition(offset)
-                self.assertTrue(finder.isAtBoundary(), "Pagination split a family emoji or combining mark")
-                if index + 1 < len(self.bubble._pages):
-                    self.bubble._next_page()
+            self.assertEqual("".join(self.bubble._pages), LONG_REPLY_NOTICE)
+            self.assertLessEqual(len(self.bubble._pages), 2)
+            self.assertEqual(self.chat.store.load_messages(message["conversation_id"])[-1]["content"], reply.strip())
+            focused = QSignalSpy(self.chat.message_focus_requested)
+            QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton, pos=self.bubble._text_rect.center().toPoint())
+            spin_until(lambda: self.session.chat_window is not None and not self.chat.history_loading)
+            self.assertEqual(focused.count(), 1)
+            self.assertEqual(focused.at(0)[0], message["id"])
+            self.session.chat_window.chat_panel._activate_native()
+            actual = self.session.chat_window.chat_panel.transcript.toPlainText()
+            self.assertIn("家人👨‍👩‍👧‍👦一起看海", actual)
+            self.assertIn("组合字 e\u0301", actual)
+            self.assertFalse(self.bubble.isVisible())
 
     def test_late_reply_for_other_conversation_is_saved_without_speech(self):
         with MockApiServer() as server:

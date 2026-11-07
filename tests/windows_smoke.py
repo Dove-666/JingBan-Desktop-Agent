@@ -720,7 +720,7 @@ def run_validation(*, bubble_only=False) -> int:
                 click(native_point(app_hwnd, torso, dpr), right=True)
                 choose_menu_action("设置")
                 try:
-                    wait_for(lambda: panel_window("设置 · 鲸鱼娘") is not None)
+                    wait_for(lambda: panel_window("设置 · 鲸伴") is not None)
                 except AssertionError:
                     rect = wintypes.RECT()
                     user32.GetWindowRect(app_hwnd, ctypes.byref(rect))
@@ -728,7 +728,7 @@ def run_validation(*, bubble_only=False) -> int:
                           (rect.left, rect.top, rect.right, rect.bottom), "pid", app_pid.value,
                           "foreground", user32.GetForegroundWindow())
                     raise
-                debug_hwnd = panel_window("设置 · 鲸鱼娘")
+                debug_hwnd = panel_window("设置 · 鲸伴")
                 if attempt == 0:
                     first_debug_hwnd = debug_hwnd
                 else:

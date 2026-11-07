@@ -1,4 +1,4 @@
-AURA GlassSurface attribution and implementation notes
+鲸伴 GlassSurface attribution and implementation notes
 =====================================================
 
 Local implementation:
@@ -19,7 +19,7 @@ Upstream SVG RGB channel displacement / screen-combination reference:
   https://github.com/rdev/liquid-glass-react/blob/ac48eab18d1f7f444ae30002d240cae29c863a21/src/index.tsx
   License: MIT (LICENSE-rdev in this directory), Copyright 2025 MAX ROVENSKY.
 
-AURA modifications:
+鲸伴 modifications:
 - React 19 component with ordinary div attributes; existing layout is retained.
 - Edge-only rounded-rectangle normal map, capped at 160,000 pixels / 640 pixels per axis.
 - No WebGL, external assets, package dependencies, pointer capture or continuous animation.

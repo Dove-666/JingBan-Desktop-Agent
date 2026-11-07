@@ -42,9 +42,13 @@ class DirectApiRepositoryTest {
         }
     }
     private class Vault(var value: DirectApiConfig? = null) : ApiConfigVault {
+        var persona: SyncedPersona? = null
         override fun load() = value
         override fun save(config: DirectApiConfig) { value = config }
         override fun clear() { value = null }
+        override fun loadPersona() = persona
+        override fun savePersona(persona: SyncedPersona) { this.persona = persona }
+        override fun clearPersona() { persona = null }
     }
     private class Model : DirectChatGateway {
         val calls = mutableListOf<Pair<DirectApiConfig, JSONArray>>()
@@ -68,6 +72,11 @@ class DirectApiRepositoryTest {
         var authorized = true
         var supportsConfig = true
         var invalidConfig = false
+        var personaName: String? = null
+        var personaPrompt = "shared role alpha"
+        var personaRevision = "role-a"
+        var configGate: CompletableDeferred<Unit>? = null
+        val configEntered = CompletableDeferred<Unit>()
         var statusGate: CompletableDeferred<Unit>? = null
         val statusEntered = CompletableDeferred<Unit>()
         var uploadGate: CompletableDeferred<Unit>? = null
@@ -90,14 +99,21 @@ class DirectApiRepositoryTest {
             fun fail(code: String) = JSONObject().put("ok", false).put("error", JSONObject().put("code", code).put("message", "safe failure"))
             if (!authorized) return fail("unauthorized")
             return when (method) {
+                "pair" -> ok(JSONObject().put("paired", true))
                 "status" -> {
                     statusGate?.let { gate -> statusGate = null; statusEntered.complete(Unit); gate.await() }
                     ok(JSONObject().put("protocol_version", 1).put("capabilities", JSONArray(if (supportsConfig) listOf("chat.config", "chat.import", "chat.image") else listOf("chat.image"))))
                 }
-                "chat.config" -> ok(JSONObject().put("version", if (invalidConfig) 99 else 1).put("available", available).put("revision", revision).apply {
+                "chat.config" -> {
+                  val result = JSONObject().put("version", if (invalidConfig) 99 else 1).put("available", available).put("revision", revision).apply {
+                    personaName?.let { put("persona", JSONObject().put("version", 1).put("name", it)
+                        .put("revision", personaRevision).put("system_prompt", personaPrompt)) }
                     if (available) put("base_url", baseUrl).put("api_key", apiKey).put("model", model)
                         .put("system_prompt", "SYSTEM PROMPT FROM PC").put("timeout_seconds", 1.5).put("reasoning_effort", "max")
-                })
+                  }
+                  configGate?.let { gate -> configGate = null; configEntered.complete(Unit); gate.await() }
+                  ok(result)
+                }
                 "sync.snapshot" -> ok(JSONObject().put("items", JSONArray()).put("watermark", 0).put("has_more", false).put("next_cursor", ""))
                 "sync.pull" -> if (failPullAfterImport && importCalls > 0) fail("sync_error") else ok(JSONObject().put("changes", JSONArray())
                     .put("next_since", params.getLong("since")).put("has_more", false))
@@ -302,6 +318,43 @@ class DirectApiRepositoryTest {
 
     private fun png() = Base64.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==", Base64.NO_WRAP)
 
+    @Test fun absentHistoricalImageComparisonKeepsComposerAndNeverCallsModel() = runBlocking {
+        val db = CompanionDatabase(context, null); val rpc = Rpc(); val model = Model()
+        val repo = AppRepository(context, rpc, db, Vault(), model)
+        try {
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "model", "SYNTHETIC_KEY", 30, "default"))
+            val cid = repo.newConversation(); repo.stageImage(cid, png(), "new.png", "image/png")
+            val pending = db.pendingImage(cid); assertNotNull(pending)
+            repo.sendMessage(cid, "这张和上一张图片有什么区别？")
+            await { !repo.state.value.directChatBusy }
+            assertEquals(0, model.calls.size); assertEquals(0, rpc.legacyCalls)
+            assertTrue(db.outbox().isEmpty()); assertTrue(db.directTurns().isEmpty()); assertTrue(db.messages(cid).isEmpty())
+            assertEquals(pending, db.pendingImage(cid))
+            assertEquals("无法读取上一张图片，请重新选择图片后再比较。", repo.state.value.error)
+        } finally { repo.close() }
+    }
+
+    @Test fun missingHistoricalImageCacheComparisonKeepsComposerAndNeverCallsModel() = runBlocking {
+        val db = CompanionDatabase(context, null); val rpc = Rpc(); val model = Model()
+        val repo = AppRepository(context, rpc, db, Vault(), model)
+        try {
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "model", "SYNTHETIC_KEY", 30, "default"))
+            val cid = repo.newConversation(); val oldImage = "a".repeat(64)
+            val previous = db.beginDirectTurn(cid, "original photo", oldImage, allowUnpaired = true)
+            db.finishDirectTurn(previous.id, "original visible answer")
+            assertNull(db.image(oldImage))
+            val originalMessages = db.messages(cid); val originalTurns = db.directTurns()
+            repo.stageImage(cid, png(), "new.png", "image/png")
+            val pending = db.pendingImage(cid); assertNotNull(pending)
+            repo.sendMessage(cid, "Compare this photo with the previous image")
+            await { !repo.state.value.directChatBusy }
+            assertEquals(0, model.calls.size); assertEquals(0, rpc.legacyCalls)
+            assertTrue(db.outbox().isEmpty()); assertEquals(originalTurns, db.directTurns())
+            assertEquals(originalMessages, db.messages(cid)); assertEquals(pending, db.pendingImage(cid))
+            assertEquals("无法读取上一张图片，请重新选择图片后再比较。", repo.state.value.error)
+        } finally { repo.close() }
+    }
+
     @Test fun missingModelNeverCreatesAnImplicitLegacyQueueAndKeepsComposerImage() = runBlocking {
         val db = CompanionDatabase(context, null); val rpc = Rpc(); val model = Model()
         val repo = AppRepository(context, rpc, db, Vault(), model)
@@ -329,6 +382,7 @@ class DirectApiRepositoryTest {
             db = CompanionDatabase(durableContext, name); repo = AppRepository(durableContext, rpc, db, vault, model)
             repo.selectConversation(cid)
             assertTrue(repo.state.value.directApi.available); assertEquals(ids, repo.state.value.messages.map { it.id })
+            assertEquals("图片对话", repo.state.value.conversations.single { it.id == cid }.title)
             assertEquals(2, model.calls.size); assertEquals(0, rpc.legacyCalls)
             db.saveDevice(DeviceInfo("PC", "desktop", "public-ticket"), "phone")
             repo.reconnect(); repo.syncNow()
@@ -366,6 +420,104 @@ class DirectApiRepositoryTest {
             repo.sendMessage(repo.newConversation(), "independent after desktop revoke"); await { !repo.state.value.directChatBusy }
             assertEquals(1, model.calls.size); assertEquals(LOCAL_PHONE_AUTHORITY, db.directTurns().single().authorityId)
         } finally { repo.close() }
+    }
+
+    @Test fun manualProviderFollowsRoleChangesAndDefaultWithoutUsingDesktopCredentials() = runBlocking {
+        val rpc = Rpc().apply { personaName = "Alpha" }; val vault = Vault(); val model = Model()
+        val repo = AppRepository(context, rpc, db(), vault, model)
+        try {
+            repo.reconnect()
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "PHONE_ROLE_TEST_SECRET", 25, "low"))
+            rpc.available = false; rpc.personaName = "Beta"; rpc.personaPrompt = "shared role beta"; rpc.personaRevision = "role-b"
+            repo.syncNow()
+            val active = vault.value!!
+            assertEquals(ApiConfigSource.LOCAL, active.source); assertEquals("https://phone.example/v1", active.baseUrl)
+            assertEquals("phone-model", active.model); assertEquals("PHONE_ROLE_TEST_SECRET", active.apiKey)
+            assertEquals(25, active.timeoutSeconds); assertEquals("low", active.reasoningEffort)
+            assertEquals("shared role beta", active.systemPrompt); assertEquals("role-b", vault.persona!!.revision)
+            repo.disconnect(); repo.sendMessage(repo.newConversation(), "offline with current role")
+            await { !repo.state.value.directChatBusy }
+            assertEquals("shared role beta", model.calls.single().second.getJSONObject(0).getString("content"))
+            rpc.personaName = "鲸鱼娘"; rpc.personaPrompt = "default whale role"; rpc.personaRevision = "role-default"
+            repo.reconnect()
+            assertEquals("default whale role", vault.value!!.systemPrompt); assertEquals("phone-model", vault.value!!.model)
+            assertEquals(1, model.calls.size)
+        } finally { repo.close() }
+    }
+
+    @Test fun roleReceivedBeforeAnyApiSurvivesRestartAndIsUsedByNewManualProvider() = runBlocking {
+        val name = "role-before-api-${UUID.randomUUID()}.db"
+        val rpc = Rpc().apply { available = false; personaName = "Alpha" }
+        val vault = Vault(); val model = Model()
+        var database = CompanionDatabase(durableContext, name).apply { saveDevice(DeviceInfo("PC", "desktop", "public-ticket"), "phone") }
+        var repo = AppRepository(durableContext, rpc, database, vault, model)
+        try {
+            repo.reconnect(); assertNull(vault.value); assertEquals("shared role alpha", vault.persona!!.systemPrompt)
+            repo.close()
+            database = CompanionDatabase(durableContext, name); repo = AppRepository(durableContext, rpc, database, vault, model)
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "PHONE_ROLE_TEST_SECRET", 30, "default"))
+            assertEquals("shared role alpha", vault.value!!.systemPrompt)
+            repo.sendMessage(repo.newConversation(), "role after restart")
+            await { !repo.state.value.directChatBusy }
+            assertEquals("shared role alpha", model.calls.single().second.getJSONObject(0).getString("content"))
+        } finally { repo.close(); durableContext.deleteDatabase(name) }
+    }
+
+    @Test fun rolePollingIsIndependentOfApiRevisionAndDoesNotRefetchOnEveryIdlePoll() = runBlocking {
+        var now = 1000L
+        val rpc = Rpc().apply { personaName = "Alpha" }; val vault = Vault()
+        val repo = AppRepository(context, rpc, db(), vault, Model(), monotonicMillis = { now })
+        try {
+            repo.reconnect(); val apiRevision = vault.value!!.revision
+            rpc.personaPrompt = "shared role beta"; rpc.personaRevision = "role-b"
+            repo.poll(); assertEquals("shared role alpha", vault.value!!.systemPrompt)
+            now += 30_001; repo.poll()
+            assertEquals(apiRevision, vault.value!!.revision)
+            assertEquals("shared role beta", vault.value!!.systemPrompt)
+        } finally { repo.close() }
+    }
+
+    @Test fun invalidRoleKeepsLastValidPersonaAndNeverReplacesManualApi() = runBlocking {
+        val rpc = Rpc().apply { personaName = "Alpha" }; val vault = Vault()
+        val repo = AppRepository(context, rpc, db(), vault, Model())
+        try {
+            repo.reconnect(); assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "PHONE_ROLE_TEST_SECRET", 30, "default"))
+            rpc.personaPrompt = "x".repeat(32769); rpc.personaRevision = "invalid-role"
+            repo.syncNow()
+            assertEquals("shared role alpha", vault.value!!.systemPrompt); assertEquals("role-a", vault.persona!!.revision)
+            assertEquals("PHONE_ROLE_TEST_SECRET", vault.value!!.apiKey)
+        } finally { repo.close() }
+    }
+
+    @Test fun pairingAndChangingComputersSynchronizesNewRoleWithTheSamePhoneProvider() = runBlocking {
+        val database = CompanionDatabase(context, null)
+        val rpc = Rpc().apply { personaName = "Alpha"; available = false }; val vault = Vault()
+        val repo = AppRepository(context, rpc, database, vault, Model())
+        try {
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "PHONE_ROLE_TEST_SECRET", 30, "default"))
+            fun pairing(id: String) = JSONObject().put("version", 1).put("ticket", "public-ticket").put("code", "temporary-test-code")
+                .put("endpoint_id", id).toString()
+            repo.pair(pairing("desktop"), "owned phone")
+            assertEquals("desktop", vault.persona!!.authorityId); assertEquals("shared role alpha", vault.value!!.systemPrompt)
+            rpc.personaName = "Beta"; rpc.personaPrompt = "other desktop role"; rpc.personaRevision = "other-role"
+            repo.pair(pairing("other-desktop"), "owned phone")
+            assertEquals("other-desktop", vault.persona!!.authorityId); assertEquals("other desktop role", vault.value!!.systemPrompt)
+            assertEquals("phone-model", vault.value!!.model); assertEquals("PHONE_ROLE_TEST_SECRET", vault.value!!.apiKey)
+        } finally { repo.close() }
+    }
+
+    @Test fun responseFromPreviousComputerCannotOverwriteCurrentCachedRole() = runBlocking {
+        val database = db(); val rpc = Rpc().apply { personaName = "Alpha" }; val vault = Vault()
+        val repo = AppRepository(context, rpc, database, vault, Model())
+        val gate = CompletableDeferred<Unit>()
+        try {
+            repo.reconnect(); rpc.personaPrompt = "stale role beta"; rpc.personaRevision = "role-b"; rpc.configGate = gate
+            val refresh = launch { repo.refreshApiConfig() }
+            withTimeout(5000) { rpc.configEntered.await() }
+            database.saveDevice(DeviceInfo("Other PC", "other-desktop", "other-public-ticket"), "phone")
+            gate.complete(Unit); refresh.join()
+            assertEquals("role-a", vault.persona!!.revision); assertEquals("shared role alpha", vault.value!!.systemPrompt)
+        } finally { gate.complete(Unit); repo.close() }
     }
 
     @Test fun explicitQueuedImageMigrationPreservesUserIdAndImageAndDoesNotSendOldComputerRequest() = runBlocking {
@@ -439,6 +591,30 @@ class DirectApiRepositoryTest {
             assertFalse(repo.state.value.error!!.contains("SECRET_FOR_BOUND_CACHE"))
             assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "confirmed-local-model", "", 30, "default"))
             assertEquals(ApiConfigSource.LOCAL, repo.state.value.directApi.source); assertTrue(repo.state.value.directApi.available)
+        } finally { repo.close() }
+    }
+
+    @Test fun reasoningFieldsRejectPreviousKeysAndNewDesktopSecretsAreNeverPublished() = runBlocking {
+        val db = CompanionDatabase(context, null); val vault = Vault(); val rpc = Rpc(); val repo = AppRepository(context, rpc, db, vault, Model())
+        try {
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "OldPhoneToken", 30, "default"))
+            assertFalse(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "NewPhoneToken", 30,
+                "OldPhoneToken", "custom"))
+            val declaration = JSONObject().put("version", 1).put("base_url", "https://phone.example/v1").put("model", "phone-model")
+                .put("profile", "openai").put("values", JSONArray(listOf("OldPhoneToken")))
+            assertFalse(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "NewPhoneToken", 30,
+                "default", "auto", reasoningMetadata = declaration.toString()))
+            assertEquals("OldPhoneToken", vault.value!!.apiKey)
+            assertFalse(repo.state.value.error.orEmpty().contains("OldPhoneToken"))
+            assertTrue(repo.saveDirectApiConfig("https://phone.example/v1", "phone-model", "", 30, "UltraMode", "custom"))
+            rpc.apiKey = "UltraMode"
+            db.saveDevice(DeviceInfo("Computer", "desktop", "ticket"), "phone")
+            repo.reconnect()
+            assertFalse(repo.state.value.directApi.available)
+            assertFalse(repo.state.value.directApi.toString().contains("UltraMode"))
+            assertFalse(repo.apiConfigDraft().toString().contains("UltraMode"))
+            assertFalse(repo.state.value.error.orEmpty().contains("UltraMode"))
+            assertEquals("OldPhoneToken", vault.value!!.apiKey)
         } finally { repo.close() }
     }
 

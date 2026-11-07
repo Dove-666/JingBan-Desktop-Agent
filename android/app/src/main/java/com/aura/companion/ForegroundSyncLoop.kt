@@ -14,7 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Keep short app switches warm, without polling while the app is in the background. */
+/** Background polling requires an explicit, running task-service lease. */
 internal class ForegroundSyncLoop(
     private val scope: CoroutineScope,
     private val state: StateFlow<AppState>,
@@ -25,6 +25,7 @@ internal class ForegroundSyncLoop(
     private val backgroundGraceMillis: Long = 45_000,
 ) {
     private var foreground = false
+    private var backgroundTaskActive = false
     private var loop: Job? = null
     private var idleClose: Job? = null
     private val wake = Channel<Unit>(Channel.CONFLATED)
@@ -33,15 +34,27 @@ internal class ForegroundSyncLoop(
     fun setForeground(value: Boolean) {
         if (foreground == value) return
         foreground = value
+        reconcile()
+    }
+
+    fun setBackgroundTaskActive(value: Boolean) {
+        if (backgroundTaskActive == value) return
+        backgroundTaskActive = value
+        reconcile()
+    }
+
+    private fun active(): Boolean = foreground || backgroundTaskActive
+
+    private fun reconcile() {
         idleClose?.cancel()
-        if (!value) {
+        if (!active()) {
             idleClose = scope.launch {
                 delay(backgroundGraceMillis)
-                if (!foreground) {
+                if (!active()) {
                     val previous = loop
                     previous?.cancelAndJoin()
                     if (loop === previous) loop = null
-                    if (!foreground) disconnect()
+                    if (!active()) disconnect()
                 }
             }
             return
@@ -55,7 +68,7 @@ internal class ForegroundSyncLoop(
         // Local initialization publishes the paired device asynchronously. Wait
         // for that event instead of adding a fixed two-second startup delay.
         state.first { it.device != null }
-        while (scope.isActive && foreground) {
+        while (scope.isActive && active()) {
             while (wake.tryReceive().isSuccess) { /* Coalesce foreground events. */ }
             var wait = 10_000L
             if (autoConnect() && state.value.device != null) {
@@ -86,19 +99,20 @@ internal class ForegroundSyncLoop(
                     retryDelay = (retryDelay * 2).coerceAtMost(30_000)
                 }
             }
-            if (!foreground) break
+            if (!active()) break
             withTimeoutOrNull(wait) { wake.receive() }
         }
     }
 
     fun close() {
         foreground = false
+        backgroundTaskActive = false
         idleClose?.cancel()
         loop?.cancel()
         wake.close()
     }
 
-    private fun hasPendingWork(value: AppState): Boolean = value.directChatBusy || value.historyPendingCount > 0 ||
+    private fun hasPendingWork(value: AppState): Boolean = value.desktopAgentBusy || value.directChatBusy || value.historyPendingCount > 0 ||
         value.outbox.any { it.status in setOf("queued", "sending", "unknown", "pending") } ||
         value.messages.any { it.role == "user" && (it.requestStatus == "pending" ||
             it.source == "user" && it.localState == "sent") }

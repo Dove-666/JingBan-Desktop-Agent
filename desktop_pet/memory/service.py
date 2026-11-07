@@ -22,8 +22,10 @@ from uuid import uuid4
 from PySide6.QtCore import QSettings
 
 from desktop_pet.api_client import redact_secret
-from desktop_pet.settings_manager import ApiSettings, CredentialStore, CredentialsError, SettingsError, SettingsManager
+from desktop_pet.settings_manager import ApiSettings, CredentialStore, CredentialsError, SettingsError, SettingsManager, read_api_settings
 from .settings import MemorySettings
+from .policy import _SENSITIVE, _CORRECTION
+from ..bundle_runtime import bundled_python_executable, worker_python_executable
 
 
 class MemoryUnavailable(RuntimeError):
@@ -47,14 +49,6 @@ class MemoryServiceProtocol(Protocol):
 _CANDIDATE = re.compile(
     r"记住|长期|以后|一直|偏好|喜欢|习惯|正在开发|正在做|项目|决定|计划|已[经]?完成|下一步|进度|目标|我叫|我是|我住|我的"
     r"|\b(?:remember|prefer|always|usually|project|decided|plan to|my name|i am|i'm working|i have completed)\b",
-    re.IGNORECASE,
-)
-_SENSITIVE = re.compile(
-    r"(?:api[ _-]?key|password|passcode|secret|bearer\s|sk-[A-Za-z0-9]|密码|验证码|银行卡|身份证|私钥)",
-    re.IGNORECASE,
-)
-_CORRECTION = re.compile(
-    r"不再|改成|改为|纠正|更正|更新我的|更新偏好|以前.{0,30}现在|\b(?:no longer|instead|correct my|update my|used to)\b",
     re.IGNORECASE,
 )
 _PATH_LOCKS: dict[str, threading.RLock] = {}
@@ -167,47 +161,76 @@ class MemoryService:
                 self.set_embedding_key(embedding_key)
             self._write_settings(settings)
 
-    def credential_status(self) -> str:
-        def describe(label, getter):
-            try:
-                present = bool(getter())
-            except CredentialsError:
+    def _credential_presence_reader(self):
+        """Keep only presence/error facts for one local readiness operation."""
+        values = {}
+        getters = {"chat": self._chat_store.get_api_key,
+                   "llm": self._llm_credentials.get_api_key,
+                   "embedding": self._embedding_credentials.get_api_key}
+
+        def presence(kind):
+            if kind not in values:
+                try:
+                    values[kind] = bool(getters[kind]())
+                except CredentialsError:
+                    values[kind] = None
+            return values[kind]
+
+        return presence
+
+    @staticmethod
+    def _credential_status(settings: MemorySettings, presence) -> str:
+        def describe(label, kind):
+            present = presence(kind)
+            if present is None:
                 # The backend's availability is not proof that a password
                 # exists. Nor may an unreadable vault be reported as empty.
                 return label + "：无法读取，请检查 Windows 系统凭据。"
             return label + ("：已保存。" if present else "：未保存，请填写并保存密钥。")
 
-        settings = self.load_settings()
         if settings.use_chat_model:
-            llm = describe("提炼模型复用的聊天密钥", self._chat_store.get_api_key)
+            llm = describe("提炼模型复用的聊天密钥", "chat")
         else:
-            llm = describe("独立记忆提炼密钥", self._llm_credentials.get_api_key)
+            llm = describe("独立记忆提炼密钥", "llm")
         if settings.embedding_provider == "fastembed":
             return llm + "\nEmbedding：本地 FastEmbed，无需 API Key；模型就绪需单独验证。"
-        return llm + "\n" + describe("Embedding 密钥", self._embedding_credentials.get_api_key)
+        return llm + "\n" + describe("Embedding 密钥", "embedding")
 
-    def configuration_status(self) -> dict:
-        """Local readiness facts only; this method never tests a provider."""
-        settings = self.load_settings()
-        chat = SettingsManager(QSettings(self._chat_config_path, QSettings.Format.IniFormat))
-        def configured(configuration, getter):
+    def _configuration_status(self, settings: MemorySettings, presence) -> dict:
+        # Read current saved preferences in this worker's own QSettings.
+        chat = read_api_settings(QSettings(self._chat_config_path, QSettings.Format.IniFormat))
+
+        def configured(configuration, kind):
             try:
                 configuration.validate()
-                return bool(getter())
-            except CredentialsError:
-                return None
+                return presence(kind)
             except SettingsError:
                 return False
-        chat_configured = configured(chat.load_api_settings(), self._chat_store.get_api_key)
+
+        chat_configured = configured(chat, "chat")
         extraction = chat_configured if settings.use_chat_model else configured(
-            ApiSettings(settings.llm_base_url, settings.llm_model, settings.timeout_seconds), self._llm_credentials.get_api_key,
+            ApiSettings(settings.llm_base_url, settings.llm_model, settings.timeout_seconds), "llm",
         )
         embedding = True if settings.embedding_provider == "fastembed" else configured(
-            ApiSettings(settings.embedding_base_url, settings.embedding_model, settings.timeout_seconds), self._embedding_credentials.get_api_key,
+            ApiSettings(settings.embedding_base_url, settings.embedding_model, settings.timeout_seconds), "embedding",
         )
         return {"chat_configured": chat_configured, "extraction_configured": extraction,
                 "embedding_configured": embedding, "embedding_provider": settings.embedding_provider,
                 "uses_chat_model": settings.use_chat_model}
+
+    def load_state_snapshot(self) -> tuple[MemorySettings, str, dict]:
+        """Sample readiness once per call, without testing or caching a key."""
+        settings = self.load_settings()
+        presence = self._credential_presence_reader()
+        credentials = self._credential_status(settings, presence)
+        return settings, credentials, self._configuration_status(settings, presence)
+
+    def credential_status(self) -> str:
+        return self._credential_status(self.load_settings(), self._credential_presence_reader())
+
+    def configuration_status(self) -> dict:
+        """Local readiness facts only; this method never tests a provider."""
+        return self._configuration_status(self.load_settings(), self._credential_presence_reader())
 
     def _managed_settings(self, current: MemorySettings) -> MemorySettings:
         """Choose defaults only for an unused, unconfigured vector space.
@@ -510,9 +533,10 @@ class MemoryService:
                 # Download only the named public model. Do not give its helper
                 # chat/provider credentials or a path to the memory database.
                 payload["config"] = {"embedder": config["embedder"]}
-            executable = Path(sys.executable)
-            if executable.name.lower() == "pythonw.exe":
-                executable = executable.with_name("python.exe")
+            executable = worker_python_executable()
+            command = [str(executable), "-m", "desktop_pet.memory.worker"]
+            if bundled_python_executable() is not None:
+                command = [str(executable), "-I", "-u", str(Path(__file__).with_name("worker_entry.py"))]
             environment = os.environ.copy()
             environment.update({"MEM0_TELEMETRY": "False", "MEM0_DIR": str(self.data_dir / "runtime"),
                                 "PYTHONIOENCODING": "utf-8", "HF_HUB_DISABLE_TELEMETRY": "1",
@@ -533,7 +557,7 @@ class MemoryService:
             if automatic and self.automatic_paused:
                 return []
             process = subprocess.Popen(
-                [str(executable), "-m", "desktop_pet.memory.worker"],
+                command,
                 cwd=str(Path(__file__).resolve().parents[2]), env=environment,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, **options,
             )

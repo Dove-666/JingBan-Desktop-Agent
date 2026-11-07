@@ -1,0 +1,60 @@
+{
+  "runtime_canvas": [
+    1024,
+    1024
+  ],
+  "runtime_frame_count": 68,
+  "runtime_fps": 12,
+  "runtime_duration_ms": 5667,
+  "preview_fixed_crop_from_full_sequence_union": [
+    157,
+    255,
+    888,
+    986
+  ],
+  "preview_dimensions": [
+    480,
+    480
+  ],
+  "per_frame_crop_or_scale": false,
+  "runtime_art_changed": false,
+  "source_is_real_generated_video": true,
+  "files": [
+    {
+      "name": "hands_on_hips_rgba.png",
+      "bytes": 482064,
+      "sha256": "023d1454824ac84750b54625fbc7c50370eddad885800f5dfec7cf33e1cf76e6"
+    },
+    {
+      "name": "idle_hands_on_hips.apng",
+      "bytes": 30586450,
+      "sha256": "64a10f21aeba316b08c83eca3051d56a824f32005781b8b34cab076ae57ddd04"
+    },
+    {
+      "name": "idle_hands_on_hips_dark.gif",
+      "bytes": 5223420,
+      "sha256": "b14253508ad37d07333af3a34ca6b765d703271f6be7c00dde55a1d3caa4d699"
+    },
+    {
+      "name": "idle_hands_on_hips_light.gif",
+      "bytes": 6281294,
+      "sha256": "b65989a92e99a3d043dac1e57003c56dc3c682286285ee9de138e21ba49cde4c"
+    }
+  ],
+  "gif_palette": {
+    "method": "one stable global palette trained from every frame plus mouth focus",
+    "runtime_mouth_focus": [
+      442,
+      560,
+      485,
+      593
+    ],
+    "preview_mouth_focus": [
+      187,
+      200,
+      216,
+      222
+    ],
+    "helper": "tools/asset_pipeline/gif_palette.py"
+  }
+}

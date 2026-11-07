@@ -9,20 +9,51 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-UNCONFIRMED_REPLY = "尚未确认操作目标已达成，任务未标记为完成。已执行的操作保留，未自动重复点击。"
+UNCONFIRMED_REPLY = "未完成：没有取得有效的操作结果记录。"
 REPORT_KEYS = {"status", "method", "reason", "checked_at"}
+
+
+def checked_feedback(value, *, secrets=()):
+    """Bound independent observations for the planner, not a permission grant.
+
+    The public UI still receives fixed status labels. Details remain private
+    tool observations and can describe a missing postcondition for recovery.
+    """
+    if value is None:
+        return None
+    if (not isinstance(value, dict) or set(value) - {"reason", "checks", "reobserve", "source"}
+            or not isinstance(value.get("reason"), str)
+            or value.get("reason") not in _UNCONFIRMED_REASONS and value.get("reason") not in {"GOAL_STATE_CONFIRMED", "NO_PROGRESS"}
+            or not isinstance(value.get("checks", []), list) or len(value.get("checks", [])) > 32):
+        raise ValueError("GUI_VERIFICATION_FEEDBACK_INVALID")
+    checks = []
+    for item in value.get("checks", []):
+        if (not isinstance(item, dict) or set(item) != {"requirement", "observed", "passed"}
+                or type(item["passed"]) is not bool
+                or any(not isinstance(item[key], str) or not 1 <= len(item[key].strip()) <= 1500
+                       or any(ord(c) < 32 and c not in "\n\t" for c in item[key]) for key in ("requirement", "observed"))):
+            raise ValueError("GUI_VERIFICATION_FEEDBACK_INVALID")
+        cleaned = dict(item)
+        for key in ("requirement", "observed"):
+            for secret in secrets:
+                if isinstance(secret, str) and secret:
+                    cleaned[key] = cleaned[key].replace(secret, "[redacted]")
+        checks.append(cleaned)
+    return {"reason": value["reason"], "checks": checks,
+            "reobserve": value.get("reason") != "GOAL_STATE_CONFIRMED",
+            "source": "independent_visual_observation"}
 
 # Public explanations are selected by exact, host-known codes. Neither model
 # prose nor arbitrary report fields may become a diagnostic shown to the user.
 _UNCONFIRMED_REASONS = {
-    "GOAL_STATE_NOT_MET": ("failed", "结果核对未通过：当前画面中的目标状态仍未达到要求。"),
-    "GOAL_NOT_OBSERVABLE": ("unverified", "当前画面不足以确认目标已经完成，操作是否生效仍待确认。"),
-    "TARGET_IDENTITY_UNCONFIRMED": ("unverified", "当前画面无法确认操作的是你指定的对象，结果仍待确认。"),
-    "TEMPORAL_EVIDENCE_MISSING": ("unverified", "缺少能确认目标顺序的画面证据，尚不能确认操作的是你指定的第几个对象。"),
-    "VERIFICATION_CAPTURE_FAILED": ("unverified", "操作后未能取得可用的新画面，暂时无法核对结果。"),
-    "VERIFICATION_RESPONSE_INVALID": ("unverified", "结果核对没有得到有效答复，暂时无法确认操作是否成功。"),
-    "VERIFICATION_SERVICE_UNAVAILABLE": ("unverified", "结果核对服务暂时不可用，操作是否生效仍待确认。"),
-    "VERIFICATION_NOT_RUN": ("unverified", "操作已停止，尚未完成独立的结果核对。"),
+    "GOAL_STATE_NOT_MET": ("failed", "未完成：操作后的目标状态未达到要求。"),
+    "GOAL_NOT_OBSERVABLE": ("unverified", "未完成：当前画面缺少用于核对结果的信息。"),
+    "TARGET_IDENTITY_UNCONFIRMED": ("unverified", "未完成：没有取得你指定的对象的识别信息。"),
+    "TEMPORAL_EVIDENCE_MISSING": ("unverified", "未完成：缺少目标顺序记录，无法定位指定的第几个对象。"),
+    "VERIFICATION_CAPTURE_FAILED": ("unverified", "未完成：操作后截图失败。"),
+    "VERIFICATION_RESPONSE_INVALID": ("unverified", "未完成：结果检查服务没有返回有效答复。"),
+    "VERIFICATION_SERVICE_UNAVAILABLE": ("unverified", "未完成：结果检查服务暂时不可用。"),
+    "VERIFICATION_NOT_RUN": ("unverified", "未完成：操作在检查结果前停止。"),
 }
 
 
@@ -42,7 +73,7 @@ def unconfirmed_reply(verification):
     selected = _UNCONFIRMED_REASONS.get(value["reason"])
     if selected is None or value["status"] != selected[0]:
         return UNCONFIRMED_REPLY
-    return selected[1] + "任务未标记为完成，没有为了核对结果而再次点击。"
+    return selected[1]
 
 
 def utc_now():

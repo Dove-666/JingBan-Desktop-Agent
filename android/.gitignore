@@ -6,7 +6,7 @@ local.properties
 *.keystore
 *.p12
 *.dpapi
-deliverables/*.apk
+deliverables/**/*.apk
 signing.properties
 captures/
 .idea/

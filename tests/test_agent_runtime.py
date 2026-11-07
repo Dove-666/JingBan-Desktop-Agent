@@ -19,6 +19,7 @@ from desktop_pet.agents import (
     AgentValidationError, load_agent_settings, save_agent_settings,
 )
 from desktop_pet.agents import service as runtime
+from desktop_pet.agents.settings import shared_api_settings
 
 
 KEY = "local-host-test-secret"
@@ -75,6 +76,28 @@ class AgentContractTests(unittest.TestCase):
         store.status = lambda: Status.NoError
         save_agent_settings(store, AgentSettings())
         self.assertEqual(load_agent_settings(store), AgentSettings())
+
+    def test_global_api_ignores_retired_gui_preferences_and_does_not_write_a_second_route(self):
+        api = {"base_url": "https://main.example/v1", "model": "main-vision-model"}
+        store = Store()
+        retired = {"agents/gui_base_url": "https://retired.example/v1?bad=1",
+                   "agents/gui_model": object(), "agents/gui_provider": "obsolete",
+                   "agents/gui_coordinate_profile": "obsolete"}
+        store.values.update(retired)
+        settings = load_agent_settings(store, api=api)
+        self.assertTrue(settings.enabled)
+        self.assertEqual((settings.gui_base_url, settings.gui_model), (api["base_url"], api["model"]))
+        self.assertEqual((settings.gui_provider, settings.gui_coordinate_profile), ("ui-tars-1.5", "pixel"))
+        save_agent_settings(store, replace(settings, computer_enabled=True), api=api)
+        self.assertEqual({name: store.values[name] for name in retired}, retired)
+        self.assertTrue(load_agent_settings(store, api=api).computer_enabled)
+        # Even ignored legacy fields cannot be used to smuggle a key into a save.
+        with self.assertRaises(AgentValidationError):
+            save_agent_settings(store, replace(settings, gui_model=KEY), api=api, known_secrets=(KEY,))
+        before = dict(store.values)
+        shared = shared_api_settings(settings, {**api, "model": "updated-model"})
+        self.assertEqual(shared.gui_model, "updated-model")
+        self.assertEqual(store.values, before)
 
     def test_zero_is_unlimited_default_and_positive_compatibility_limits_round_trip(self):
         self.assertEqual(AgentSettings().max_steps, 0)
@@ -150,6 +173,7 @@ class AgentRuntimeTests(unittest.TestCase):
     def make_worker(self, body):
         prefix = (
             "import sys,json,time,os\n"
+            "print(json.dumps({'type':'ready','protocol':1,'sdk':'nanobot-ai','sdk_version':'0.4.0'}),flush=True)\n"
             "request=json.loads(sys.stdin.readline())\n"
             "task_id=request['id']\n"
             f"open({str(self.capture)!r},'w',encoding='utf-8').write(json.dumps(request))\n"
@@ -165,12 +189,11 @@ class AgentRuntimeTests(unittest.TestCase):
             self.spawned.append((process, args, options))
             return process
         with patch.object(runtime, "_WORKER_PATH", self.worker), patch.object(runtime.subprocess, "Popen", spy):
-            return self.service.execute(kwargs.pop("settings", self.settings), KEY,
+            return self.service.execute(kwargs.pop("settings", self.settings), kwargs.pop("key", KEY),
                 kwargs.pop("request", self.request), kwargs.pop("context", self.context), **kwargs)
 
     def test_success_uses_fixed_worker_stdin_keys_redaction_and_static_progress(self):
         self.make_worker(
-            "send({'type':'ready'})\n"
             "send({'type':'progress','phase':'tool','message':request['config']['api_key']})\n"
             "print(request['config']['api_key'],file=sys.stderr)\n"
             "send({'type':'final','reply':'完成 '+request['config']['api_key'],'emotion':'happy'})\n"
@@ -194,22 +217,44 @@ class AgentRuntimeTests(unittest.TestCase):
         self.assertEqual(options["stderr"], subprocess.DEVNULL)
         self.assertIsNotNone(process.poll())
 
-    def test_computer_model_credentials_are_sent_only_for_explicit_computer_task(self):
+    def test_computer_tasks_reuse_global_api_and_ignore_retired_route_and_credential(self):
         self.make_worker("send({'type':'final','reply':'完成 '+request['config']['gui']['api_key']})\n")
-        settings = replace(self.settings, computer_enabled=True, gui_model="ui-tars-fixture")
+        settings = replace(self.settings, computer_enabled=True, gui_model="retired-vision-model",
+                           gui_base_url="https://retired.example/v1", gui_provider="doubao-1.5-20b")
         result = self.execute(settings=settings, request=AgentRequest("桌面测试", "computer"),
                               context=dict(self.context, gui_api_key=GUI_KEY))
         self.assertEqual(result.kind, "computer")
         self.assertNotIn(GUI_KEY, result.reply)
         payload = json.loads(self.capture.read_text(encoding="utf-8"))
-        self.assertEqual(payload["config"]["gui"]["api_key"], GUI_KEY)
+        self.assertEqual(payload["config"]["gui"]["api_key"], KEY)
+        self.assertEqual(payload["config"]["gui"]["base_url"], self.context["api"]["base_url"])
+        self.assertEqual(payload["config"]["gui"]["model"], self.context["api"]["model"])
         self.assertEqual(payload["config"]["gui"]["provider"], "ui-tars-1.5")
-        self.assertEqual(payload["config"]["gui"]["coordinate_profile"], "native")
-        settings = replace(settings, gui_coordinate_profile="pixel")
+        self.assertEqual(payload["config"]["gui"]["coordinate_profile"], "pixel")
+        self.assertNotIn(GUI_KEY, repr(payload))
         self.execute(settings=settings, request=AgentRequest("桌面测试", "computer"),
-                     context=dict(self.context, gui_api_key=GUI_KEY))
+                     context=self.context)
         payload = json.loads(self.capture.read_text(encoding="utf-8"))
         self.assertEqual(payload["config"]["gui"]["coordinate_profile"], "pixel")
+        self.assertEqual(payload["config"]["gui"]["api_key"], KEY)
+
+    def test_only_the_actual_shared_account_changes_the_session_scope(self):
+        from uuid import uuid4
+        self.make_worker("send({'type':'final','reply':'done'})\n")
+        conversation_id = str(uuid4())
+        context = dict(self.context, conversation_id=conversation_id, gui_api_key=GUI_KEY)
+        self.execute(context=context)
+        original = self.service._session_scopes[conversation_id]
+        # An obsolete key supplied by an older internal caller is redacted but
+        # must not invalidate facts or change the account used for GUI traffic.
+        self.execute(context={**context, "gui_api_key": "different-retired-gui-key"})
+        self.assertEqual(self.service._session_scopes[conversation_id], original)
+        payload = json.loads(self.capture.read_text(encoding="utf-8"))
+        self.assertTrue(payload.get("session_history"))
+        self.execute(context=context, key="different-actual-main-key")
+        self.assertNotEqual(self.service._session_scopes[conversation_id], original)
+        payload = json.loads(self.capture.read_text(encoding="utf-8"))
+        self.assertFalse(payload.get("session_history"))
 
     def test_disabled_and_invalid_context_do_not_spawn(self):
         cases = [dict(settings=replace(self.settings, enabled=False)),
@@ -235,10 +280,13 @@ class AgentRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(self.spawned[0][0].poll())
 
     def test_timeout_stops_once_without_retry_or_raw_output(self):
-        self.make_worker("time.sleep(60)\n")
-        with patch.object(runtime.time, "monotonic", side_effect=[0, 6]):
+        self.make_worker("send({'type':'progress','phase':'planning'})\ntime.sleep(60)\n")
+        clock = [0.0]
+        def progress(phase):
+            if phase == 'planning': clock[0] = 6.0
+        with patch.object(runtime.time, "monotonic", side_effect=lambda: clock[0]):
             with self.assertRaises(AgentError) as caught:
-                self.execute(settings=replace(self.settings, timeout_seconds=5))
+                self.execute(settings=replace(self.settings, timeout_seconds=5),progress_callback=progress)
         self.assertEqual(caught.exception.code, "timeout")
         self.assertEqual(len(self.spawned), 1)
         self.assertIsNotNone(self.spawned[0][0].poll())
@@ -347,7 +395,7 @@ class AgentRuntimeTests(unittest.TestCase):
         result = self.execute(event_callback=events.append)
         # A successful click event proves dispatch, not the requested outcome.
         self.assertEqual(result.status, "needs_user")
-        self.assertIn("尚未确认", result.reply)
+        self.assertIn("未完成", result.reply)
         self.assertEqual([item['label'] for item in events], ['读取文件', '读取文件', '点击界面'])
         self.assertEqual(events[0]['id'], events[1]['id'])
         self.assertEqual(events[0]['status'], 'running')
@@ -356,6 +404,19 @@ class AgentRuntimeTests(unittest.TestCase):
         self.assertNotIn('reasoning', json.dumps(events))
         payload = json.loads(self.capture.read_text(encoding='utf-8'))
         self.assertTrue(payload['options']['include_activity'])
+
+    def test_local_subjects_are_bounded_and_redacted_while_raw_arguments_stay_hidden(self):
+        self.make_worker(
+            "send({'type':'activity','kind':'tool','name':'read_file','event_id':'tool-1','status':'completed','subject':{'kind':'file','name':'需求说明.docx'},'detail':'private raw arguments'})\n"
+            "send({'type':'activity','kind':'tool','name':'read_file','event_id':'tool-2','status':'completed','subject':{'kind':'file','name':request['config']['api_key']}})\n"
+            "send({'type':'activity','kind':'tool','name':'read_file','event_id':'tool-3','status':'completed','subject':{'kind':'file','name':'C:/private/secret.txt'}})\n"
+            "send({'type':'final','reply':'done'})\n")
+        events = []
+        self.execute(event_callback=events.append)
+        self.assertEqual(events[0]["subject"], {"kind": "file", "name": "需求说明.docx"})
+        self.assertNotIn(KEY, json.dumps(events, ensure_ascii=False))
+        self.assertNotIn("subject", events[2])
+        self.assertNotIn("private raw arguments", json.dumps(events))
 
     def test_full_model_context_crosses_old_message_character_and_request_caps(self):
         self.make_worker("send({'type':'final','reply':'done'})\n")

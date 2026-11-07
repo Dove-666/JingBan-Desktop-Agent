@@ -155,7 +155,7 @@ def deliver_selection(config_path, request, *, timeout_ms=2500):
     try:
         socket.connectToServer(inbox_name(config_path))
         if not socket.waitForConnected(max(1, round((deadline - time.monotonic()) * 1000))):
-            return {"ok": False, "error": "桌宠尚未就绪，请启动 AURA 后再试。"}
+            return {"ok": False, "error": "鲸伴尚未就绪，请启动鲸伴后再试。"}
         socket.write(outgoing)
         socket.flush()
         received = bytearray()

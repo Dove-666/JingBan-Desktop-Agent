@@ -8,12 +8,13 @@ import ctypes
 import sys
 from ctypes import wintypes
 
-from PySide6.QtCore import QEvent, QObject, QPointF, QRectF, Qt
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QRegion
 from PySide6.QtWidgets import (
-    QAbstractButton, QAbstractSpinBox, QComboBox, QHBoxLayout, QLineEdit,
+    QAbstractButton, QAbstractSpinBox, QApplication, QComboBox, QHBoxLayout, QLineEdit,
     QPlainTextEdit, QTextEdit, QWidget,
 )
+from .theme import color, current_theme, style_widget, theme_manager
 
 
 class _CaptionButton(QAbstractButton):
@@ -65,21 +66,18 @@ class _CaptionButton(QAbstractButton):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         hovered = self.underMouse()
         keyboard_focus = self.hasFocus() and self._keyboard_focus
-        background = "#ffffff"
-        foreground = "#526e88"
-        if self.kind == "close" and (hovered or self.isDown() or keyboard_focus):
-            background = "#c50f1f" if self.isDown() or keyboard_focus else "#e81123"
-            foreground = "#ffffff"
-        elif self.isDown():
-            background = "#dfedfb"
-        elif keyboard_focus:
-            background = "#e7f1fb"
-        elif hovered:
-            background = "#edf5fd"
-        painter.fillRect(self.rect(), QColor(background))
+        painter.fillRect(self.rect(), QColor(color("window")))
+        foreground = color("muted")
+        if hovered or self.isDown() or keyboard_focus:
+            background = color("selected") if self.isDown() else color("hover")
+            painter.setPen(QPen(QColor(color("focus")), 1) if keyboard_focus else Qt.PenStyle.NoPen)
+            painter.setBrush(QColor(background))
+            painter.drawRoundedRect(QRectF(self.rect()).adjusted(4, 4, -4, -4), 7, 7)
+            foreground = color("text")
         pen = QPen(QColor(foreground), 1.1)
         pen.setCapStyle(Qt.PenCapStyle.SquareCap)
         painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         x, y = self.width() / 2, self.height() / 2
         if self.kind == "minimize":
             painter.drawLine(QPointF(x - 5, y + 0.5), QPointF(x + 5, y + 0.5))
@@ -128,7 +126,7 @@ class _WindowOutline(QWidget):
     def paintEvent(self, _event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setPen(QPen(QColor("#d5e3f0"), 1.0))
+        painter.setPen(QPen(QColor(color("border") if current_theme() == "dark" else "#d5e3f0"), 1.0))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(QRectF(self.rect()).adjusted(.5, .5, -.5, -.5),
                                 self.radius - .5, self.radius - .5)
@@ -147,6 +145,11 @@ class WindowChrome(QObject):
         super().__init__(window)
         self.window = window
         self._drag_regions = set()
+        self._drag_region_heights = {}
+        self._drag_press = None
+        self._drag_origin = None
+        self._drag_widget = None
+        self._drag_started = False
         self._resize_cursor_set = False
         self._user32 = None
         self._shape_key = None
@@ -158,7 +161,7 @@ class WindowChrome(QObject):
         self.controls.setObjectName("windowControls")
         self.controls.setFixedSize(self.CONTROL_WIDTH, self.CONTROL_HEIGHT)
         self.controls.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.controls.setStyleSheet("QWidget#windowControls { background: #ffffff; }")
+        style_widget(self.controls, "QWidget#windowControls { background: #ffffff; }")
         self.controls.setCursor(Qt.CursorShape.ArrowCursor)
         layout = QHBoxLayout(self.controls)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -178,6 +181,14 @@ class WindowChrome(QObject):
         self._refresh_window_shape()
         self.controls.show()
         self.raise_controls()
+        manager = theme_manager()
+        if manager is not None:
+            manager.theme_changed.connect(self._theme_changed)
+
+    def _theme_changed(self, _name):
+        self.outline.update()
+        for button in (self.minimize_button, self.maximize_button, self.close_button):
+            button.update()
 
     @staticmethod
     def _rounded_region(rect, radius):
@@ -245,15 +256,71 @@ class WindowChrome(QObject):
         else:
             self.window.showMaximized()
 
-    def add_drag_region(self, widget):
-        """Opt a header/label into dragging; child inputs remain interactive."""
+    def add_drag_region(self, widget, *, height=None):
+        """Opt a header into dragging, optionally only its top logical pixels.
+
+        A bounded background region covers the gap above a game's headers
+        without turning the board, splitter or editor into a drag target.
+        """
+        if height is not None and (type(height) is not int or height <= 0):
+            raise ValueError("Drag-region height must be a positive integer.")
         if not isinstance(widget, QWidget) or widget in self._drag_regions:
             return
         self._drag_regions.add(widget)
+        self._drag_region_heights[widget] = height
         widget.installEventFilter(self)
         widget.setMouseTracking(True)
         widget.setCursor(Qt.CursorShape.ArrowCursor)
-        widget.destroyed.connect(lambda: self._drag_regions.discard(widget))
+        widget.destroyed.connect(lambda: self._remove_drag_region(widget))
+
+    def _remove_drag_region(self, widget):
+        self._drag_regions.discard(widget)
+        self._drag_region_heights.pop(widget, None)
+        if self._drag_widget is widget:
+            self._cancel_drag()
+
+    def _cancel_drag(self):
+        widget = self._drag_widget
+        self._drag_press = self._drag_origin = self._drag_widget = None
+        self._drag_started = False
+        try:
+            if widget is not None and QWidget.mouseGrabber() is widget:
+                widget.releaseMouse()
+        except RuntimeError:
+            pass
+
+    def _begin_manual_drag(self, widget, event):
+        self._drag_press = event.globalPosition().toPoint()
+        self._drag_origin = self.window.pos()
+        self._drag_widget = widget
+        self._drag_started = False
+        self._drag_anchor = self._drag_press - self.window.frameGeometry().topLeft()
+        self._drag_fraction = self._drag_anchor.x() / max(1, self.window.width())
+        # Keep delivery when the pointer leaves the header. Hidden QA widgets
+        # deliberately never acquire the user's native mouse capture.
+        handle = self.window.windowHandle()
+        if handle is not None and handle.isExposed():
+            widget.grabMouse()
+
+    def _continue_manual_drag(self, event):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
+            self._cancel_drag()
+            return False
+        position = event.globalPosition().toPoint()
+        delta = position - self._drag_press
+        if not self._drag_started and delta.manhattanLength() < QApplication.startDragDistance():
+            return True
+        self._drag_started = True
+        if self.window.isMaximized():
+            fraction = max(0.0, min(1.0, self._drag_fraction))
+            anchor_y = max(0, min(self._drag_anchor.y(), self.CONTROL_HEIGHT + self.FRAME_MARGIN))
+            self.window.showNormal()
+            restored = QPoint(position.x() - round(self.window.width() * fraction), position.y() - anchor_y)
+            self.window.move(restored)
+            self._drag_press, self._drag_origin = position, restored
+        else:
+            self.window.move(self._drag_origin + delta)
+        return True
 
     def _resize_edges(self, position):
         if self.window.isMaximized() or self.window.isFullScreen():
@@ -311,6 +378,18 @@ class WindowChrome(QObject):
 
     def eventFilter(self, watched, event):
         kind = event.type()
+        if watched is self.window and kind in (QEvent.Type.Hide, QEvent.Type.WindowDeactivate,
+                                               QEvent.Type.Close):
+            self._cancel_drag()
+        if self._drag_press is not None:
+            if kind == QEvent.Type.MouseMove:
+                if self._continue_manual_drag(event):
+                    event.accept()
+                    return True
+            elif kind == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+                self._cancel_drag()
+                event.accept()
+                return True
         if watched is self.window:
             if kind == QEvent.Type.WinIdChange:
                 self._shape_key = None
@@ -333,7 +412,15 @@ class WindowChrome(QObject):
             self._refresh_window_shape()
         if watched in self._drag_regions:
             if kind in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
-                if event.button() == Qt.MouseButton.LeftButton and not self._interactive_child_at(watched, event):
+                height = self._drag_region_heights.get(watched)
+                inside = watched.rect().contains(event.position().toPoint())
+                inside = inside and not self._resize_edges(watched.mapTo(self.window, event.position().toPoint()))
+                if height is not None:
+                    inside = inside and event.position().y() < height
+                if (inside and not self.window.isFullScreen()
+                        and event.button() == Qt.MouseButton.LeftButton
+                        and not self._interactive_child_at(watched, event)):
+                    self._cancel_drag()
                     if kind == QEvent.Type.MouseButtonDblClick:
                         self.toggle_maximized()
                         event.accept()
@@ -341,6 +428,9 @@ class WindowChrome(QObject):
                     if self.start_move():
                         event.accept()
                         return True
+                    self._begin_manual_drag(watched, event)
+                    event.accept()
+                    return True
         return super().eventFilter(watched, event)
 
     def _windows_api(self):

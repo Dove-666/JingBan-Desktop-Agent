@@ -65,10 +65,15 @@ class AgentCredentialsTests(unittest.TestCase):
         self.assertEqual(reopened.get_agent_gui_api_key(), GUI_KEY)
         self.assert_no_ini_secrets()
 
-    def test_gui_key_and_chat_key_are_never_written_to_ini(self):
+    def test_agent_settings_store_no_duplicate_api_and_never_write_keys_to_ini(self):
         settings = replace(self.manager.load_agent_settings(), gui_model="ui-tars-fixture", max_steps=18)
         self.manager.save_agent_settings(settings)
-        self.assertEqual(self.new_manager().load_agent_settings(), settings)
+        api = self.manager.load_api_settings()
+        expected = replace(settings, gui_base_url=api.base_url, gui_model=api.model,
+                           gui_provider="ui-tars-1.5", gui_coordinate_profile="pixel")
+        self.assertEqual(self.new_manager().load_agent_settings(), expected)
+        for name in ("gui_base_url", "gui_model", "gui_provider", "gui_coordinate_profile"):
+            self.assertFalse(self.manager._settings.contains("agents/" + name))
         self.assertFalse(any("api_key" in name for name in self.manager._settings.allKeys()))
         self.assertNotIn(GUI_KEY, repr(asdict(settings)))
         self.assert_no_ini_secrets()
@@ -101,10 +106,22 @@ class AgentCredentialsTests(unittest.TestCase):
         self.assertNotIn(GUI_CREDENTIAL_ACCOUNT, {account for _service, account in self.vault.values})
         self.assert_no_ini_secrets()
 
-    def test_corrupted_gui_preferences_disable_agent_without_changing_credentials(self):
+    def test_legacy_gui_preferences_are_ignored_but_invalid_agent_settings_disable_execution(self):
+        api = self.manager.load_api_settings()
         for key, value in (("gui_provider", "unrecognized"), ("gui_base_url", "https://user:password@example.test"),
-                           ("gui_model", "model\nwith-control"), ("enabled", "invalid-bool"),
-                           ("timeout_seconds", "NaN"), ("workspace", "relative-directory")):
+                           ("gui_model", "model\nwith-control"), ("gui_coordinate_profile", "invalid-profile")):
+            with self.subTest(key=key):
+                self.manager._settings.remove("agents")
+                self.manager._settings.setValue("agents/" + key, value)
+                self.manager._settings.sync()
+                settings = self.manager.load_agent_settings()
+                self.assertTrue(settings.enabled)
+                self.assertEqual((settings.gui_base_url, settings.gui_model), (api.base_url, api.model))
+                self.assertEqual((settings.gui_provider, settings.gui_coordinate_profile), ("ui-tars-1.5", "pixel"))
+                self.assertEqual(self.manager.get_api_key(), CHAT_KEY)
+                self.assertEqual(self.manager.get_agent_gui_api_key(), GUI_KEY)
+        for key, value in (("enabled", "invalid-bool"), ("timeout_seconds", "NaN"),
+                           ("workspace", "relative-directory")):
             with self.subTest(key=key):
                 self.manager._settings.remove("agents")
                 self.manager._settings.setValue("agents/" + key, value)
@@ -114,15 +131,23 @@ class AgentCredentialsTests(unittest.TestCase):
                 self.assertEqual(self.manager.get_agent_gui_api_key(), GUI_KEY)
         self.assert_no_ini_secrets()
 
-    def test_default_agent_is_enabled_without_requiring_a_gui_model_or_key(self):
+    def test_agent_follows_global_api_changes_without_requiring_a_separate_gui_key(self):
         self.manager.clear_agent_gui_api_key()
         settings = self.manager.load_agent_settings()
-        self.assertEqual(settings, AgentSettings())
+        api = self.manager.load_api_settings()
+        self.assertEqual(settings, replace(AgentSettings(), gui_base_url=api.base_url, gui_model=api.model,
+                                           gui_provider="ui-tars-1.5", gui_coordinate_profile="pixel"))
         self.assertTrue(settings.enabled)
-        self.assertFalse(settings.computer_enabled)
-        self.assertEqual(settings.gui_model, "")
+        self.assertTrue(settings.computer_enabled)
+        self.assertEqual(settings.gui_model, api.model)
         self.manager.save_agent_settings(settings)
         self.assertTrue(self.manager.load_agent_settings().tools_enabled)
+        updated = replace(api, base_url="http://127.0.0.1:2/v1", model="updated-global-model")
+        self.manager.save_api_settings(updated)
+        current = self.manager.load_agent_settings()
+        self.assertEqual((current.gui_base_url, current.gui_model), (updated.base_url, updated.model))
+        self.assertEqual((current.gui_provider, current.gui_coordinate_profile), ("ui-tars-1.5", "pixel"))
+        self.assertTrue(current.enabled)
         self.assert_no_ini_secrets()
 
     def test_vault_failure_is_sanitized_and_does_not_replace_existing_credentials(self):
@@ -144,8 +169,10 @@ class AgentCredentialsTests(unittest.TestCase):
         self.assert_no_ini_secrets()
 
     def test_new_gui_key_cannot_legitimize_a_key_already_pasted_in_public_agent_fields(self):
-        unsafe = replace(self.manager.load_agent_settings(), gui_model=PENDING_KEY)
-        self.manager.save_agent_settings(unsafe)
+        # A previous version may have retained a pasted key in its public GUI
+        # model setting. Runtime derivation must not hide it from key validation.
+        self.manager._settings.setValue("agents/gui_model", PENDING_KEY)
+        self.manager._settings.sync()
         with self.assertRaises(CredentialsError) as caught:
             self.manager.save_agent_gui_api_key(PENDING_KEY)
         self.assertNotIn(PENDING_KEY, str(caught.exception))

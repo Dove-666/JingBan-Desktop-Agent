@@ -142,7 +142,7 @@ def collect_diagnostics(*, image_path=None, module_finder=None, version_getter=N
 
 def format_summary(report: dict) -> str:
     runtime, image = report["runtime"], report["character_image"]
-    lines = ["AURA 本地诊断：" + report["summary"],
+    lines = ["鲸伴本地诊断：" + report["summary"],
              f"Python {runtime['python']} · {runtime['architecture_bits']} 位 · {runtime['system']}",
              "Qt：" + (runtime["qt"] or "未完成加载验证")]
     if image["validation"] == "decoded":

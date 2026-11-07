@@ -216,8 +216,8 @@ class _Arithmetic:
 
 
 class DataTools:
-    def __init__(self, workspace: Path):
-        self.files = WorkspaceFiles(Path(workspace))
+    def __init__(self, workspace: Path, *, files=None):
+        self.files = files if files is not None else WorkspaceFiles(Path(workspace))
 
     def calculate(self, expression: str) -> str:
         """+, -, *, /, //, %, small integer **; abs/min/max/sum/round only.
@@ -348,7 +348,7 @@ class DataTools:
         warnings = ["UNMARKED_CURRENCY_VALUES"] if currencies and unmarked else []
         currency = next(iter(currencies)) if currencies and not unmarked else None
         return _json({"tool": "analyze_csv", "read_only": True, "exact": True,
-                      "source_path": str(target.relative_to(self.files.root)),
+                      "source_path": self.files.display_path(target),
                       "source_sha256": hashlib.sha256(raw).hexdigest(), "source_bytes": len(raw),
                       "value_column": value_column, "group_by": group_by,
                       "record_count": count, "blank_records_skipped": blanks, "empty": count == 0,

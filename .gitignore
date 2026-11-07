@@ -1,6 +1,10 @@
 .venv/
 node_modules/
 .venv-assets/
+.venv-release/
+# Generated Windows test releases; keep guides and SHA256 manifests reviewable.
+/deliverables/windows/*/*.exe
+/deliverables/windows/*/*.zip
 .asset-cache/
 asset_work/
 third_party/sam2/
@@ -22,6 +26,12 @@ settings.ini
 *.db
 *.db-*
 /memory/
+# Reproducible optional game engines; provision with tools/setup_pikafish.py.
+/assets/engines/pikafish/*.exe
+/assets/engines/pikafish/*.nnue
+/assets/engines/rapfi/*.exe
+/assets/engines/rapfi/*.bin
+/assets/engines/rapfi/*.bin.lz4
 mem0_data/
 conversation_exports/
 model_cache/
@@ -33,3 +43,21 @@ model_cache/
 
 # Machine-specific Photoshop preferences; keep art sources tracked.
 /美术资产/鲸鱼娘_七种表情_Photoshop/工程/Photoshop偏好备份/
+
+# Frozen database used by the remote synchronization migration regression.
+!/tests/fixtures/remote_sync_v10_delegation.sqlite3
+
+# Local credentials and generated install packages never belong in source control.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.dpapi
+*.vault
+credentials.json
+devices.json
+/android/deliverables/**/*.apk
+
+# Personal reference photos stay local; the finished character artwork is tracked.
+/美术资产/鲸鱼娘_叉腰小得意_20261103/参考与提示词/用户动作示意.jpg
+/美术资产/鲸鱼娘_捧脸心动_20261103/参考与提示词/用户动作示意.jpg

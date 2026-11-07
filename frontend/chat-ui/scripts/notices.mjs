@@ -28,10 +28,10 @@ function visit(name, from) {
 
 for (const dependency of Object.keys(rootPackage.dependencies)) visit(dependency, project);
 const text = [
-  'AURA offline chat frontend - third-party notices',
+  '鲸伴 offline chat frontend - third-party notices',
   '',
   'This frontend uses the real @assistant-ui/react package and its runtime and primitives.',
-  'UI layout and CSS are maintained locally by AURA. The notices below cover the installed',
+  'UI layout and CSS are maintained locally by 鲸伴. The notices below cover the installed',
   'runtime dependency graph; some listed modules may be removed by production tree shaking.',
   'No frontend dependency makes a network request on behalf of this application.',
   '',
@@ -43,7 +43,7 @@ for (const { pkg, files } of [...packages.values()].sort((a, b) => a.pkg.name.lo
 }
 const glassSources = path.resolve(project, '../../third_party/liquid_glass');
 if (fs.existsSync(glassSources)) {
-  text.push('='.repeat(78), 'AURA GlassSurface: adapted SVG refraction sources', '');
+  text.push('='.repeat(78), '鲸伴 GlassSurface: adapted SVG refraction sources', '');
   for (const file of ['PROVENANCE.txt', 'LICENSE', 'LICENSE-rdev']) {
     text.push(`--- ${file} ---`, fs.readFileSync(path.join(glassSources, file), 'utf8').trim(), '');
   }

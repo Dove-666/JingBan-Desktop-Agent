@@ -231,7 +231,7 @@ def main():
         settings_before = hashlib.sha256(settings_path.read_bytes()).hexdigest()
         manager = SettingsManager(QSettings(str(settings_path), QSettings.IniFormat))
         configured = manager.load_agent_settings()
-        gui_key = manager.get_agent_gui_api_key()
+        gui_key = manager.get_api_key()
         if not configured.enabled or not configured.computer_enabled or not configured.gui_model or not gui_key:
             raise SystemExit("Configured GUI permissions/model/credential not ready")
     user32 = ctypes.WinDLL("user32", use_last_error=True)

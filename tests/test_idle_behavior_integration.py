@@ -18,8 +18,8 @@ from PySide6.QtWidgets import QApplication
 from desktop_pet.animation_controller import AnimationState
 from desktop_pet.config import PetConfig
 from desktop_pet.expression_manager import EXPRESSIONS, ExpressionManager
-from desktop_pet.frame_animation import ClipManifest, LoadedClip
-from desktop_pet.idle_behavior import DEFAULT_IDLE_ACTIONS, IdleBehaviorPolicy
+from desktop_pet.frame_animation import ClipManifest, LoadedClip, static_canvas
+from desktop_pet.idle_behavior import DEFAULT_IDLE_ACTIONS, IDLE_DURATION_SECONDS, IdleBehaviorPolicy
 from desktop_pet.pet_controller import PetController
 from desktop_pet.pet_window import PetWindow
 from desktop_pet.settings_manager import CredentialStore, SettingsManager
@@ -104,7 +104,9 @@ class IdleBehaviorIntegrationTests(unittest.TestCase):
     def _manifest(self, _directory, name):
         return ClipManifest(
             name=name, paths=(self.root / "frame-1.png", self.root / "frame-2.png"),
-            fps=12, loop=True, completion="idle", anchor=(.5, .9375), transition_ms=250,
+            fps=12, loop=name not in {"think_scratch_head", "snarl_cute"},
+            completion="hold_last" if name == "snarl_cute" else "idle",
+            anchor=(.5, .9375), transition_ms=250,
         )
 
     def _loaded_clip(self, directory, name):
@@ -141,7 +143,8 @@ class IdleBehaviorIntegrationTests(unittest.TestCase):
                 self.tick(self.controller.behavior.next_idle_in + .001)
         choices = [call.args[0] for call in play.call_args_list]
         self.assertEqual(len(choices), len(DEFAULT_IDLE_ACTIONS) * 3)
-        self.assertTrue(all(call.kwargs == {"once": True} for call in play.call_args_list))
+        self.assertTrue(all(call.kwargs == {"once": True, "duration_seconds": IDLE_DURATION_SECONDS}
+                            for call in play.call_args_list))
         self.assertTrue(all(first != second for first, second in zip(choices, choices[1:])))
         for offset in range(0, len(choices), len(DEFAULT_IDLE_ACTIONS)):
             self.assertEqual(set(choices[offset:offset + len(DEFAULT_IDLE_ACTIONS)]), set(DEFAULT_IDLE_ACTIONS))
@@ -149,13 +152,128 @@ class IdleBehaviorIntegrationTests(unittest.TestCase):
     def test_automatic_clip_really_finishes_and_restores_static_pixels(self):
         self.start_random_clip()
         self.assertFalse(self.player._clip.manifest.loop)
-        self.tick(.26)  # Entry bridge.
-        self.tick(.20)  # Complete the two frames and begin the exit bridge.
-        self.tick(.26)
+        self.tick(IDLE_DURATION_SECONDS - .01)
+        self.assertTrue(self.player.playing)
+        self.tick(.02)
         self.assertFalse(self.player.playing)
         self.assertFalse(self.pet._sequence_frames)
         self.assertFalse(self.controller._idle_clip_owned)
         self.assert_face("neutral")
+
+    def test_new_video_idles_play_once_and_restore_neutral(self):
+        for name in ("idle_hands_on_hips", "idle_heart_cheeks", "idle_typing_work", "idle_eating_rice"):
+            with self.subTest(name=name):
+                self.assertIn(name, DEFAULT_IDLE_ACTIONS)
+                self.controller.behavior = IdleBehaviorPolicy(
+                    random.Random(37), idle_actions=(name,),
+                )
+                self.start_random_clip()
+                self.assertEqual(self.player.name, name)
+                self.assertFalse(self.player._clip.manifest.static_pose_idle)
+                self.assertFalse(self.player._clip.manifest.loop)
+                self.tick(IDLE_DURATION_SECONDS - .01)
+                self.assertTrue(self.player.playing)
+                self.tick(.02)
+                self.assertFalse(self.player.playing)
+                self.assertFalse(self.pet._sequence_frames)
+                self.assertFalse(self.controller._idle_clip_owned)
+                self.assert_face("neutral")
+
+    def test_reused_actions_finish_once_with_a_visible_return_bridge(self):
+        for name in ("think_scratch_head", "snarl_cute"):
+            with self.subTest(name=name):
+                self.assertIn(name, DEFAULT_IDLE_ACTIONS)
+                self.controller.behavior = IdleBehaviorPolicy(random.Random(37), idle_actions=(name,))
+                self.start_random_clip()
+                self.assertEqual(self.player.name, name)
+                self.assertFalse(self.player._clip.manifest.loop)
+                self.assertEqual(self.player._clip.manifest.completion, "idle")
+                self.tick(IDLE_DURATION_SECONDS - .25)
+                # The old snarl source ends crouching and manually holds that
+                # pose. Its automatic route must render a return bridge, not
+                # jump directly from the last pose to static neutral pixels.
+                self.assertTrue(self.player.playing)
+                self.assertEqual(self.player._phase, "exit")
+                last_pose = self.pet._hit_image.copy()
+                self.tick(.12)
+                self.assertEqual(self.player._phase, "exit")
+                self.assertNotEqual(self.pet._hit_image, last_pose)
+                self.tick(.14)
+                self.assertFalse(self.player.busy)
+                self.assertFalse(self.pet._sequence_frames)
+                self.assertFalse(self.controller._idle_clip_owned)
+                self.assert_face("neutral")
+
+    def test_both_static_poses_are_registered_in_the_random_idle_pool(self):
+        self.assertIn("idle_sleepy", DEFAULT_IDLE_ACTIONS)
+        self.assertIn("idle_tsundere", DEFAULT_IDLE_ACTIONS)
+
+    def test_active_idle_duration_freezes_while_dragging_and_returning(self):
+        self.start_random_clip()
+        self.tick(1)
+        before = self.player._clock.elapsed
+        frozen = self.pet._hit_image.copy()
+        self.pet.animation.start_dragging()
+        self.tick(20)
+        self.assertEqual(self.player._clock.elapsed, before)
+        self.assertEqual(self.pet._hit_image, frozen)
+        self.pet.animation.finish_dragging()
+        self.tick(.01)
+        self.assertEqual(self.pet.animation.state, AnimationState.RETURNING)
+        self.assertEqual(self.player._clock.elapsed, before)
+        self.tick(self.pet.config.animation.return_duration + .01)
+        self.assertLess(self.player._clock.elapsed - before, .5)
+        self.tick(IDLE_DURATION_SECONDS - 2)
+        self.assertTrue(self.player.playing)
+        self.tick(2)
+        self.assertFalse(self.player.playing)
+        self.assert_face("neutral")
+
+    def test_duration_finishes_at_six_seconds_for_fine_and_delayed_ticks(self):
+        neutral = static_canvas(self.pet._source.toImage())
+        variants = ((self.clip_frames[0], self.clip_frames[-1]),
+                    (self.clip_frames[0], neutral), (neutral, neutral))
+        for frames in variants:
+            self.clip_frames = frames
+            for step in (1 / 60, .37, IDLE_DURATION_SECONDS):
+                with self.subTest(neutral_end=frames[-1] == neutral, step=step):
+                    self.controller.behavior = IdleBehaviorPolicy(random.Random(37),
+                                                                  idle_actions=("idle_puff_cheeks",))
+                    self.start_random_clip()
+                    elapsed = 0.0
+                    while elapsed < IDLE_DURATION_SECONDS - .001:
+                        delta = min(step, IDLE_DURATION_SECONDS - .001 - elapsed)
+                        self.tick(delta)
+                        elapsed += delta
+                        self.assertTrue(self.player.playing,
+                                        f"Idle ended before its six-second deadline at {elapsed}")
+                    self.tick(.001)
+                    self.assertFalse(self.player.playing,
+                                     "A completed clip must not defer leftover exit time to the next tick")
+                    self.assertFalse(self.controller._idle_clip_owned)
+                    self.assert_face("neutral")
+            with self.subTest(neutral_end=frames[-1] == neutral, tick="single-six-second-tick"):
+                self.controller.behavior = IdleBehaviorPolicy(random.Random(37),
+                                                              idle_actions=("idle_puff_cheeks",))
+                self.start_random_clip()
+                self.tick(IDLE_DURATION_SECONDS)
+                self.assertFalse(self.player.playing)
+                self.assertFalse(self.controller._idle_clip_owned)
+                self.assert_face("neutral")
+
+    def test_invalid_duration_arguments_preserve_the_active_clip_and_pixels(self):
+        self.start_random_clip()
+        self.tick(1)
+        active = self.player._clip
+        frame = self.pet._hit_image.copy()
+        for options in ({"once": False, "duration_seconds": IDLE_DURATION_SECONDS},
+                        *({"once": True, "duration_seconds": invalid}
+                          for invalid in (True, 0, -1, .25, .5, float("nan"), float("inf"), "6"))):
+            with self.subTest(options=options):
+                self.assertFalse(self.player.play("snarl_cute", **options))
+                self.assertIs(self.player._clip, active)
+                self.assertEqual(self.pet._hit_image, frame)
+                self.assertFalse(self.player.loading)
 
     def test_conversation_busy_blocks_idle_and_false_waits_for_fresh_quiet(self):
         with patch.object(self.player, "play", return_value=True) as play:

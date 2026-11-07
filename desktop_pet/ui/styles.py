@@ -76,3 +76,10 @@ QMenu#chatToolsMenu QLabel#contextUsage { color: #647d90; font-size: 12px; paddi
 QLabel#screenEventDetails { background: #edf7f2; border: 1px solid #cfe4da;
     border-radius: 8px; padding: 11px; color: #315b4c; }
 """
+
+# Shared by the pet and tray menus as well as native recovery views.
+MENU_STYLE = PANEL_STYLE + """
+QMenu { border-radius: 10px; padding: 5px; }
+QMenu::item { padding: 7px 22px 7px 12px; border-radius: 6px; }
+QMenu::separator { height: 1px; background: #e6eaf0; margin: 5px 8px; }
+"""

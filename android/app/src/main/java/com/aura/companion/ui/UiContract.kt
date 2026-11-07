@@ -22,11 +22,16 @@ data class UiDirectApi(
     val keySaved: Boolean = false,
     val timeoutSeconds: Int = 30,
     val reasoningEffort: String = "default",
+    val reasoningProfile: String = "auto",
+    val reasoningBudgetTokens: Int = 0,
+    val reasoningMetadata: String? = null,
 )
 
 /** Ephemeral form submission; never store this object in saved UI state. */
 class UiApiConfigInput(val baseUrl: String, val model: String, val apiKey: String,
-                       val timeoutSeconds: Int, val reasoningEffort: String) {
+                       val timeoutSeconds: Int, val reasoningEffort: String,
+                       val reasoningProfile: String = "auto", val reasoningBudgetTokens: Int = 0,
+                       val reasoningMetadata: String? = null) {
     override fun toString() = "UiApiConfigInput([private])"
 }
 
@@ -37,6 +42,9 @@ data class UiConversation(
     val updatedAt: String = "",
     val localOnly: Boolean = false,
 )
+
+/** Character shelf labels only. Role prompts and credentials stay out of UI state. */
+data class UiCharacterCard(val id: String, val label: String, val name: String)
 
 /** Public application/tool observations only; no model reasoning or tool arguments. */
 data class UiExecutionStep(
@@ -77,6 +85,15 @@ data class UiPendingAttachment(
     val preparing: Boolean = false,
 )
 
+data class UiAgentFileResource(val path: String, val access: String, val directory: Boolean)
+data class UiAgentInteraction(val id: String, val kind: String, val question: String,
+    val conversationId: String, val options: List<String> = emptyList(), val resource: UiAgentFileResource? = null)
+data class UiAgentArtifact(val reference: String, val name: String, val bytes: Long)
+sealed interface UiAgentAnswer {
+    data class Text(val text: String) : UiAgentAnswer
+    data class Permission(val allowed: Boolean) : UiAgentAnswer
+}
+
 data class UiImage(
     val id: String,
     val filename: String,
@@ -116,11 +133,12 @@ data class UiState(
     val pairingError: String? = null,
     val pendingPairInfo: String? = null,
     val notice: String? = null,
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.LIGHT,
     val petScale: Int = 100,
     val petVisible: Boolean = true,
     val directApi: UiDirectApi = UiDirectApi(),
     val directChatBusy: Boolean = false,
+    val directChatConversationId: String? = null,
     val historyPendingCount: Int = 0,
     val apiConfigSaving: Boolean = false,
     val apiConfigError: String? = null,
@@ -132,6 +150,18 @@ data class UiState(
     val desktopTaskRunning: Boolean = false,
     val desktopTaskActivity: String = "",
     val desktopTaskError: String = "",
+    val agentInteraction: UiAgentInteraction? = null,
+    val agentInteractionBusy: Boolean = false,
+    val canSteerDesktop: Boolean = false,
+    val agentArtifacts: List<UiAgentArtifact> = emptyList(),
+    val artifactDownloading: String? = null,
+    val taskNotificationsEnabled: Boolean = false,
+    val characterCards: List<UiCharacterCard> = emptyList(),
+    val activeCharacterId: String? = null,
+    val activeCharacterName: String = "鲸鱼娘",
+    val characterSyncBusy: Boolean = false,
+    val characterSyncError: String? = null,
+    val characterLibrarySupported: Boolean = false,
 ) {
     val chatAvailable: Boolean get() = paired || directApi.available || conversations.isNotEmpty()
     val queueSummary: String get() = when {
@@ -157,6 +187,7 @@ interface UiActions {
     fun selectConversation(id: String)
     fun newConversation()
     fun sendMessage(text: String)
+    fun sendPhoneMessage(text: String, onAccepted: (Boolean) -> Unit) { sendMessage(text); onAccepted(false) }
     fun retryMessage(id: String)
     fun discardOutbox(requestId: String)
     fun pickImage()
@@ -173,4 +204,11 @@ interface UiActions {
     fun requestDesktopScreenshot()
     fun setDesktopAgentMode(enabled: Boolean) {}
     fun cancelDesktopTask() {}
+    fun cancelDirectChat() {}
+    fun answerAgentInteraction(id: String, answer: UiAgentAnswer, onAccepted: (Boolean) -> Unit) { onAccepted(false) }
+    fun steerDesktopTask(text: String, onAccepted: (Boolean) -> Unit) { onAccepted(false) }
+    fun saveArtifact(reference: String) {}
+    fun setTaskNotifications(enabled: Boolean) {}
+    fun refreshCharacters() {}
+    fun selectCharacter(id: String) {}
 }

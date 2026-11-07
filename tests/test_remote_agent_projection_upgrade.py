@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 from uuid import uuid4
 
-from desktop_pet.conversations.store import ConversationStore
+from desktop_pet.conversations.store import ConversationStore, REMOTE_SYNC_SCHEMA_VERSION
 from desktop_pet.execution_trace import ExecutionTrace
 from desktop_pet.remote.sync import RemoteSyncStore
 
@@ -34,7 +34,7 @@ class AgentProjectionUpgradeTests(unittest.TestCase):
             public = [c["data"] for c in RemoteSyncStore(upgraded).pull()["changes"] if c["entity"] == "message"][-1]
             self.assertEqual(public["agent_error_code"], "gui_desktop_locked")
             with upgraded._connection() as connection:
-                self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], 7)
+                self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], REMOTE_SYNC_SCHEMA_VERSION)
 
     def test_existing_v5_projection_includes_native_system_observations(self):
         with tempfile.TemporaryDirectory() as directory:

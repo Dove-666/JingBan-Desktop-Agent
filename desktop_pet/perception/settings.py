@@ -1,4 +1,4 @@
-"""Non-secret, explicitly opt-in preferences for screen perception."""
+"""Non-secret screen defaults and independent, initially disabled camera preferences."""
 
 from dataclasses import dataclass
 import math
@@ -18,15 +18,15 @@ COMMENTARY_MODES = frozenset({"quiet", "companion"})
 
 @dataclass(frozen=True)
 class PerceptionSettings:
-    enabled: bool = False
-    allow_remote: bool = False
+    enabled: bool = True
+    allow_remote: bool = True
     observation_interval_seconds: int = 10
-    analysis_interval_seconds: int = 60
+    analysis_interval_seconds: int = 30
     change_threshold: float = 0.08
-    speech_cooldown_seconds: int = 180
-    max_speeches_per_hour: int = 6
+    speech_cooldown_seconds: int = 30
+    max_speeches_per_hour: int = 30
     commentary_mode: str = "companion"
-    idle_pause_seconds: int = 600
+    idle_pause_seconds: int = 585
     privacy_keywords: tuple[str, ...] = DEFAULT_PRIVACY_KEYWORDS
     excluded_apps: tuple[str, ...] = DEFAULT_EXCLUDED_APPS
 
@@ -65,6 +65,12 @@ class PerceptionSettings:
 class CameraSettings(PerceptionSettings):
     """Independent consent and device selection; screen approval never enables it."""
 
+    enabled: bool = False
+    allow_remote: bool = False
+    analysis_interval_seconds: int = 60
+    speech_cooldown_seconds: int = 180
+    max_speeches_per_hour: int = 6
+    idle_pause_seconds: int = 600
     device_id: str = ""
 
     def validate(self) -> None:

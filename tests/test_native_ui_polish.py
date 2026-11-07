@@ -69,7 +69,7 @@ class NativeUiPolishTests(unittest.TestCase):
 
     def api_panel(self):
         self.settings = FakeSettings()
-        self.settings.config = replace(self.settings.config, reasoning_effort="high")
+        self.settings.config = replace(self.settings.config, reasoning_effort="high", reasoning_profile="openai")
         panel = DebugPanel(FakePet(), self.settings, FakeChat())
         self.widgets.append(panel)
         panel.tabs.setCurrentIndex(1)
@@ -103,6 +103,7 @@ class NativeUiPolishTests(unittest.TestCase):
         panel.key_input.setText("synthetic-new-key")
         panel.model_input.setText("synthetic-model-draft")
         panel.api_advanced_button.click()
+        panel.reasoning_controls.profile_combo.setCurrentIndex(panel.reasoning_controls.profile_combo.findData("openai"))
         panel.reasoning_effort_combo.setCurrentIndex(panel.reasoning_effort_combo.findData("low"))
         panel.api_advanced_button.click()
         self.assertEqual(panel.key_input.text(), "synthetic-new-key")

@@ -48,11 +48,11 @@ flowchart TD
 | 项目与许可 | 实际版本及代码 | 借鉴内容 |
 | --- | --- | --- |
 | Microsoft UFO，MIT | [controller.py](https://github.com/microsoft/UFO/blob/eae3c0a8d168c47cb10df0652e293e092eda1078/ufo/automator/ui_control/controller.py) | 控件观察与结构化动作分工 |
-| Windows-MCP，MIT | [patterns.py](https://github.com/CursorTouch/Windows-MCP/blob/94b52cfb48076cb793e710351517fa18a316cd12/src/windows_mcp/uia/patterns.py) | 读状态后按需操作；AURA 限制一次切换 |
+| Windows-MCP，MIT | [patterns.py](https://github.com/CursorTouch/Windows-MCP/blob/94b52cfb48076cb793e710351517fa18a316cd12/src/windows_mcp/uia/patterns.py) | 读状态后按需操作；鲸伴限制一次切换 |
 | Vercel Agent Desktop，Apache-2.0 | [固定版本](https://github.com/vercel-labs/agent-desktop/tree/9eb9b296192fcb70bda25e918cd6dd66abfa3d0d) | 失效引用与歧义目标显式报错 |
 | Midscene，MIT | [insight.ts](https://github.com/web-infra-dev/midscene/blob/1527e33dac3a289309c3cbc5a1e6745ee05bbf98/packages/core/src/agent/insight.ts) | 独立结果断言，失败不能当成功 |
 | Agent S，Apache-2.0 | [worker.py](https://github.com/simular-ai/Agent-S/blob/0fff0e634869dab72027435b4586e62300185d41/gui_agents/s3/agents/worker.py) | 观察、动作和反思/检查分工 |
-| Browser Use，MIT | [service.py](https://github.com/browser-use/browser-use/blob/b49a68e4060acb226da8f784194fef301c53a6d7/browser_use/agent/service.py) | 独立轨迹判断；AURA 额外强制其参与完成门槛 |
+| Browser Use，MIT | [service.py](https://github.com/browser-use/browser-use/blob/b49a68e4060acb226da8f784194fef301c53a6d7/browser_use/agent/service.py) | 独立轨迹判断；鲸伴额外强制其参与完成门槛 |
 | UI-TARS SDK 1.2.3 | 项目已安装的实际 SDK | 修补批量预测分发及 `finished` 自动结束的适配边界 |
 
 ## 测试与边界

@@ -15,7 +15,7 @@ AGENT_ACTIVITY = frozenset({
 
 AGENT_TRACE_LABELS = AGENT_ACTIVITY | frozenset({
     "开始处理请求", "回复已完成", "本次请求未能完成", "本次请求已停止",
-    "等待你完成当前步骤", "上次请求意外中断", "任务分派说明（模型公开回复）",
+    "等待你完成当前步骤", "任务未完成", "上次请求意外中断", "任务分派说明（模型公开回复）", "任务分派说明（直接请求）",
 })
 AGENT_TRACE_STATES = frozenset({"running", "completed", "failed", "cancelled", "needs_user", "interrupted"})
 AGENT_TRACE_KINDS = frozenset({"progress", "tool", "computer", "summary"})

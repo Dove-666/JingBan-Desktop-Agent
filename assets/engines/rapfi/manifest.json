@@ -1,0 +1,50 @@
+{
+  "name": "Rapfi",
+  "version": "250615",
+  "entry": "rapfi.exe",
+  "license": "GPL-3.0-or-later",
+  "source_url": "https://github.com/dotb1ue/rapfi/tree/250615",
+  "archive_url": "https://github.com/dotb1ue/rapfi/releases/download/250615/Rapfi-engine.7z",
+  "archive_sha256": "1a3e24024062a153ac079060ee9589a37c6bdd1ecc54fed3908793c519594e05",
+  "archive_bytes": 36786619,
+  "original_executable": "pbrain-rapfi-windows-avx2.exe",
+  "cpu_avx2_available": true,
+  "files": {
+    "rapfi.exe": {
+      "bytes": 2485760,
+      "sha256": "1e02497433fb765626f954c895b0b92e057ac12a76c76318abe74d4050914e8e"
+    },
+    "config.toml": {
+      "bytes": 6709,
+      "sha256": "32b9180c91247541d399ceef62906d5ffeb48e34eb5f261612987633820d5d3c"
+    },
+    "model210901.bin": {
+      "bytes": 23204,
+      "sha256": "2fa08cb15cf240d9533548c3e011b03d46809f6858362e97ee873d0632aa2015"
+    },
+    "mix9svqfreestyle_bsmix.bin.lz4": {
+      "bytes": 10030398,
+      "sha256": "6bc0d1b0ff8e1d857f7f412923cd458f38f1a435087c91ae71fec3676c23ef62"
+    },
+    "mix9svqstandard_bs15.bin.lz4": {
+      "bytes": 10345775,
+      "sha256": "84334f5db96f45b3e36ebdde06d2259d878ae1eb347b7cf74574ac908b8d9e7d"
+    },
+    "mix9svqrenju_bs15_black.bin.lz4": {
+      "bytes": 9984172,
+      "sha256": "7ab8c974c30da07717ce6a504616a62ac8c981500503f0ced0fadefd3f46c5ec"
+    },
+    "mix9svqrenju_bs15_white.bin.lz4": {
+      "bytes": 9844944,
+      "sha256": "a31f318518d3b5630489054d9eb013fd5353c553999640c2bcfd8d95e6fe4e4e"
+    },
+    "AUTHORS": {
+      "bytes": 941,
+      "sha256": "40f6de00b384a64bb98c816d97e077cd0ba6f75c5a36abbbc59668b77883cfbd"
+    },
+    "Copying.txt": {
+      "bytes": 35141,
+      "sha256": "6bab265559d5ebe9f259f2f54e9640bb4c8c8535bacd37c18125231f6fa9acf7"
+    }
+  }
+}

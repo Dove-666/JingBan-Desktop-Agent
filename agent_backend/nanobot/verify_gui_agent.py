@@ -21,6 +21,76 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 
+def safe_tool_verification_diagnostics(messages):
+    """Fixed-value projection of this QA conversation's tool observations.
+
+    Never save tool arguments, prompts, reply/summary/check prose, pixels,
+    resource IDs, source paths or unknown strings, even if a provider places a
+    credential in a nominally structured status/reason field.
+    """
+    tools = {"verify_desktop_goal", "computer_use", "finish_task"}
+    statuses = {"completed", "needs_user", "cancelled", "timed_out", "failed", "unverified", "verified"}
+    reasons = {"GOAL_STATE_CONFIRMED", "GOAL_STATE_NOT_MET", "GOAL_NOT_OBSERVABLE", "TARGET_IDENTITY_UNCONFIRMED",
+        "TEMPORAL_EVIDENCE_MISSING", "VERIFICATION_CAPTURE_FAILED", "VERIFICATION_RESPONSE_INVALID",
+        "VERIFICATION_SERVICE_UNAVAILABLE", "VERIFICATION_NOT_RUN", "GUI_GOAL_UNVERIFIED", "APP_WINDOW_VERIFIED", "NO_PROGRESS"}
+    issues = {"EXECUTION_EVIDENCE_MISSING", "PLAN_UNFINISHED", "UNRESOLVED_TOOL_FAILURE", "ARTIFACT_VERIFICATION_FAILED",
+        "GUI_GOAL_UNVERIFIED", "ARTIFACT_CHANGED_AFTER_WRITE_OR_VERIFICATION", "SOURCE_CHANGED_AFTER_VERIFICATION"}
+    errors = {"GUI_ALREADY_USED", "GUI_RUNTIME_MISSING", "GUI_START_FAILED", "GUI_EXITED", "GUI_PROTOCOL", "GUI_FAILED",
+        "GUI_SDK_UNAVAILABLE", "GUI_UNSUPPORTED_PLATFORM", "GUI_STEP_LIMIT", "GUI_SCREENSHOT_FAILED", "GUI_MODEL_FAILED",
+        "GUI_ACTION_FAILED", "GUI_CONTEXT_LENGTH_EXCEEDED", "GUI_DESKTOP_LOCKED", "GUI_DESKTOP_SESSION_UNAVAILABLE",
+        "GUI_SCREENSHOT_DISPLAY_UNAVAILABLE", "GUI_SCREENSHOT_BLACK_FRAME", "GUI_UNSUPPORTED_ACTION", "GUI_SDK_FAILED",
+        "GUI_INVALID_REQUEST", "GUI_INVALID_PROVIDER", "GUI_BUSY", "GUI_WORKER_FAILED", "GUI_NO_ACTION_TO_VERIFY",
+        "ACTION_OUTCOME_UNCERTAIN", "ACTION_ID_CONFLICT", "REQUEST_TIMEOUT", "TOOL_FAILED"}
+    result = []
+    if not isinstance(messages, (list, tuple)):
+        return result
+    for index, message in enumerate(messages[-512:]):
+        if not isinstance(message, dict) or message.get("role") != "tool" or message.get("name") not in tools:
+            continue
+        item = {"sequence": index, "tool": message["name"]}
+        content = message.get("content")
+        try:
+            value = json.loads(content) if isinstance(content, str) and len(content) <= 262144 else None
+        except (ValueError, RecursionError):
+            value = None
+        if not isinstance(value, dict):
+            item["format"] = "non_json_or_omitted"
+            prefix = content.split(":", 1)[0].strip() if isinstance(content, str) else None
+            if prefix in errors: item["error_code"] = prefix
+            result.append(item)
+            continue
+        item["format"] = "json_object"
+        for field in ("status", "effect_state", "verification_scope"):
+            allowed = statuses if field == "status" else {"confirmed", "uncertain", "not_dispatched"} if field == "effect_state" else {"parent", "subgoal"}
+            if field in value: item[field] = value[field] if isinstance(value[field], str) and value[field] in allowed else "unrecognized"
+        for field in ("accepted", "passed", "gui_goal_verified", "pending_effect"):
+            if type(value.get(field)) is bool: item[field] = value[field]
+        verification = value.get("verification")
+        if isinstance(verification, dict):
+            safe = {}
+            for field, allowed in (("status", {"verified", "failed", "unverified"}), ("method", {"visual", "native", "uia"}), ("reason", reasons)):
+                if field in verification:
+                    entry = verification[field]
+                    safe[field] = entry if isinstance(entry, str) and entry in allowed else "unrecognized"
+            item["verification"] = safe
+        for field in ("issues", "failed_tools"):
+            values = value.get(field)
+            if isinstance(values, list):
+                allowed = issues if field == "issues" else tools | {"desktop_act", "desktop_activate", "open_application", "desktop_verify_state", "write_file", "edit_file", "read_file", "verify_artifact", "create_document", "render_document"}
+                item[field] = [entry for entry in values[:64] if isinstance(entry, str) and entry in allowed]
+                item[field + "_unrecognized_count"] = sum(not isinstance(entry, str) or entry not in allowed for entry in values[:64])
+        feedback = value.get("feedback")
+        if isinstance(feedback, dict):
+            reason = feedback.get("reason")
+            item["feedback_reason"] = reason if isinstance(reason, str) and reason in reasons else "unrecognized"
+            checks = feedback.get("checks")
+            if isinstance(checks, list):
+                item["checks_count"] = min(len(checks), 32)
+                item["failed_checks_count"] = sum(isinstance(check, dict) and check.get("passed") is False for check in checks[:32])
+        result.append(item)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-real-gui", action="store_true", required=True)
@@ -38,11 +108,11 @@ def main():
     settings_path = Path(manager.config_path)
     settings_before = hashlib.sha256(settings_path.read_bytes()).hexdigest()
     settings = manager.load_agent_settings()
-    key, gui_key, api = manager.get_api_key(), manager.get_agent_gui_api_key(), manager.load_api_settings()
+    key, api = manager.get_api_key(), manager.load_api_settings()
+    gui_key = key
     def relevant_settings_fingerprint():
         state = {"agent": asdict(manager.load_agent_settings()), "api": asdict(manager.load_api_settings()),
-                 "key_hash": hashlib.sha256(manager.get_api_key().encode()).hexdigest(),
-                 "gui_key_hash": hashlib.sha256(manager.get_agent_gui_api_key().encode()).hexdigest()}
+                 "key_hash": hashlib.sha256(manager.get_api_key().encode()).hexdigest()}
         return hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest()
     relevant_before = relevant_settings_fingerprint()
     identifier = str(uuid4())
@@ -69,6 +139,14 @@ def main():
             os.environ["AURA_GUI_QA_TRACE_PATH"] = old_trace_path
         (workspace / "verification-real-gui.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps(report, ensure_ascii=False), flush=True)
+
+    def record_tool_diagnostics():
+        # shutdown() clears _sessions, so take the same-conversation projection
+        # first. The lock protects the host's bounded replay snapshot only.
+        with service._lock:
+            messages = list(service._sessions.get(identifier, []))
+        report["tool_verification_diagnostics"] = safe_tool_verification_diagnostics(messages)
+        report["tool_verification_diagnostic_scope"] = "same_QA_conversation_fixed_values_only; no prompts/model_prose/pixels/credentials"
 
     reason = ""
     if sys.platform != "win32" or app.platformName() != "windows":
@@ -170,6 +248,7 @@ def main():
         return checks["visible"] and checks["opaque"] and checks["covers_screen"] and not above and checks["foreground_owned"]
 
     def finish(result):
+        record_tool_diagnostics()
         service.shutdown()
         report["completed_tool_calls"] = sum(event["kind"] == "tool" and event["status"] == "completed" for event in events)
         report["gui_activity_events"] = sum(event["kind"] in {"computer", "progress"} for event in events)
@@ -196,6 +275,7 @@ def main():
         report["native_typing_probe"] = result
         report["unicode_emoji_multiline_exact"] = native_text.toPlainText() == native_expected
         report["passed"] = bool(result.get("exit_code") == 0 and report["unicode_emoji_multiline_exact"])
+        record_tool_diagnostics()
         service.shutdown()
         if not report["passed"]:
             window.grab().save(str(workspace / "fixture-diagnostic.png"))

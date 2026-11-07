@@ -6,7 +6,7 @@ from unittest.mock import patch
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QInputMethodEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox, QPushButton
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QMessageBox, QPushButton
 
 from desktop_pet.settings_manager import ApiSettings
 from desktop_pet.ui.debug_panel import ChatWindow, DebugPanel
@@ -84,6 +84,7 @@ class FakeChat(QObject):
 
     def __init__(self):
         super().__init__()
+        self.current_conversation_id = "debug-ui-conversation"
         self.messages = []
         self.busy = False
         self.test_calls = []
@@ -140,6 +141,10 @@ class DebugUiTests(unittest.TestCase):
         self.assertEqual(self.pet.scale_percent, 100)
         self.pet.set_scale(75)
         self.assertEqual(self.panel.scale_slider.value(), 75)
+
+    def test_control_panel_has_no_release_channel_or_revision_banner(self):
+        self.assertEqual(self.panel.windowTitle(), "鲸伴")
+        self.assertIsNone(self.panel.findChild(QLabel, "runtimeRevision"))
 
     def test_expression_feedback_test_button_and_external_sync(self):
         self.panel.expression_combo.setCurrentIndex(self.panel.expression_combo.findData("angry"))

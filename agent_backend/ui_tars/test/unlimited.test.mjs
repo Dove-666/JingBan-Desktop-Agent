@@ -57,7 +57,7 @@ test('zero wire sentinel becomes actual SDK Infinity without falling back to its
   assert.equal(received, Infinity);
 });
 
-test('unlimited real SDK completes after 17 fresh observations and returns latest pixels plus action history', async () => {
+test('unlimited real SDK completes 17 observations with bounded target/current images and action history', async () => {
   const Operator = fakeOperator(); let calls = 0; const observed = [];
   const local = await modelServer(async (body, response) => {
     const step = ++calls;
@@ -78,7 +78,10 @@ test('unlimited real SDK completes after 17 fresh observations and returns lates
     assert.equal(calls, 17); assert.equal(Operator.screenshots, 18); assert.equal(Operator.actions, 16);
     assert.equal(events.filter((event) => event.stage === 'observing').at(-1).step, 18);
     for (const { step, colors, actions } of observed) {
-      assert.deepEqual(colors, Array.from({ length: step }, (_, index) => index + 1));
+      assert.equal(colors.length, Math.min(step, 8));
+      assert.equal(colors[0], 1);
+      assert.equal(colors.at(-1), step);
+      assert.ok(colors.every((color, index) => index === 0 || color > colors[index - 1]));
       assert.equal(actions.length, step - 1);
       if (step > 1) assert.match(actions.at(-1), new RegExp(`synthetic step ${step - 1}\\nAction: click`));
     }

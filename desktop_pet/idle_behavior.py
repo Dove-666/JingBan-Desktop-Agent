@@ -12,7 +12,11 @@ import random
 from typing import Iterable
 
 
+IDLE_DURATION_SECONDS = 6.0
+
 DEFAULT_IDLE_ACTIONS = (
+    "think_scratch_head",
+    "snarl_cute",
     "idle_puff_cheeks",
     "idle_tiptoe_look",
     "idle_pinch_cheeks",
@@ -21,6 +25,11 @@ DEFAULT_IDLE_ACTIONS = (
     "idle_balloon_float",
     "idle_proud_pose",
     "idle_tsundere",
+    "idle_sleepy",
+    "idle_hands_on_hips",
+    "idle_heart_cheeks",
+    "idle_typing_work",
+    "idle_eating_rice",
 )
 BehaviorEvent = tuple[str, str | None]
 

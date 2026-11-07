@@ -1,5 +1,6 @@
 """Mock transport only: no native operator, screenshot, or desktop input."""
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -303,6 +304,137 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(spawns), 1)
             bridge.record_failure("GUI_ALREADY_USED")
             self.assertEqual(bridge.failure_code, "GUI_START_FAILED")
+
+
+class EffectSettlementRegressionTests(unittest.IsolatedAsyncioTestCase):
+    """Actual bridge settlement with fake protocol events, never desktop input."""
+    class Output:
+        def __init__(self, entries): self.entries = iter(entries)
+
+        async def readline(self):
+            entry = next(self.entries, b"")
+            if isinstance(entry, BaseException): raise entry
+            return entry if isinstance(entry, bytes) else (json.dumps(entry) + "\n").encode()
+
+    def bridge(self):
+        return GuiBridge({"base_url": "http://127.0.0.1:9/v1", "api_key": "owned-fixture", "model": "none"},
+            "effect-audit", {"max_steps": 0, "timeout_seconds": 0}, lambda *_a, **_kw: None)
+
+    def process(self, identity, *entries, acting=False):
+        wire = "effect-audit:" + hashlib.sha256(identity.encode()).hexdigest()[:12]
+        frames = [{"type": "ready"}]
+        if acting:
+            frames.append({"type": "progress", "id": wire, "stage": "acting", "status": "running", "action": "click"})
+        frames.extend({**entry, "id": wire} if isinstance(entry, dict) else entry for entry in entries)
+        process = FakeProcess(completed=False)
+        process.stdout = self.Output(frames)
+        return process
+
+    async def test_reader_error_before_input_is_not_dispatched_and_cached_without_replay(self):
+        for kind in (ValueError, UnicodeError, TypeError, RuntimeError):
+            with self.subTest(kind=kind.__name__):
+                process = self.process("before", kind("OWNED_READ_FAILURE"))
+                with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                        patch("gui_bridge.asyncio.create_subprocess_exec", return_value=process) as spawn:
+                    bridge = self.bridge()
+                    for _ in range(2):
+                        with self.assertRaises(BridgeFailure) as caught:
+                            await bridge.run("owned parent goal", action_id="before")
+                        self.assertEqual(caught.exception.effect_state, "not_dispatched")
+                        self.assertFalse(bridge.pending_effect)
+                    self.assertEqual(spawn.await_count, 1)
+                    self.assertEqual(sum(row["type"] == "run" for row in process.stdin.lines), 1)
+                    self.assertIsNone(bridge.process)
+
+    async def test_reader_error_after_running_action_preserves_uncertain_effect(self):
+        for kind in (ValueError, UnicodeError, TypeError, RuntimeError):
+            with self.subTest(kind=kind.__name__):
+                process = self.process("after", kind("OWNED_READ_FAILURE"), acting=True)
+                with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                        patch("gui_bridge.asyncio.create_subprocess_exec", return_value=process) as spawn:
+                    bridge = self.bridge()
+                    with self.assertRaises(BridgeFailure) as caught:
+                        await bridge.run("owned parent goal", action_id="after")
+                    self.assertEqual(bridge.effect_state, "uncertain")
+                    self.assertEqual(bridge._actions_dispatched, 1)
+                    self.assertEqual((caught.exception.effect_state, bridge.pending_effect), ("uncertain", True))
+                    self.assertEqual(spawn.await_count, 1)
+
+    async def test_invalid_verification_after_running_action_preserves_uncertainty(self):
+        process = self.process("malformed", {"type": "final", "status": "completed", "steps": 1,
+            "summary": "owned", "verification": {"status": "verified"}}, acting=True)
+        with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                patch("gui_bridge.asyncio.create_subprocess_exec", return_value=process):
+            bridge = self.bridge()
+            with self.assertRaises(BridgeFailure) as caught:
+                await bridge.run("owned parent goal", action_id="malformed")
+            self.assertEqual(caught.exception.code, "GUI_PROTOCOL")
+            self.assertEqual((caught.exception.effect_state, bridge.pending_effect), ("uncertain", True))
+
+    async def test_existing_protocol_failure_branch_blocks_new_input_identity(self):
+        process = self.process("protocol", b"invalid JSON\n", acting=True)
+        with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                patch("gui_bridge.asyncio.create_subprocess_exec", return_value=process) as spawn:
+            bridge = self.bridge()
+            with self.assertRaises(BridgeFailure) as caught:
+                await bridge.run("owned parent goal", action_id="protocol")
+            self.assertEqual((caught.exception.effect_state, bridge.pending_effect), ("uncertain", True))
+            blocked = json.loads(await bridge.run("owned parent goal", action_id="new-input"))
+            self.assertEqual(blocked["reason"], "UNKNOWN_INPUT_EFFECT")
+            self.assertEqual(spawn.await_count, 1)
+
+    async def test_cached_uncertain_failure_keeps_effect_without_subprocess_replay(self):
+        process = self.process("cached", {"type": "error", "code": "ACTION_FAILED", "effect_state": "uncertain"}, acting=True)
+        with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                patch("gui_bridge.asyncio.create_subprocess_exec", return_value=process) as spawn:
+            bridge = self.bridge()
+            with self.assertRaises(BridgeFailure) as first:
+                await bridge.run("owned parent goal", action_id="cached")
+            with self.assertRaises(BridgeFailure) as repeated:
+                await bridge.run("owned parent goal", action_id="cached")
+            self.assertEqual(spawn.await_count, 1)
+            self.assertEqual(sum(row["type"] == "run" for row in process.stdin.lines), 1)
+            self.assertEqual(first.exception.code, repeated.exception.code)
+            self.assertTrue(bridge.pending_effect)
+            self.assertEqual(repeated.exception.effect_state, first.exception.effect_state)
+
+    async def test_generic_failure_after_running_action_cannot_start_new_input_identity(self):
+        first = self.process("original", RuntimeError("OWNED_READ_FAILURE"), acting=True)
+        second = self.process("next", {"type": "final", "status": "needs_user", "summary": "owned", "steps": 0})
+        with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                patch("gui_bridge.asyncio.create_subprocess_exec", side_effect=[first, second]) as spawn:
+            bridge = self.bridge()
+            try:
+                with self.assertRaises(BridgeFailure):
+                    await bridge.run("owned parent goal", action_id="original")
+                blocked = json.loads(await bridge.run("owned parent goal", action_id="next"))
+                self.assertEqual(spawn.await_count, 1, "A fresh identity must not bypass uncertain earlier input")
+                self.assertEqual(blocked["reason"], "UNKNOWN_INPUT_EFFECT")
+            finally:
+                await bridge.close()
+
+    async def test_confirmed_input_reader_error_stays_confirmed_and_allows_new_identity(self):
+        for kind in (ValueError, RuntimeError):
+            with self.subTest(kind=kind.__name__):
+                first = self.process("confirmed", {"type": "progress", "stage": "acting", "status": "completed", "action": "click"},
+                                     kind("OWNED_READ_FAILURE"), acting=True)
+                second = self.process("next", {"type": "final", "status": "needs_user", "summary": "owned", "steps": 0})
+                with patch("gui_bridge.shutil.which", return_value=sys.executable), \
+                        patch("gui_bridge.asyncio.create_subprocess_exec", side_effect=[first, second]) as spawn:
+                    bridge = self.bridge()
+                    try:
+                        with self.assertRaises(BridgeFailure) as caught:
+                            await bridge.run("owned parent goal", action_id="confirmed")
+                        self.assertEqual((caught.exception.effect_state, bridge.pending_effect), ("confirmed", False))
+                        await bridge.run("owned parent goal", action_id="next")
+                        self.assertEqual(spawn.await_count, 2)
+                        with self.assertRaises(BridgeFailure) as repeated:
+                            await bridge.run("owned parent goal", action_id="confirmed")
+                        self.assertEqual(repeated.exception.effect_state, "confirmed")
+                        self.assertFalse(bridge.pending_effect)
+                        self.assertEqual(spawn.await_count, 2)
+                    finally:
+                        await bridge.close()
 
 
 if __name__ == "__main__":

@@ -160,6 +160,25 @@ class BrowserAskHostTests(unittest.TestCase):
         self.assertEqual(len(calls), 3)
         self.assertEqual(calls, [calls[0]] * 3)
 
+    def test_current_brand_not_ready_response_also_wakes_the_app_once(self):
+        deliver = Mock(side_effect=[{"ok": False, "error": "鲸伴尚未就绪，请启动鲸伴后再试。"}, {"ok": True}])
+        launch = Mock(return_value=True)
+        result = host.handle_message(message(), self.config, deliver=deliver, launch=launch, timeout_seconds=.5)
+        self.assertEqual(result, {"ok": True})
+        launch.assert_called_once_with(self.config)
+
+    def test_frozen_bridge_launches_only_the_sibling_gui_executable(self):
+        folder = Path(self.temp.name)
+        gui = folder / "鲸伴.exe"
+        gui.write_bytes(b"MZ synthetic never-executed fixture")
+        with patch.object(host.sys, "frozen", True, create=True), \
+                patch.object(host.sys, "executable", str(folder / "鲸伴网页桥.exe")), \
+                patch.object(host, "default_config_path", return_value=self.config), \
+                patch.object(host.subprocess, "Popen") as popen:
+            self.assertTrue(host.start_pet(self.config))
+            self.assertEqual(popen.call_args.args[0], [str(gui)])
+            self.assertEqual(popen.call_args.kwargs["cwd"], str(folder))
+
     def test_launch_failure_and_startup_deadline_are_safe_without_repeat_launch(self):
         for can_launch in (False, True):
             deliver = Mock(return_value={"ok": False, "error": MISSING_LISTENER})

@@ -78,6 +78,7 @@
   },
   "loop": false,
   "completion": "idle",
+  "transition_ms": 250,
   "union_bbox": [
     674,
     45,

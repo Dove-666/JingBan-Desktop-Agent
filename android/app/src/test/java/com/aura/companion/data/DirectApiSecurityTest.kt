@@ -110,4 +110,25 @@ class DirectApiSecurityTest {
             }
         } finally { vault.clear() }
     }
+
+    @Test fun personaCacheIsEncryptedIndependentOfApiAndCannotBeSwappedWithCredentialCiphertext() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val name = "shared-role-test.enc"
+        val key = SecretKeySpec(ByteArray(32) { 8 }, "AES")
+        val vault = EncryptedApiConfigVault(context, name) { key }
+        val file = File(context.noBackupFilesDir, "$name.persona")
+        try {
+            vault.savePersona(SyncedPersona("desktop", "role-v1", "Luna", "PRIVATE_ROLE_PROMPT"))
+            val bytes = file.readBytes()
+            assertFalse(bytes.toString(Charsets.ISO_8859_1).contains("PRIVATE_ROLE_PROMPT"))
+            assertNull(vault.load())
+            val reopened = EncryptedApiConfigVault(context, name) { key }
+            assertEquals("PRIVATE_ROLE_PROMPT", reopened.loadPersona()!!.systemPrompt)
+            vault.save(config()); vault.clear()
+            assertEquals("Luna", vault.loadPersona()!!.name)
+            vault.save(config()); file.writeBytes(File(context.noBackupFilesDir, name).readBytes())
+            assertNull(vault.loadPersona()); assertFalse(file.exists())
+            assertEquals("sensitive-key-value", vault.load()!!.apiKey)
+        } finally { vault.clear(); vault.clearPersona() }
+    }
 }

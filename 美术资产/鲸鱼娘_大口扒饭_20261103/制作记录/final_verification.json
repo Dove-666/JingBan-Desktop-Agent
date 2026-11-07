@@ -1,0 +1,32 @@
+{
+  "name": "idle_eating_rice",
+  "label": "大口扒饭",
+  "status": "passed",
+  "frame_count": 68,
+  "fps": 12,
+  "canvas": [
+    1024,
+    1024
+  ],
+  "source_native_frames": 124,
+  "sampled_frames": 62,
+  "derived_endpoint_frames": 6,
+  "duration_seconds": 5.666666666666667,
+  "source_video_sha256": "9a00b351e074e7865bb02d704e108e399afe7d2bcc38c46925cb2b4c1ffc7f78",
+  "paid_submissions": 1,
+  "allocated_charge_cny": 1.5,
+  "old_asset_files_unchanged": 716,
+  "art_package_exact_runtime_files": 73,
+  "native_qa": "artifacts\\idle_eating_rice_20261103\\runtime\\native_qa\\verification.json",
+  "native_manual_loops": 2,
+  "native_scale_levels": [
+    50,
+    75,
+    100,
+    125,
+    150,
+    200
+  ],
+  "drag_and_auto_idle_passed": true,
+  "gif_generated": false
+}

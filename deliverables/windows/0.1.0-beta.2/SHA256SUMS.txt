@@ -1,0 +1,2 @@
+02832e3ba10d8e3bdc0a3dd3da8243a829f164e6229d7be418ba012ff72a3825  鲸伴-0.1.0-beta.2-Windows-x64-Portable.zip
+ee2abe514724ee7f202e9b42abc0b5c97215235f8122337f6d11a88d804e0bef  鲸伴-0.1.0-beta.2-Windows-x64-Setup.exe

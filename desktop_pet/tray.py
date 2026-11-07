@@ -3,6 +3,9 @@
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
+from .ui.styles import MENU_STYLE
+from .branding import APP_NAME
+from .ui.theme import style_widget
 
 
 class DesktopTray(QObject):
@@ -10,9 +13,14 @@ class DesktopTray(QObject):
         super().__init__(parent)
         self.session = session
         self.icon = QSystemTrayIcon(QIcon(str(image_path)), self)
-        self.icon.setToolTip("AURA 鲸鱼娘 · 双击打开聊天")
+        self.icon.setToolTip(f"{APP_NAME} · 双击打开聊天")
         self.menu = QMenu(session.pet)
+        style_widget(self.menu, MENU_STYLE)
         self.chat_action = self.menu.addAction("和鲸鱼娘聊天", session.open_chat_window)
+        if callable(getattr(session, "open_xiangqi_window", None)):
+            self.xiangqi_action = self.menu.addAction("和鲸鱼娘下象棋", session.open_xiangqi_window)
+        if callable(getattr(session, "open_gomoku_window", None)):
+            self.gomoku_action = self.menu.addAction("和鲸鱼娘下五子棋", session.open_gomoku_window)
         self.settings_action = self.menu.addAction("设置", session.open_settings)
         if hasattr(session, "open_remote_settings"):
             self.remote_action = self.menu.addAction("手机远程连接", session.open_remote_settings)
@@ -43,7 +51,7 @@ class DesktopTray(QObject):
             if active_changed is not None:
                 active_changed.connect(lambda _active: self.refresh())
         self.menu.addSeparator()
-        self.menu.addAction("退出桌宠", session.shutdown)
+        self.menu.addAction(f"退出{APP_NAME}", session.shutdown)
         self.menu.aboutToShow.connect(self.refresh)
         self.icon.setContextMenu(self.menu)
         self.icon.activated.connect(self._activated)
@@ -73,7 +81,7 @@ class DesktopTray(QObject):
             self.camera_pause_action.setEnabled(self.session.camera.settings.enabled or self.session.camera.paused)
             camera_state = self._observation_state(self.session.camera, camera=True)
             self.camera_status_action.setText("摄像头：" + camera_state)
-        tooltip = f"AURA 鲸鱼娘 · 双击聊天\n屏幕感知：{screen_state}\n摄像头：{camera_state}"
+        tooltip = f"{APP_NAME} · 双击聊天\n屏幕感知：{screen_state}\n摄像头：{camera_state}"
         if self.icon.toolTip() != tooltip:
             self.icon.setToolTip(tooltip)
 

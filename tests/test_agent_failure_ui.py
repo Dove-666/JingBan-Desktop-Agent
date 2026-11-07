@@ -68,7 +68,7 @@ class AgentFailureUiTests(unittest.TestCase):
             state = eval_js(panel, "document.querySelector('[data-testid=message-request-state]').textContent")
             self.assertIn("任务超时", state)
             self.assertIn(_ERROR_MESSAGES["timeout"], state)
-            self.assertIn("再发送新消息继续", state)
+            self.assertIn(chat.message_retry_state(chat.current_conversation_id, chat.messages[0]["id"])["status"], state)
             self.assertNotIn("回复失败", state)
             self.assertNotIn("PRIVATE_PROVIDER_EXCEPTION", json.dumps(panel.web_state()))
             self.assertEqual(eval_js(panel, "document.querySelectorAll('[data-testid=message-request-state] button').length"), 0)

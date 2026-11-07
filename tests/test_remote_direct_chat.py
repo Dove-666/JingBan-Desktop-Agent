@@ -46,7 +46,7 @@ class DirectChatRpcTests(unittest.TestCase):
         self.pair()
 
     def configure(self, base="https://api.example.test/v1", key="PRIVATE_DIRECT_CONFIG_KEY"):
-        self.settings.save_api_settings(ApiSettings(base, "configured-model", 41, "high"))
+        self.settings.save_api_settings(ApiSettings(base, "configured-model", 41, "high", reasoning_profile="legacy"))
         self.settings.save_api_key(key)
         return key
 
@@ -66,6 +66,7 @@ class DirectChatRpcTests(unittest.TestCase):
         self.assertEqual(config["model"], "configured-model")
         self.assertEqual(config["timeout_seconds"], 41)
         self.assertEqual(config["reasoning_effort"], "high")
+        self.assertEqual(config["reasoning"], {"version": 1, "profile": "legacy", "value": "high", "budget_tokens": 0})
         self.assertRegex(config["revision"], r"^[0-9a-f]{64}$")
         self.assertEqual(config, self.request("chat.config")["result"])
         self.assertIsNone(self.remote.sync.get_operation(support.PEER, request_id))
@@ -76,9 +77,58 @@ class DirectChatRpcTests(unittest.TestCase):
         self.assertNotEqual(config["revision"], self.request("chat.config")["result"]["revision"])
         self.settings.clear_api_key()
         unavailable = self.request("chat.config")["result"]
-        self.assertEqual(set(unavailable), {"version", "available", "revision"})
+        self.assertEqual(set(unavailable), {"version", "available", "revision", "persona", "character_library"})
+        self.assertEqual(unavailable["character_library"], config["character_library"])
+        self.assertEqual(unavailable["persona"], config["persona"])
+        self.assertNotIn("api_key", unavailable["persona"])
         self.assertFalse(unavailable["available"])
         self.assertNotEqual(config["revision"], unavailable["revision"])
+
+    def test_native_reasoning_modes_are_versioned_and_legacy_phones_get_default(self):
+        self.configure()
+        self.enable()
+        for profile, value, budget, expected_legacy in (
+                ("deepseek", "high", 0, "default"), ("qwen_budget", "enabled", 16000, "default"),
+                ("custom", "UltraMode", 0, "default"), ("openai", "low", 0, "low")):
+            with self.subTest(profile=profile):
+                self.settings.save_api_settings(ApiSettings("https://api.example.test/v1", "configured-model", 41, value,
+                    reasoning_profile=profile, reasoning_budget_tokens=budget))
+                result = self.request("chat.config")["result"]
+                self.assertTrue(result["available"])
+                self.assertEqual(result["reasoning_effort"], expected_legacy)
+                self.assertEqual(result["reasoning"], {"version": 1, "profile": profile, "value": value, "budget_tokens": budget})
+        old = self.request("chat.config")["result"]["revision"]
+        self.settings.save_api_settings(ApiSettings("https://api.example.test/v1", "configured-model", 41, "enabled",
+            reasoning_profile="qwen_budget", reasoning_budget_tokens=17000))
+        self.assertNotEqual(old, self.request("chat.config")["result"]["revision"])
+
+    def test_reasoning_declarations_are_bound_to_the_selected_api_and_model(self):
+        self.configure()
+        declaration = {"version": 1, "base_url": "https://api.example.test/v1", "model": "configured-model",
+                       "profile": "openrouter", "values": ["high"]}
+        self.settings.save_api_settings(ApiSettings(declaration["base_url"], declaration["model"], 41, "high",
+            reasoning_metadata=declaration))
+        self.enable()
+        result = self.request("chat.config")["result"]
+        self.assertTrue(result["available"])
+        self.assertEqual(result["reasoning_effort"], "default")
+        self.assertEqual(result["reasoning"]["metadata"]["profile"], "openrouter")
+        self.assertEqual(result["reasoning"]["metadata"]["values"], ["default", "high"])
+        self.assertNotIn("api_key", result["reasoning"]["metadata"])
+
+    def test_sixteen_declared_levels_round_trip_without_exceeding_phone_metadata_limit(self):
+        self.configure()
+        levels = [f"level_{index}" for index in range(16)]
+        declaration = {"version": 1, "base_url": "https://api.example.test/v1", "model": "configured-model",
+                       "profile": "openai", "values": levels}
+        self.settings.save_api_settings(ApiSettings(declaration["base_url"], declaration["model"], 41, levels[0],
+            reasoning_metadata=declaration))
+        self.enable()
+        result = self.request("chat.config")["result"]
+        self.assertTrue(result["available"])
+        self.assertEqual(result["reasoning_effort"], "default")
+        self.assertEqual(result["reasoning"]["metadata"]["values"], levels)
+        self.assertEqual(result["reasoning"]["value"], levels[0])
 
     def test_config_vault_read_runs_on_qt_thread_and_error_text_does_not_escape(self):
         self.configure()
@@ -257,7 +307,10 @@ class DirectChatRpcTests(unittest.TestCase):
             config = self.request("chat.config")["result"]
             api.enqueue(json.dumps({"reply": "direct model answer", "emotion": "happy"}))
             reply = ApiClient().complete_context(ApiSettings(config["base_url"], config["model"],
-                config["timeout_seconds"], config["reasoning_effort"]), config["api_key"],
+                config["timeout_seconds"], config["reasoning"]["value"],
+                reasoning_profile=config["reasoning"]["profile"],
+                reasoning_budget_tokens=config["reasoning"]["budget_tokens"],
+                reasoning_metadata=config["reasoning"].get("metadata")), config["api_key"],
                 [{"role": "system", "content": config["system_prompt"]},
                  {"role": "user", "content": "phone direct question"}])
             params = exchange()

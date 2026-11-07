@@ -3,7 +3,9 @@
 from collections import OrderedDict, deque
 from concurrent.futures import Future, TimeoutError as FutureTimeout
 from copy import deepcopy
+from contextlib import nullcontext
 from datetime import datetime, timezone
+from functools import partial
 import base64
 import hashlib
 import importlib.util
@@ -22,14 +24,19 @@ from ..expression_manager import EXPRESSIONS
 from . import PROTOCOL_VERSION
 from .attachments import ImageInbox
 from .chat_transfer import direct_chat_configuration, normalize_import
+from .character_transfer import (character_library_summary, get_character, list_characters,
+                                 select_character, validate_character_selection)
 from .desktop_capture import DesktopCaptureUnavailable, capture_desktop_image
 from .errors import RemoteError
 from .settings import PEER_ID, RemotePreferences
 from .sync import RemoteSyncStore, SyncError
+from ..agents.coordinator import CoordinatorError
+from ..image_storage import ImageStorageGate, ImageStorageGateError
 
 
-CAPABILITIES = ["pet.command", "chat.send", "chat.image", "chat.config", "chat.import", "chat.desktop_context", "agent.send", "agent.cancel", "desktop.snapshot", "sync.snapshot", "sync.pull", "operation.get",
-                "image.upload", "image.list", "image.get", "image.delete"]
+CAPABILITIES = ["pet.command", "chat.send", "chat.image", "chat.config", "chat.import", "chat.desktop_context", "agent.send", "agent.queue.v1", "agent.cancel", "agent.answer", "agent.steer", "desktop.snapshot", "sync.snapshot", "sync.pull", "operation.get",
+                "image.upload", "image.list", "image.get", "image.delete", "artifact.list", "artifact.get", "context.get",
+                "character.list", "character.get", "character.select"]
 
 RETRY_DELAYS_SECONDS = (2, 5, 10, 30, 60)
 _TRANSPORT_ERRORS = {
@@ -41,6 +48,7 @@ _TRANSPORT_ERRORS = {
     "shutdown_pending": "正在等待上一条连接释放资源，随后自动重试。",
 }
 _RETRYABLE_ERRORS = frozenset(("bind_failed", "no_usable_address", "transport_failed", "shutdown_pending"))
+_IMAGE_STORAGE_WRITES = frozenset({"chat.send", "agent.send", "chat.import", "image.upload", "desktop.snapshot", "image.delete"})
 
 
 class RemoteController(QObject):
@@ -85,6 +93,8 @@ class RemoteController(QObject):
         self._retry_timer = QTimer(self)
         self._retry_timer.setSingleShot(True)
         self._retry_timer.timeout.connect(self._retry_automatically)
+        binder=getattr(self.session.chat,"bind_remote_agent_authority",None)
+        if callable(binder): binder(self._agent_authorization)
         if self._enabled:
             # An owned timer can be cancelled if the user disables the service
             # before startup runs, unlike an anonymous singleShot callback.
@@ -119,7 +129,25 @@ class RemoteController(QObject):
                         "dependency_available": self._dependency_available()}
         self.status_changed.emit(self.status)
 
+    def _agent_guard(self):
+        getter=getattr(self.session.chat,"agent_authority_guard",None)
+        return getter() if callable(getter) else nullcontext()
+
+    def _agent_authorization(self,peer,*,create=False):
+        if self._closed or not self._enabled or not self.preferences.enabled: return None
+        return self.preferences.agent_authorization(peer,create=create)
+
+    def _agent_authority_changed(self):
+        method=getattr(self.session.chat,"remote_agent_authority_changed",None)
+        if callable(method): method()
+
     def set_enabled(self, enabled):
+        with self._agent_guard():
+            result=self._set_enabled(enabled)
+            self._agent_authority_changed()
+            return result
+
+    def _set_enabled(self, enabled):
         if type(enabled) is not bool or self._closed:
             return False
         try:
@@ -264,6 +292,12 @@ class RemoteController(QObject):
             self.cancel_pairing()
 
     def revoke_device(self, peer_id):
+        with self._agent_guard():
+            result=self._revoke_device(peer_id)
+            self._agent_authority_changed()
+            return result
+
+    def _revoke_device(self, peer_id):
         try:
             self.preferences.revoke(peer_id)
             self.devices_changed.emit(self.devices)
@@ -385,8 +419,126 @@ class RemoteController(QObject):
                 "code": "operation_failed", "message": "操作未完成，请检查电脑端状态后重试。"}}
 
     def _dispatch(self, peer_id, request_id, method, params, generation):
+        if method not in _IMAGE_STORAGE_WRITES:
+            return self._dispatch_operation(peer_id, request_id, method, params, generation)
+        self._require_image_storage_host_open()
+        gate = getattr(self.session.chat, "image_storage_gate", None)
+        mutated = getattr(self.session.chat, "mark_image_storage_mutated", None)
+        if not isinstance(gate, ImageStorageGate) or not callable(mutated):
+            raise RemoteError("busy", "图片存储状态暂不可用，请稍后重试。")
+        owner = gate.create_owner()
+        token = None
+        try:
+            token = gate.maintenance(owner) if method == "image.delete" else gate.activity(owner)
+            self._notify_image_storage_changed()
+            ui_call = self._call_ui if method == "image.delete" else partial(self._call_image_storage_ui, gate, owner)
+            return gate.run(token, lambda: self._dispatch_operation(
+                peer_id, request_id, method, params, generation, ui_call=ui_call))
+        except ImageStorageGateError:
+            raise RemoteError("busy", "图片存储正在维护或使用中，请稍后重试。") from None
+        finally:
+            if token is not None:
+                gate.release(token)
+            gate.close_owner(owner)
+            self._notify_image_storage_changed()
+
+    def _require_image_storage_host_open(self):
+        if getattr(self.session.chat, "_closed", True) is not False:
+            raise RemoteError("disabled", "电脑端聊天已关闭，请重新启动后再试。")
+
+    def _notify_image_storage_changed(self):
+        notify = getattr(self.session.chat, "notify_image_storage_changed", None)
+        if callable(notify):
+            try:
+                notify()
+            except Exception:
+                pass  # Display delivery cannot retire work or replace its result.
+
+    def _call_image_storage_ui(self, gate, owner, operation, peer_id=None, *, generation=None):
+        inner = gate.activity(owner)
+
+        def admitted_operation():
+            self._require_image_storage_host_open()
+            return operation()
+
+        def run_ui():
+            try:
+                return gate.run(inner, admitted_operation)
+            finally:
+                self._notify_image_storage_changed()
+
+        try:
+            return self._call_ui(run_ui, peer_id, generation=generation)
+        finally:
+            # A timed-out Future can already be running on Qt. Only its real
+            # run_ui finally may remove that activity; release just discards it.
+            gate.release(inner)
+            self._notify_image_storage_changed()
+
+    def _check_image_storage_delete(self):
+        self._require_image_storage_host_open()
+        chat = self.session.chat
+        service_query = getattr(getattr(chat, "_agent_service", None), "execution_resources_pending", None)
+        queue = getattr(getattr(chat, "_agent_queue", None), "queue", None)
+        queue_query = getattr(queue, "has_image_maintenance_blocker", None)
+        deleted = getattr(chat, "mark_image_storage_deleted", None)
+        mutated = getattr(chat, "mark_image_storage_mutated", None)
+        try:
+            clear = (callable(service_query) and callable(queue_query) and callable(deleted) and callable(mutated)
+                     and service_query() is False and queue_query() is False)
+        except Exception:
+            clear = False
+        if not clear:
+            raise RemoteError("busy", "电脑任务仍在运行或退出状态尚未确认，请稍后管理图片。")
+
+    def _dispatch_operation(self, peer_id, request_id, method, params, generation, *, ui_call=None):
+        ui_call = self._call_ui if ui_call is None else ui_call
+        if method in _IMAGE_STORAGE_WRITES:
+            self._require_image_storage_host_open()
+            self._require_authorized(peer_id, generation)
+        if method == "image.delete":
+            self._check_image_storage_delete()
+        if method == "context.get":
+            if set(params) - {"conversation_id", "generation", "query"}:
+                raise RemoteError("invalid_request", "上下文同步参数无效。")
+            cid = params.get("conversation_id")
+            if not isinstance(cid, str) or str(UUID(cid)) != cid:
+                raise RemoteError("invalid_request", "上下文同步需要有效的会话标识。")
+            expected = params.get("generation")
+            if expected is not None and (not isinstance(expected, str) or str(UUID(expected)) != expected):
+                raise RemoteError("invalid_request", "会话版本无效。")
+            query = params.get("query", "")
+            if not isinstance(query, str) or len(query) > 4000:
+                raise RemoteError("invalid_request", "上下文查询过长。")
+            self._require_authorized(peer_id, generation)
+            policy = ui_call(self.session.chat.context_export_policy, peer_id, generation=generation)
+            result = self.session.chat.context_envelope_for(cid, generation=expected, query=query, policy=policy)
+            self._require_authorized(peer_id, generation)
+            return result
+        if method in {"artifact.list", "artifact.get"}:
+            cid = params.get("conversation_id")
+            try:
+                if not isinstance(cid, str) or str(UUID(cid)) != cid:
+                    raise ValueError
+            except ValueError:
+                raise RemoteError("invalid_request", "交付文件需要有效的会话标识。") from None
+            self._require_authorized(peer_id, generation)
+            if method == "artifact.list":
+                if set(params) != {"conversation_id"}:
+                    raise RemoteError("invalid_request", "交付文件列表只接受会话标识。")
+                result = {"artifacts": self.session.chat.agent_artifacts_for(cid)}
+            else:
+                if set(params) - {"conversation_id", "reference", "offset", "limit"} or "reference" not in params:
+                    raise RemoteError("invalid_request", "读取交付文件只接受当前会话、文件标识和分块位置。")
+                try:
+                    result = self.session.chat.agent_artifact_page(cid, params["reference"],
+                        offset=params.get("offset", 0), limit=params.get("limit", 262144))
+                except (ValueError, OSError):
+                    raise RemoteError("artifact_unavailable", "交付文件已变化、不可用或不属于此会话。") from None
+            self._require_authorized(peer_id, generation)
+            return result
         if method == "status":
-            return self._call_ui(lambda: {"protocol_version": PROTOCOL_VERSION,
+            return ui_call(lambda: {"protocol_version": PROTOCOL_VERSION,
                 "agent_trace_version": 1,
                 "state": self._status["state"], "chat_busy": self.session.chat.busy,
                 "current_conversation_id": self.session.chat.current_conversation_id,
@@ -397,17 +549,33 @@ class RemoteController(QObject):
                 raise RemoteError("invalid_request", "配置同步不接受附加参数。")
             # Never reserve/log this response: it deliberately contains the
             # credential, only within an authenticated encrypted connection.
-            return self._call_ui(lambda: direct_chat_configuration(self.session.settings), peer_id,
-                                 generation=generation)
+            def configuration():
+                result = direct_chat_configuration(self.session.settings)
+                try:
+                    result["character_library"] = character_library_summary(self.session.settings)
+                except RemoteError:
+                    pass  # Keep the prior valid phone role when the shelf is unreadable.
+                return result
+            return ui_call(configuration, peer_id, generation=generation)
+        if method == "character.list":
+            return ui_call(lambda: list_characters(self.session.settings, params), peer_id,
+                           generation=generation)
+        if method == "character.get":
+            return ui_call(lambda: get_character(self.session.settings, params), peer_id,
+                           generation=generation)
         if method == "chat.import":
             normalized = normalize_import(params)
-            self._call_ui(lambda: self._check_chat_import(normalized["conversation_id"]), peer_id,
+            ui_call(lambda: self._check_chat_import(normalized["conversation_id"]), peer_id,
                           generation=generation)
             image_id = normalized["messages"][0].get("image_id")
             if image_id is not None:
                 self.images.metadata(image_id)
             self._require_authorized(peer_id, generation)
-            result = self.sync.import_exchange(peer_id, request_id, normalized)
+            self._require_image_storage_host_open()
+            with self._agent_guard():
+                self._require_authorized(peer_id, generation)
+                self._require_image_storage_host_open()
+                result = self.sync.import_exchange(peer_id, request_id, normalized)
             self._chat_imported.emit(normalized["conversation_id"])
             return result
         if method == "sync.snapshot":
@@ -427,8 +595,12 @@ class RemoteController(QObject):
                 raise RemoteError("invalid_request", "图片标识无效。")
             if method == "image.get":
                 return self.images.get(image_id)
-        if method not in ("pet.command", "chat.send", "agent.send", "agent.cancel", "image.upload", "image.delete", "desktop.snapshot"):
+        if method not in ("pet.command", "chat.send", "agent.send", "agent.cancel", "agent.answer", "agent.steer", "image.upload", "image.delete", "desktop.snapshot", "character.select"):
             raise RemoteError("unknown_method", "不支持此远程操作。")
+        if method == "character.select":
+            # Only validated IDs/hashes, never a card body or prompt, enter the
+            # durable operation log. Read responses stay ephemeral above.
+            params = validate_character_selection(params)
         expires_at = None
         if method == "pet.command":
             expires_at = params.get("expires_at")
@@ -447,12 +619,24 @@ class RemoteController(QObject):
         reservation = self.sync.reserve_operation(peer_id, request_id,
             {"method": method, "params": operation_params}, expires_at=expires_at, ephemeral=method == "pet.command")
         if not reservation["accepted"]:
+            if method=="agent.send":
+                recover=getattr(self.session.chat,"recover_remote_agent_ack",None)
+                if callable(recover):
+                    ack=ui_call(lambda:recover(peer_id,request_id),peer_id,generation=generation)
+                    if ack is not None: return {"duplicate":True,**ack}
             return {"duplicate": True, **reservation}
         try:
             if method == "pet.command":
-                result = self._call_ui(lambda: self._pet_command(params), peer_id, generation=generation)
+                result = ui_call(lambda: self._pet_command(params), peer_id, generation=generation)
+            elif method == "character.select":
+                result = ui_call(lambda: select_character(self.session.settings, self.session.chat, params),
+                                 peer_id, generation=generation)
             elif method == "agent.cancel":
-                result = self._call_ui(lambda: self._cancel_agent(params), peer_id, generation=generation)
+                result = ui_call(lambda: self._cancel_agent(params), peer_id, generation=generation)
+            elif method == "agent.answer":
+                result = ui_call(lambda: self._answer_agent(params), peer_id, generation=generation)
+            elif method == "agent.steer":
+                result = ui_call(lambda: self._steer_agent(params), peer_id, generation=generation)
             elif method == "agent.send":
                 if not {"conversation_id", "text"} <= set(params) or set(params) - {"conversation_id", "text", "image_id"}:
                     raise RemoteError("invalid_request", "电脑 Agent 请求只接受会话、文字和本次图片。")
@@ -461,7 +645,7 @@ class RemoteController(QObject):
                     if not isinstance(image_id, str) or not IMAGE_ID.fullmatch(image_id):
                         raise RemoteError("invalid_image", "图片标识无效，请先上传图片再发送。")
                     self.images.metadata(image_id)
-                result = self._call_ui(lambda: self._send_agent(peer_id, request_id, params), peer_id,
+                result = ui_call(lambda: self._send_agent(peer_id, request_id, params), peer_id,
                                        generation=generation)
             elif method == "chat.send":
                 if any(name in params for name in ("desktop_image_id", "desktop_capture_unavailable_reason")):
@@ -473,38 +657,59 @@ class RemoteController(QObject):
                 desktop_image_id = None
                 desktop_capture_unavailable_reason = None
                 if params.get("desktop_context"):
-                    self._call_ui(lambda: self._validate_chat_params(params), peer_id, generation=generation)
+                    ui_call(lambda: self._validate_chat_params(params), peer_id, generation=generation)
                     try:
-                        desktop_image_id = self._capture_desktop(peer_id, generation)["id"]
+                        desktop_image_id = self._capture_desktop(peer_id, generation, ui_call=ui_call)["id"]
                     except DesktopCaptureUnavailable as exc:
                         if exc.blocked_code != "own_window":
                             raise
                         # AURA intentionally never photographs its own chat or
                         # settings. An explicit task can still reach the normal
                         # current-user routing gate, without invented pixels.
-                        self._call_ui(self._desktop_chat_fallback_permission, peer_id, generation=generation)
+                        ui_call(self._desktop_chat_fallback_permission, peer_id, generation=generation)
                         desktop_capture_unavailable_reason = "own_window"
                 if "image_id" in params:
                     image_id = params["image_id"]
                     if not isinstance(image_id, str) or not IMAGE_ID.fullmatch(image_id):
                         raise RemoteError("invalid_image", "图片标识无效，请先上传图片再发送。")
                     self.images.metadata(image_id)
-                result = self._call_ui(lambda: self._send_chat(peer_id, request_id, params, desktop_image_id,
+                result = ui_call(lambda: self._send_chat(peer_id, request_id, params, desktop_image_id,
                     desktop_capture_unavailable_reason), peer_id,
                                        generation=generation)
             elif method == "desktop.snapshot":
                 if params:
                     raise RemoteError("invalid_request", "获取电脑画面不接受附加参数。")
-                result = self._capture_desktop(peer_id, generation)
+                result = self._capture_desktop(peer_id, generation, ui_call=ui_call)
             elif method == "image.upload":
                 self._require_authorized(peer_id, generation)
+                self._require_image_storage_host_open()
                 result = self.images.upload(params)
+                self.session.chat.mark_image_storage_mutated(result["id"])
                 self.image_received.emit(result)
             else:
-                result = self.images.delete(params["id"])
+                self._require_authorized(peer_id, generation)
+                self._check_image_storage_delete()
+                failed = True
+                try:
+                    result = self.images.delete(params["id"])
+                    failed = False
+                finally:
+                    try:
+                        self.session.chat.mark_image_storage_deleted(params["id"])
+                    except BaseException:
+                        if not failed:
+                            raise
             self.sync.complete_operation(peer_id, request_id, {"ok": True, "result": result})
             return result
         except Exception as exc:
+            if method=="agent.send":
+                recover=getattr(self.session.chat,"recover_remote_agent_ack",None)
+                if callable(recover):
+                    ack=ui_call(lambda:recover(peer_id,request_id),peer_id,generation=generation)
+                    if ack is not None:
+                        # The exact queue enrollment is durable even if the
+                        # separate operation-result write was interrupted.
+                        return ack
             error = ({"code": exc.code, "message": exc.message} if isinstance(exc, RemoteError) else {
                 "code": "operation_failed", "message": "该操作未完成，请确认电脑状态后使用新的请求标识。"})
             self.sync.complete_operation(peer_id, request_id, {"ok": False, "error": error})
@@ -581,16 +786,56 @@ class RemoteController(QObject):
     def _agent_status(self):
         readiness = self.session.chat.agent_readiness()
         cid = self.session.chat.agent_running_conversation_id
+        pending = False
+        query = getattr(getattr(self.session.chat, "_agent_service", None), "execution_resources_pending", None)
+        if callable(query):
+            try:
+                value = query()
+                pending = value if type(value) is bool else True
+            except Exception:
+                pending = True
         return {"agent_available": readiness["available"],
                 "agent_unavailable_reason": readiness["reason"],
                 "agent_capabilities": readiness.get("tools", []),
-                "agent_busy": cid is not None, "agent_conversation_id": cid}
+                "agent_busy": cid is not None or pending, "agent_conversation_id": cid,
+                "agent_interaction": (self.session.chat.agent_interaction_for(cid)
+                    if cid is not None and callable(getattr(self.session.chat, "agent_interaction_for", None)) else None)}
+
+    def _answer_agent(self, params):
+        if (set(params) != {"conversation_id", "interaction_id", "answer"}
+                or not isinstance(params["conversation_id"], str)
+                or not isinstance(params["interaction_id"], str) or not isinstance(params["answer"], dict)):
+            raise RemoteError("invalid_request", "答复需要当前会话、问题标识和明确选择。")
+        try:
+            if str(UUID(params["conversation_id"])) != params["conversation_id"]:
+                raise ValueError
+        except ValueError:
+            raise RemoteError("invalid_request", "会话标识无效。") from None
+        accepted = self.session.chat.answer_agent_interaction(params["interaction_id"], params["answer"],
+                                                             conversation_id=params["conversation_id"])
+        return {"accepted": bool(accepted)}
+
+    def _steer_agent(self, params):
+        if (set(params) != {"conversation_id", "text"} or not isinstance(params["conversation_id"], str)
+                or not isinstance(params["text"], str)):
+            raise RemoteError("invalid_request", "补充指令需要当前会话和文字。")
+        try:
+            if str(UUID(params["conversation_id"])) != params["conversation_id"]:
+                raise ValueError
+        except ValueError:
+            raise RemoteError("invalid_request", "会话标识无效。") from None
+        return {"accepted": bool(self.session.chat.steer_agent(params["text"], conversation_id=params["conversation_id"]))}
 
     def _send_agent(self, peer_id, request_id, params):
-        text, conversation_id = self._validate_chat_params(params)
+        text, conversation_id = self._validate_chat_params(params,allow_busy=True)
         readiness = self.session.chat.agent_readiness()
         if not readiness["available"]:
             raise RemoteError("agent_unavailable", readiness["reason"])
+        admission=getattr(self.session.chat,"admit_remote_agent",None)
+        if callable(admission):
+            try: return admission(peer_id,request_id,conversation_id,text,image_id=params.get("image_id"))
+            except CoordinatorError as exc:
+                raise RemoteError("agent_queue_unavailable","任务暂未加入队列，请保持原请求编号查询状态；本次不会自动重复执行。") from None
         message_id = str(uuid5(NAMESPACE_URL, "aura-remote:" + peer_id + ":" + request_id))
         options = {"agent_mode": True}
         if "image_id" in params:
@@ -604,6 +849,12 @@ class RemoteController(QObject):
         cid = params.get("conversation_id")
         if set(params) != {"conversation_id"} or not isinstance(cid, str) or str(UUID(cid)) != cid:
             raise RemoteError("invalid_request", "停止任务需要有效的会话标识。")
+        cancel=getattr(self.session.chat,"cancel_queued_agent",None)
+        if callable(cancel):
+            result=cancel(cid)
+            if isinstance(result,dict) and result.get("cancelled") is True:
+                return {"conversation_id":cid,**result}
+            if result is True: return {"cancelled":True,"conversation_id":cid}
         if self.session.chat.agent_running_conversation_id != cid:
             return {"cancelled": False, "conversation_id": cid}
         return {"cancelled": self.session.chat.stop_request(cid), "conversation_id": cid}
@@ -614,25 +865,30 @@ class RemoteController(QObject):
         if not callable(current_code) or current_code(settings) != "own_window":
             raise DesktopCaptureUnavailable()
 
-    def _capture_desktop(self, peer_id, generation):
-        observer, settings = self._call_ui(self._desktop_capture_permission, peer_id, generation=generation)
+    def _capture_desktop(self, peer_id, generation, *, ui_call=None):
+        self._require_image_storage_host_open()
+        ui_call = self._call_ui if ui_call is None else ui_call
+        observer, settings = ui_call(self._desktop_capture_permission, peer_id, generation=generation)
         payload = capture_desktop_image(observer, settings)
         # Recheck revocation and consent after capture, before retaining pixels
         # or exposing them to a phone/model. Never change perception settings.
-        current_observer, current_settings = self._call_ui(self._desktop_capture_permission, peer_id,
+        current_observer, current_settings = ui_call(self._desktop_capture_permission, peer_id,
                                                           generation=generation)
         if current_observer is not observer or current_settings != settings:
             raise RemoteError("desktop_permission_denied", "电脑屏幕授权已变化，画面已丢弃，请重新获取。")
         self._require_authorized(peer_id, generation)
-        return self.images.upload(payload)
+        self._require_image_storage_host_open()
+        result = self.images.upload(payload)
+        self.session.chat.mark_image_storage_mutated(result["id"])
+        return result
 
-    def _validate_chat_params(self, params):
+    def _validate_chat_params(self, params, *, allow_busy=False):
         text = params.get("text")
         conversation_id = params.get("conversation_id", self.session.chat.current_conversation_id)
         if (not isinstance(text, str) or not text.strip() or len(text) > 8000
                 or not isinstance(conversation_id, str) or str(UUID(conversation_id)) != conversation_id):
             raise RemoteError("invalid_request", "聊天文字或会话标识无效。")
-        if self.session.chat.busy:
+        if self.session.chat.busy and not allow_busy:
             raise RemoteError("chat_unavailable", "电脑正在处理另一条请求，请稍后再试。")
         return text, conversation_id
 
@@ -654,10 +910,14 @@ class RemoteController(QObject):
                 "reply_delivery": "sync.pull"}
 
     def shutdown(self):
+        with self._agent_guard(): self._shutdown()
+
+    def _shutdown(self):
         if self._closed:
             return
         self._closed = True
         self._enabled = False
+        self._agent_authority_changed()
         self._stop_transport()
         self._set_status("disabled", endpoint_id="", ticket="", error_code="", auto_retry=False,
                          retry_in_seconds=None, local_available=False, relay_available=False)

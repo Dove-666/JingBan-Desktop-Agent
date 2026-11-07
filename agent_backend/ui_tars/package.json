@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "On-demand UI-TARS GUI worker for AURA, using JSON Lines over stdio.",
+  "description": "On-demand UI-TARS GUI worker for 鲸伴, using JSON Lines over stdio.",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "start": "node worker.mjs",
-    "check": "node --check worker.mjs && node --check bridge.mjs && node --check sdk-adapter.mjs && node --check bounded-observations.mjs && node --check goal-verifier.mjs && node --check windows-capture.mjs && node --check model-context.mjs && node --check pixel-profile.mjs && node --check synthetic-model-probe.mjs",
+    "check": "node --check worker.mjs && node --check bridge.mjs && node --check sdk-adapter.mjs && node --check bounded-observations.mjs && node --check goal-verifier.mjs && node --check windows-capture.mjs && node --check model-context.mjs && node --check pixel-profile.mjs && node --check synthetic-model-probe.mjs && node --check progress-monitor.mjs && node --check structured-observations.mjs",
     "test": "node --test test/*.test.mjs",
     "probe": "node probe.mjs"
   },

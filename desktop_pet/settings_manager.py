@@ -7,9 +7,13 @@ Tests may inject a small in-memory backend without touching the user's vault.
 
 from __future__ import annotations
 
+import json
+import hashlib
 import math
+import os
+import re
 import sys
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass, replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -38,6 +42,9 @@ class ApiSettings:
     model: str = ""
     timeout_seconds: float = 30.0
     reasoning_effort: str = "default"
+    reasoning_profile: str = "auto"
+    reasoning_budget_tokens: int = 0
+    reasoning_metadata: dict | None = None
 
     def validate(self, require_model: bool = True) -> None:
         if not isinstance(self.base_url, str) or not self.base_url:
@@ -70,8 +77,64 @@ class ApiSettings:
             or not 1 <= self.timeout_seconds <= 120
         ):
             raise SettingsError("请求超时必须为 1～120 秒。")
-        if not isinstance(self.reasoning_effort, str) or self.reasoning_effort not in REASONING_EFFORTS:
-            raise SettingsError("思考强度无效，请在模型设置中重新选择。")
+        from .reasoning import ReasoningError, resolve_reasoning, validate_selection
+        try:
+            if self.reasoning_metadata is not None and resolve_reasoning(
+                    self.base_url, self.model, metadata=self.reasoning_metadata).source != "metadata":
+                raise ReasoningError("invalid capability")
+            validate_selection(self.base_url, self.model, value=self.reasoning_effort,
+                profile=self.reasoning_profile, budget_tokens=self.reasoning_budget_tokens,
+                metadata=self.reasoning_metadata)
+        except (ReasoningError, TypeError, ValueError):
+            raise SettingsError("当前模型的思考配置无效，请在模型设置中重新选择适配方式、模式或预算。") from None
+
+
+def read_api_settings(settings: QSettings) -> ApiSettings:
+    """Read ordinary API preferences without constructing a credential store."""
+    defaults = ApiSettings()
+    try:
+        effort = settings.value("api/reasoning_effort", defaults.reasoning_effort)
+        profile = settings.value("api/reasoning_profile", "auto")
+        budget = settings.value("api/reasoning_budget_tokens", 0)
+        try:
+            budget = int(budget) if not isinstance(budget, bool) else -1
+        except (TypeError, ValueError, OverflowError):
+            budget = -1
+        if not settings.contains("api/reasoning_profile"):
+            effort = effort if isinstance(effort, str) and effort in REASONING_EFFORTS else "default"
+            profile = "legacy" if effort != "default" else "auto"
+        result = ApiSettings(
+            base_url=settings.value("api/base_url", defaults.base_url),
+            model=settings.value("api/model", defaults.model),
+            timeout_seconds=float(settings.value("api/timeout_seconds", defaults.timeout_seconds)),
+            reasoning_effort=effort,
+            reasoning_profile=profile,
+            reasoning_budget_tokens=budget,
+        )
+        from .model_context import model_context_cache_key
+        try:
+            cached = settings.value("model_reasoning_metadata/" + model_context_cache_key(result.base_url, result.model), "", type=str)
+            metadata = json.loads(cached) if cached else None
+            if isinstance(metadata, dict):
+                result = replace(result, reasoning_metadata=metadata)
+        except (TypeError, ValueError, RecursionError, AttributeError):
+            pass
+        if not settings.contains("api/reasoning_effort") and not settings.contains("api/reasoning_profile"):
+            from .reasoning import default_reasoning_selection
+            selection = default_reasoning_selection(result.base_url, result.model, metadata=result.reasoning_metadata)
+            result = replace(result, reasoning_effort=selection["value"],
+                             reasoning_budget_tokens=selection["budget_tokens"])
+        # A broken reasoning preference must not discard a valid provider URL.
+        try:
+            result.validate(require_model=False)
+        except SettingsError:
+            result = replace(result, reasoning_effort="default", reasoning_profile="auto",
+                             reasoning_budget_tokens=0, reasoning_metadata=None)
+            result.validate(require_model=False)
+        return result
+    except (SettingsError, ValueError, TypeError, OverflowError):
+        # A damaged ordinary config must not prevent the pet from starting.
+        return defaults
 
 
 class CredentialStore:
@@ -168,9 +231,20 @@ class SettingsManager:
         self,
         settings: QSettings | None = None,
         credential_store: CredentialStore | None = None,
+        *,
+        profile_dir: Path | None = None,
     ) -> None:
+        if settings is not None and profile_dir is not None:
+            raise SettingsError("独立配置目录不能与现有设置实例同时指定。")
+        self.profile_dir = None
+        if profile_dir is not None:
+            try:
+                self.profile_dir = Path(profile_dir).expanduser().resolve()
+            except (OSError, ValueError, TypeError):
+                raise SettingsError("无法使用指定的独立配置目录，请检查路径是否有效。") from None
         if settings is None:
-            directory = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
+            directory = (str(self.profile_dir) if self.profile_dir is not None else
+                         QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation))
             if not directory:
                 raise SettingsError("无法确定当前用户的本地配置目录。")
             try:
@@ -180,7 +254,13 @@ class SettingsManager:
                 raise SettingsError("无法创建当前用户的本地配置目录，请检查目录权限。") from None
             settings = QSettings(str(path), QSettings.Format.IniFormat)
         self._settings = settings
-        self._credentials = credential_store if credential_store is not None else CredentialStore()
+        if credential_store is not None:
+            self._credentials = credential_store
+        elif self.profile_dir is not None:
+            scope = hashlib.sha256(os.path.normcase(str(self.profile_dir)).encode("utf-8")).hexdigest()[:24]
+            self._credentials = CredentialStore(service="AURA Desktop Agent · profile-" + scope)
+        else:
+            self._credentials = CredentialStore()
 
     @property
     def credentials_available(self) -> bool:
@@ -195,27 +275,86 @@ class SettingsManager:
         return self._settings.fileName()
 
     def load_api_settings(self) -> ApiSettings:
-        defaults = ApiSettings()
+        return read_api_settings(self._settings)
+
+    def has_unmigrated_reasoning(self):
+        return (not self._settings.contains("api/reasoning_profile") and
+                self._settings.value("api/reasoning_effort", "default") in REASONING_EFFORTS[1:])
+
+    def load_character_card(self):
+        from .character_cards import CharacterCard, CharacterCardError, MAX_CARD_JSON_BYTES
+        raw = self._settings.value("character/card", "")
+        if not isinstance(raw, str) or not raw:
+            return None
         try:
-            effort = self._settings.value("api/reasoning_effort", defaults.reasoning_effort)
-            if not isinstance(effort, str) or effort not in REASONING_EFFORTS:
-                effort = defaults.reasoning_effort
-            result = ApiSettings(
-                base_url=self._settings.value("api/base_url", defaults.base_url),
-                model=self._settings.value("api/model", defaults.model),
-                timeout_seconds=float(self._settings.value("api/timeout_seconds", defaults.timeout_seconds)),
-                reasoning_effort=effort,
-            )
-            result.validate(require_model=False)
-            return result
-        except (SettingsError, ValueError, TypeError, OverflowError):
-            # A damaged ordinary config must not prevent the pet from starting.
-            return defaults
+            if len(raw.encode("utf-8")) > MAX_CARD_JSON_BYTES:
+                return None
+            return CharacterCard.from_dict(json.loads(raw))
+        except (CharacterCardError, ValueError, TypeError, RecursionError):
+            return None
+
+    def save_character_card(self, card) -> None:
+        from .character_cards import CharacterCard, CharacterCardError
+        try:
+            if card is not None and not isinstance(card, CharacterCard):
+                raise CharacterCardError("角色卡格式无效。")
+            document = CharacterCard.from_dict(card.to_dict()).to_dict() if card is not None else None
+        except (CharacterCardError, ValueError, TypeError):
+            raise SettingsError("角色卡内容无效，请重新导入。") from None
+        key = "character/card"
+        present, previous = self._settings.contains(key), self._settings.value(key)
+        if document is None:
+            self._settings.remove(key)
+        else:
+            self._settings.setValue(key, json.dumps(document, ensure_ascii=False, separators=(",", ":")))
+        try:
+            self._sync()
+        except SettingsError:
+            if present:
+                self._settings.setValue(key, previous)
+            else:
+                self._settings.remove(key)
+            try:
+                self._settings.sync()
+                restored = self._settings.status() == QSettings.Status.NoError
+            except Exception:
+                restored = False
+            if not restored:
+                raise SettingsError("无法确认角色设置已恢复，请检查配置目录权限后重新打开设置核对。") from None
+            raise
 
     def _sync(self) -> None:
         self._settings.sync()
         if self._settings.status() != QSettings.Status.NoError:
             raise SettingsError("设置未能写入本地配置文件，请检查当前用户的目录权限。")
+
+    def _library_operation(self, operation, *args, **kwargs):
+        from .character_library import CharacterLibrary, CharacterLibraryError
+        try:
+            config_path = Path(self.config_path)
+            if not config_path.is_absolute():
+                raise CharacterLibraryError("无法确定角色库的本地配置目录，请重新打开设置。")
+            library = CharacterLibrary(config_path.parent / "character_cards.sqlite3")
+            return getattr(library, operation)(*args, **kwargs)
+        except CharacterLibraryError as exc:
+            raise SettingsError(str(exc)) from None
+        except (OSError, TypeError, ValueError):
+            raise SettingsError("无法确定角色库的本地配置目录，请重新打开设置。") from None
+
+    def list_character_cards(self):
+        return self._library_operation("list")
+
+    def save_library_character_card(self, card, label=None):
+        return self._library_operation("save", card, label=label)
+
+    def load_library_character_card(self, identity):
+        return self._library_operation("load", identity)
+
+    def rename_library_character_card(self, identity, label):
+        return self._library_operation("rename", identity, label)
+
+    def delete_library_character_card(self, identity):
+        return self._library_operation("delete", identity)
 
     def save_api_settings(self, settings: ApiSettings, *, pending_api_key: str = "") -> None:
         settings.validate(require_model=False)
@@ -224,13 +363,89 @@ class SettingsManager:
         # before writing anything. A missing vault must still allow non-secret
         # preferences to be saved; the caller can supply an unsaved input key.
         known_keys = (*self.get_known_api_keys(), pending_api_key.strip())
-        if any(key and (key in settings.base_url or key in settings.model) for key in known_keys):
+        fields = tuple(self._public_strings(settings))
+        if any(key and any(key in field for field in fields) for key in known_keys):
             raise SettingsError("Base URL 和模型名称不能包含 API Key，请只在 API Key 输入框中填写密钥。")
         self._settings.setValue("api/base_url", settings.base_url)
         self._settings.setValue("api/model", settings.model.strip())
         self._settings.setValue("api/timeout_seconds", float(settings.timeout_seconds))
         self._settings.setValue("api/reasoning_effort", settings.reasoning_effort)
+        self._settings.setValue("api/reasoning_profile", settings.reasoning_profile)
+        self._settings.setValue("api/reasoning_budget_tokens", settings.reasoning_budget_tokens)
+        from .model_context import model_context_cache_key
+        identity = model_context_cache_key(settings.base_url, settings.model)
+        self._settings.setValue("model_reasoning_preferences/" + identity, json.dumps({
+            "profile": settings.reasoning_profile, "value": settings.reasoning_effort,
+            "budget_tokens": settings.reasoning_budget_tokens}, ensure_ascii=False))
+        if settings.reasoning_metadata is not None:
+            self._settings.setValue("model_reasoning_metadata/" + identity, json.dumps(settings.reasoning_metadata, ensure_ascii=False))
         self._sync()
+
+    def load_reasoning_preferences(self, base_url, model):
+        """Read the explicitly saved choice for this provider/model only."""
+        from .model_context import model_context_cache_key
+        from .reasoning import validate_selection
+        try:
+            raw = self._settings.value("model_reasoning_preferences/" + model_context_cache_key(base_url, model), "", type=str)
+            value = json.loads(raw) if raw else None
+            if not isinstance(value, dict) or set(value) != {"profile", "value", "budget_tokens"}:
+                return None
+            validate_selection(base_url, model, value=value["value"], profile=value["profile"],
+                budget_tokens=value["budget_tokens"], metadata=self.load_reasoning_metadata(base_url, model))
+            return value
+        except (ValueError, TypeError, RecursionError):
+            return None
+
+    def has_reasoning_preferences(self, base_url, model):
+        """Distinguish an explicit model choice, including Default, from unset."""
+        if self.load_reasoning_preferences(base_url, model) is not None:
+            return True
+        from .reasoning import reasoning_identity
+        active = reasoning_identity(self._settings.value("api/base_url", ApiSettings().base_url),
+                                    self._settings.value("api/model", ""))
+        return (active == reasoning_identity(base_url, model) and
+                (self._settings.contains("api/reasoning_effort") or self._settings.contains("api/reasoning_profile")))
+
+    def load_reasoning_metadata(self, base_url, model):
+        from .model_context import model_context_cache_key
+        from .reasoning import resolve_reasoning
+        try:
+            raw = self._settings.value("model_reasoning_metadata/" + model_context_cache_key(base_url, model), "", type=str)
+            value = json.loads(raw) if raw else None
+            if not isinstance(value, dict) or resolve_reasoning(base_url, model, metadata=value).source != "metadata":
+                return None
+            return value
+        except (ValueError, TypeError, RecursionError):
+            return None
+
+    def save_reasoning_metadata(self, metadata, *, base_url, model):
+        from .model_context import model_context_cache_key
+        from .reasoning import resolve_reasoning
+        if not isinstance(metadata, dict) or resolve_reasoning(base_url, model, metadata=metadata).source != "metadata":
+            raise SettingsError("模型未提供可确认的思考能力。")
+        self._reject_public_api_keys(metadata)
+        self._settings.setValue("model_reasoning_metadata/" + model_context_cache_key(base_url, model),
+                                json.dumps(metadata, ensure_ascii=False))
+        self._sync()
+
+    def load_theme(self) -> str:
+        value = self._settings.value("ui/theme", "light")
+        return value if value in ("dark", "light") else "light"
+
+    def save_theme(self, value: str) -> None:
+        if not isinstance(value, str) or value not in ("dark", "light"):
+            raise SettingsError("请选择深色或浅色外观。")
+        key = "ui/theme"
+        present, previous = self._settings.contains(key), self._settings.value(key)
+        self._settings.setValue(key, value)
+        try:
+            self._sync()
+        except SettingsError:
+            if present:
+                self._settings.setValue(key, previous)
+            else:
+                self._settings.remove(key)
+            raise
 
     def load_silent_start(self) -> bool:
         value = self._settings.value("startup/silent", False)
@@ -392,14 +607,14 @@ class SettingsManager:
 
     def load_agent_settings(self):
         from .agents.settings import load_agent_settings
-        return load_agent_settings(self._settings)
+        return load_agent_settings(self._settings, api=self.load_api_settings())
 
     def save_agent_settings(self, settings, *, pending_api_key="") -> None:
         from .agents.settings import save_agent_settings
         from .agents.contracts import AgentValidationError
         known = (*self.get_known_api_keys(), pending_api_key.strip())
         try:
-            save_agent_settings(self._settings, settings, known_secrets=known)
+            save_agent_settings(self._settings, settings, known_secrets=known, api=self.load_api_settings())
         except AgentValidationError as exc:
             raise SettingsError(str(exc)) from None
 
@@ -423,7 +638,7 @@ class SettingsManager:
         self._agent_gui_credentials().clear_api_key()
 
     def load_perception_settings(self):
-        from dataclasses import fields
+        from dataclasses import fields, replace
         from .perception.settings import PerceptionSettings
 
         defaults = PerceptionSettings()
@@ -448,7 +663,8 @@ class SettingsManager:
             result.validate()
             return result
         except (ValueError, TypeError, OverflowError):
-            return defaults  # A damaged setting must never opt in to screen sending.
+            # New-profile defaults are distinct from recovery of damaged data.
+            return replace(defaults, enabled=False, allow_remote=False)
 
     def save_perception_settings(self, settings) -> None:
         from dataclasses import fields
