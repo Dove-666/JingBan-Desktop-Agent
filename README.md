@@ -4,7 +4,7 @@
 
 安卓现为 [1.19.0](android/README.md)：精简界面，并在「设置 → 角色卡」中查看、切换电脑保存的角色或恢复默认鲸鱼娘。两端同步角色设定，保留手机自选 API；离线沿用上次同步的当前角色。角色库同步需要本次更新后的电脑源码，旧独立 Windows 包不含这次改动；见[验证记录](docs/RELEASE_VALIDATION.md)。
 
-Windows **1.0.1** 的「鲸伴安装.exe」和「鲸伴.zip」位于 [`deliverables/windows/1.0.1`](deliverables/windows/1.0.1)。无需安装 Python、Node 或项目依赖；首次使用自行配置聊天 API。分发包包含角色素材、本地棋类引擎、独立后台运行时和第三方许可，不包含开发者的设置、聊天、配对信息或密钥。详见[Windows 封装与测试说明](docs/WINDOWS_RELEASE.md)。
+Windows **1.0.1** 的「鲸伴安装.exe」和「鲸伴.zip」位于 [v1.0.1 发布页](https://github.com/Dove-666/JingBan-Desktop-Agent/releases/tag/v1.0.1)。无需安装 Python、Node 或项目依赖；首次使用自行配置聊天 API。分发包包含角色素材、本地棋类引擎、独立后台运行时和第三方许可，不包含开发者的设置、聊天、配对信息或密钥。详见[Windows 封装与测试说明](docs/WINDOWS_RELEASE.md)。
 
 R29 / Windows Beta.4 与安卓 1.16.0 将思考参数改为按接口、模型和明确能力声明适配：分别提供档位、开关或 Token 预算；不再给每个模型展示同一组八档。未知网关和模型别名默认不发送参数，可以在高级设置选择兼容方式或自定义供应商原值。桌面按接口和模型保存选择，切换后恢复；手机表单保留各模型的本次编辑草稿。电脑聊天、Agent 与手机直连使用同一份能力目录和对应实际参数，默认省略字段，不因不支持而自动重试。旧参数保留原语义，编辑表单展示当前模型的选项，保存后应用。现有传输仍是 OpenAI 兼容 Chat Completions，Claude 高级模式是明确的兼容网关转发配置，不代表新增原生 Messages 接口。实现参考 [CC Switch 的能力声明](https://github.com/farion1231/cc-switch/blob/e1f8acf6479068b05e7e9df7c764aff3f76c08b4/src-tauri/src/proxy/providers/codex.rs)，原始规则与官方文档链接保存在 `shared/reasoning/profiles.json`。本轮[验证记录](artifacts/user-testing-20261107-model-reasoning/verification.json)保留各次失败与最终通过的范围。
 
