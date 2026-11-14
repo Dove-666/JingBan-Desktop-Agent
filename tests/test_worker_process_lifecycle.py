@@ -14,9 +14,7 @@ from uuid import uuid4
 
 from desktop_pet.agents.process_lifecycle import WorkerLifecycle, WorkerRunHandle, WorkerClosureReceipt
 from desktop_pet.agents import AgentService, AgentRequest, AgentSettings, AgentError, AgentResult
-from agent_backend.nanobot.acceptance_report import checked_assessment
 from desktop_pet.agents import service as host
-from desktop_pet.agents import execution_runtime, office_runtime, settings as settings_module
 
 
 class Process:
@@ -75,6 +73,19 @@ class WorkerLifecycleTests(unittest.TestCase):
         self.assertIsNotNone(self.lifecycle.settle(handle, timeout_seconds=0))
         handle, _ = self.bind(dispatched=True)
         self.assertIsNone(self.lifecycle.settle(handle, timeout_seconds=0))
+
+    def test_empty_job_cannot_prove_external_computer_operation_stopped(self):
+        handle, _ = self.bind(tree=Tree(), dispatched=False)
+        self.lifecycle.require_external_cleanup(handle)
+        self.lifecycle.mark_dispatched(handle)
+        self.assertIsNone(self.lifecycle.settle(handle, timeout_seconds=0))
+        self.lifecycle.confirm_external_cleanup(handle)
+        self.assertIsNotNone(self.lifecycle.settle(handle, timeout_seconds=0))
+
+    def test_uncommitted_worker_does_not_need_external_cleanup_ack(self):
+        handle, _ = self.bind(tree=Tree(), dispatched=False)
+        self.lifecycle.require_external_cleanup(handle)
+        self.assertIsNotNone(self.lifecycle.settle(handle, timeout_seconds=0))
 
     def test_receipt_and_run_handle_cannot_be_json_or_foreign_identity(self):
         handle, _ = self.bind(tree=Tree())
@@ -146,10 +157,9 @@ class WorkerLifecycleTests(unittest.TestCase):
                                      worker_lifecycle_callback=bound.append)
         self.assertEqual(result.status, "needs_user")
         self.assertEqual(result.artifacts, original.artifacts)
-        self.assertIn("未完成", result.reply)
+        self.assertIn("后台工具仍在结束中", result.reply)
         self.assertTrue(result.reply.startswith(original.reply))
-        self.assertFalse(checked_assessment(result.acceptance)["passed"])
-        self.assertIn("WORKER_CLEANUP_UNCONFIRMED", result.acceptance["issue_codes"])
+        self.assertIsNone(result.acceptance)
         self.assertIsNone(service.worker_closure(bound[0]))
         service.shutdown()
 
@@ -200,141 +210,47 @@ class OwnedJobAccountingTests(unittest.TestCase):
 
 
 class TerminalStorageStopTests(unittest.TestCase):
-    def test_terminal_storage_cannot_delay_stop_or_publish_early_closure(self):
-        for error in ("timeout", "backend_failed"):
-            for storage in ("journal", "checkpoint"):
-                for confirmed in (True, False):
-                    with self.subTest(error=error, storage=storage, confirmed=confirmed):
-                        self.check_blocked_storage(error, storage, confirmed)
-
-    def check_blocked_storage(self, error, storage, confirmed):
-        # All process/Job operations use these in-memory endpoints. The real
-        # public execute, input watchdog, lifecycle and owned SQLite stores run.
-        clock = SimpleNamespace(now=100.0)
-        process = Process()
-        committed = threading.Event()
-
-        class Input(io.BytesIO):
-            def write(self, value):
-                count = super().write(value)
-                if bytes(value) == b"\n":
-                    committed.set()
-                    if error == "timeout":
-                        clock.now += 6.0
-                return count
-
-        process.stdin = Input()
-        process.poll = lambda: 0 if error == "backend_failed" and committed.is_set() else None
-        tree = Tree(confirmed)
-        entered, release = threading.Event(), threading.Event()
-        ready_sent = False
-        terminal, outcomes, handles = {}, {}, []
-
-        def read_available(pipe):
-            nonlocal ready_sent
-            self.assertIs(pipe, process.stdout)
-            if not ready_sent:
-                ready_sent = True
-                return b'{"type":"ready","protocol":1,"sdk":"nanobot-ai","sdk_version":"0.4.0"}\n'
-            return b""
-
-        def hold(data):
-            terminal.update(data)
+    """A blocked native-session metadata write cannot prevent process Stop."""
+    def test_native_session_storage_cannot_delay_stop_or_publish_early_closure(self):
+        from tests.test_dsh_host import DshHostTests
+        DshHostTests.setUp(self)
+        entered, release, cancelled = threading.Event(), threading.Event(), threading.Event()
+        handles, failures = [], []
+        original = self.service._session_store.save
+        def save(*args):
             entered.set()
-            if not release.wait(10):
-                raise AssertionError("OWNED_TERMINAL_STORAGE_GATE_NOT_RELEASED")
-
-        with tempfile.TemporaryDirectory(prefix="aura-terminal-storage-") as temporary, ExitStack() as patches:
-            root = Path(temporary)
-            workspace = root / "workspace"
-            workspace.mkdir()
-            interpreter = root / "python-owned.exe"
-            interpreter.write_bytes(b"OWNED_FAKE_NOT_EXECUTED")
-            service = AgentService(checkpoint_path=root / "checkpoint.sqlite3")
-            original_append = service._journal.append
-            original_save = service._checkpoint_store.save
-
-            def append(conversation_id, task_id, kind, data, **kwargs):
-                if storage == "journal" and kind == "task_finished":
-                    hold(data)
-                return original_append(conversation_id, task_id, kind, data, **kwargs)
-
-            def save(*args, **kwargs):
-                if storage == "checkpoint" and kwargs.get("status") != "running":
-                    hold({"status": kwargs["status"]})
-                return original_save(*args, **kwargs)
-
-            service._journal.append = append
-            service._checkpoint_store.save = save
-            patches.enter_context(patch.object(settings_module, "AGENT_WORKSPACE_ROOT", root))
-            patches.enter_context(patch.object(office_runtime, "load_office_runtime", return_value=None))
-            patches.enter_context(patch.object(execution_runtime, "load_execution_runtime", return_value=None))
-            patches.enter_context(patch.object(host, "time", SimpleNamespace(
-                monotonic=lambda: clock.now, time=time.time, sleep=time.sleep)))
-            launch = patches.enter_context(patch.object(host.subprocess, "Popen", return_value=process))
-            patches.enter_context(patch.object(host, "_ProcessTree", return_value=tree))
-            patches.enter_context(patch.object(host, "_read_available", side_effect=read_available))
-            stop = patches.enter_context(patch.object(service._worker_lifecycle, "request_stop",
-                wraps=service._worker_lifecycle.request_stop))
-            settle = patches.enter_context(patch.object(service, "_settle_worker", wraps=service._settle_worker))
-            settings = AgentSettings(python_executable=str(interpreter), workspace=str(workspace),
-                tools_enabled=False, computer_enabled=False, timeout_seconds=5)
-            context = {"api": {"base_url": "http://127.0.0.1:1/v1", "model": "owned-no-provider"},
-                "messages": [], "conversation_id": str(uuid4())}
-            cancel = threading.Event()
-
-            def execute():
-                try:
-                    service.execute(settings, "owned-dummy-never-sent", AgentRequest("Owned task", "agent"),
-                        context, cancellation_event=cancel, worker_lifecycle_callback=handles.append)
-                except BaseException as exc:
-                    outcomes["exception"] = exc
-
-            thread = threading.Thread(target=execute, name="owned-terminal-storage-proof", daemon=True)
+            if not release.wait(10): raise AssertionError("Owned storage fixture was not released")
+            return original(*args)
+        def run():
             try:
+                DshHostTests.run_task(self, "cancel", cancellation_event=cancelled,
+                                     worker_lifecycle_callback=handles.append)
+            except AgentError as exc: failures.append(exc.code)
+        try:
+            with patch.object(self.service._session_store, "save", side_effect=save):
+                thread = threading.Thread(target=run)
                 thread.start()
-                self.assertTrue(entered.wait(5), repr(outcomes))
-                self.assertTrue(committed.is_set())
-                self.assertEqual(len(handles), 1)
-                handle = handles[0]
-                expected_status = "interrupted" if error == "backend_failed" and storage == "checkpoint" else error
-                self.assertEqual(terminal["status"], expected_status)
-                stop.assert_called_once_with(handle)
-                settle.assert_not_called()
-                self.assertEqual(tree.closes, 1)
-                self.assertEqual(process.wait_calls, 0)
-                self.assertIsNone(service.worker_closure(handle))
-                self.assertTrue(service._execution_lock.locked())
-                self.assertTrue(thread.is_alive())
-                self.assertIn(process.pid, service._processes)
-                self.assertIs(service._worker_handles[process.pid], handle)
-                self.assertTrue(service.execution_resources_pending())
-                self.assertFalse(cancel.is_set())
-            finally:
-                release.set()
-                thread.join(5)
-                self.assertFalse(thread.is_alive())
-                # Record unknown closure before this owned fixture's final
-                # retirement. No production process or resource is removed.
                 try:
-                    if handles:
-                        handle = handles[0]
-                        receipt = service.worker_closure(handle)
-                        self.assertIsInstance(outcomes.get("exception"), AgentError)
-                        self.assertEqual(outcomes["exception"].code, error)
-                        self.assertFalse(service._execution_lock.locked())
-                        self.assertEqual(receipt is not None, confirmed)
-                        self.assertEqual(handle in service._worker_cleanup_pending, not confirmed)
-                        self.assertEqual(process.pid in service._processes, not confirmed)
-                        if receipt is not None:
-                            self.assertTrue(service.validate_worker_closure(handle, receipt))
+                    self.assertTrue(entered.wait(10))
+                    self.assertEqual(len(handles), 1)
+                    self.service.cancel_request(cancelled)
+                    deadline = time.monotonic() + 3
+                    while handles[0]._process.poll() is None and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertIsNotNone(handles[0]._process.poll())
+                    self.assertIsNone(self.service.worker_closure(handles[0]))
+                    self.assertTrue(self.service.execution_resources_pending())
                 finally:
-                    tree.confirmed = True
-                    service.reconcile_worker_closures(timeout_seconds=0)
-                    service.shutdown()
-            launch.assert_called_once()
-            self.assertEqual(launch.call_args.args[0][0], str(interpreter))
-            self.assertFalse(service.execution_resources_pending())
+                    release.set()
+                    thread.join(10)
+                self.assertFalse(thread.is_alive())
+                self.assertEqual(failures, ["cancelled"])
+                receipt = self.service.worker_closure(handles[0])
+                self.assertTrue(self.service.validate_worker_closure(handles[0], receipt))
+                self.assertFalse(self.service.execution_resources_pending())
+        finally:
+            release.set()
+            DshHostTests.tearDown(self)
 
 
 if __name__ == "__main__": unittest.main()

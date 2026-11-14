@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import json
 from pathlib import Path
 import sqlite3
-from agent_backend.nanobot.redaction import redact_value
+from desktop_pet.redaction import redact_value
 
 
 class ExecutionJournal:

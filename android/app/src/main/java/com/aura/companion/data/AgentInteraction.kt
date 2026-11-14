@@ -15,7 +15,7 @@ internal fun parseAgentInteraction(value: JSONObject?, authorityId: String?): Ag
     val question = value.opt("question") as? String ?: return null
     val conversation = value.opt("conversation_id") as? String ?: return null
     if (!id.matches(Regex("[A-Za-z0-9_-]{1,100}")) || kind !in setOf("question", "file_access") ||
-        question.length !in 1..2000 || !AppRepository.canonicalUuid(conversation)) return null
+        question.codePointCount(0, question.length) !in 1..16000 || !AppRepository.canonicalUuid(conversation)) return null
     val options = mutableListOf<String>()
     var resource: AgentFileResource? = null
     if (kind == "file_access") {
@@ -27,10 +27,10 @@ internal fun parseAgentInteraction(value: JSONObject?, authorityId: String?): Ag
         resource = AgentFileResource(path, access, directory)
     } else if (value.has("options")) {
         val array = value.optJSONArray("options") ?: return null
-        if (array.length() > 8) return null
+        if (array.length() > 6) return null
         for (i in 0 until array.length()) {
             val item = array.opt(i) as? String ?: return null
-            if (item.length !in 1..240) return null
+            if (item.codePointCount(0, item.length) !in 1..240) return null
             options += item
         }
     }
@@ -46,6 +46,6 @@ internal fun validatedAgentAnswer(interaction: AgentInteraction, answer: JSONObj
     }
     if (keys != setOf("text")) return null
     val text = (answer.opt("text") as? String)?.trim() ?: return null
-    if (text.length !in 1..8000 || text.any { it.code < 32 && it != '\n' && it != '\t' }) return null
+    if (text.codePointCount(0, text.length) !in 1..8000 || text.any { it.code < 32 && it != '\n' && it != '\t' }) return null
     return JSONObject().put("text", text)
 }

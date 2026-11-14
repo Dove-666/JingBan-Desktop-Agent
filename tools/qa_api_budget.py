@@ -202,7 +202,8 @@ class BudgetProxy:
     or upstream URL to those clients. A separately constructed proxy can reuse
     the same ledger without renewing its budget. No runtime config is saved.
     """
-    def __init__(self, ledger, upstream_base_url, upstream_api_key, *, timeout_seconds=60, trust_env=True):
+    def __init__(self, ledger, upstream_base_url, upstream_api_key, *, timeout_seconds=60, trust_env=True,
+                 error_observer=None):
         if (type(ledger) is not BudgetLedger or type(upstream_api_key) is not str or not upstream_api_key
                 or any(c in upstream_api_key for c in "\r\n")
                 or type(timeout_seconds) not in {int, float} or not 0.1 <= timeout_seconds <= 600):
@@ -212,6 +213,7 @@ class BudgetProxy:
         self._key = upstream_api_key
         self._timeout = timeout_seconds
         self._trust_env = trust_env
+        self._error_observer = error_observer
         self.token = secrets.token_urlsafe(32)
         self.base_url = None
         self._loop = self._stop = self._engine = None
@@ -257,7 +259,7 @@ class BudgetProxy:
         import httpx
         # Reuse the production proxy's reviewed IOCP accept/socket ownership,
         # without its public-network policy or its forwarding implementation.
-        from agent_backend.nanobot.browser_network import PinnedPublicProxy
+        from tools.qa_support.browser_network import PinnedPublicProxy
         owner = self
         class Relay(PinnedPublicProxy):
             async def _accept(self, reader, writer):
@@ -286,6 +288,17 @@ class BudgetProxy:
         writer.write(f"HTTP/1.1 {status} QA Relay\r\nContent-Type: application/json\r\nContent-Length: {len(raw)}\r\nConnection: close\r\n\r\n".encode("ascii")+raw)
         await writer.drain()
 
+    async def _reject(self, reader, writer, fields, status, code):
+        # Closing a Windows socket with an unread request body can reset it
+        # before the client receives the rejection. Drain only a small,
+        # explicitly framed body, with a short bound and no forwarding.
+        length = fields.get("content-length", "")
+        if (length.isdigit() and 0 < int(length) <= 65536
+                and "transfer-encoding" not in fields and "expect" not in fields):
+            with suppress(asyncio.IncompleteReadError, asyncio.TimeoutError, OSError):
+                await asyncio.wait_for(reader.readexactly(int(length)), timeout=.25)
+        await self._error(writer, status, code)
+
     async def _handle(self, engine, reader, writer):
         attempt = None
         relay = disconnect = None
@@ -299,9 +312,6 @@ class BudgetProxy:
                 if len(first) != 3 or first[2] != "HTTP/1.1":
                     raise ValueError()
                 method, path, _ = first
-                if method != "POST" or path not in {"/v1/chat/completions", "/chat/completions"}:
-                    await self._error(writer, 405, "BUDGET_ENDPOINT_REFUSED")
-                    return
                 fields = {}
                 for line in lines[1:]:
                     key, separator, value = line.partition(":")
@@ -312,8 +322,11 @@ class BudgetProxy:
                     if key in fields:
                         raise ValueError()
                     fields[key] = value.strip()
+                if method != "POST" or path not in {"/v1/chat/completions", "/chat/completions"}:
+                    await self._reject(reader, writer, fields, 405, "BUDGET_ENDPOINT_REFUSED")
+                    return
                 if not hmac.compare_digest(fields.get("authorization", "").encode("utf-8"), ("Bearer "+self.token).encode("ascii")):
-                    await self._error(writer, 401, "BUDGET_AUTH_REFUSED")
+                    await self._reject(reader, writer, fields, 401, "BUDGET_AUTH_REFUSED")
                     return
                 length = fields.get("content-length", "")
                 if ("transfer-encoding" in fields or "expect" in fields or not length.isdigit()
@@ -370,6 +383,20 @@ class BudgetProxy:
                 await self._error(writer, 502, "BUDGET_UPSTREAM_REDIRECT_REFUSED")
                 return
             if not 200 <= status < 300:
+                if callable(self._error_observer):
+                    # Fixed field names only: never expose a provider's body,
+                    # identifiers, values, headers or credential to QA logs.
+                    diagnostic = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        diagnostic.extend(chunk[:max(0, 65536-len(diagnostic))])
+                        if len(diagnostic) >= 65536:
+                            break
+                    lowered = bytes(diagnostic).decode("utf-8", "replace").lower()
+                    fields = [name for name in ("max_tokens", "max_completion_tokens", "reasoning_effort",
+                        "thinking", "tool_choice", "tools", "response_format", "model", "messages",
+                        "temperature", "top_p", "parallel_tool_calls", "required", "additionalproperties")
+                        if name in lowered]
+                    self._error_observer({"http_status": status, "fields": fields})
                 # QA clients know only the relay token. A provider error can
                 # echo the *real* upstream credential, which their usual key
                 # scrubbing cannot recognize. Never expose this raw body or

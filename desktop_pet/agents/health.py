@@ -20,13 +20,12 @@ import tempfile
 import threading
 import time
 from ..bundle_runtime import bundled_node_executable, frozen_workspace_root
-from .settings import AGENT_WORKSPACE_ROOT, DEFAULT_PYTHON
+from .settings import AGENT_WORKSPACE_ROOT
 
 
-_VERSION = re.compile(r"v?[0-9]+(?:\.[0-9]+){1,3}(?:[.-]?(?:a|b|rc|post|dev)[0-9]+)?", re.I)
+_VERSION = re.compile(r"v?[0-9]+(?:\.[0-9]+){1,3}(?:[-.](?:alpha|beta|a|b|rc|post|dev)[.-]?[0-9]+)?", re.I)
 _COMMAND_CODES = frozenset({"OK", "MISSING", "CANCELLED", "TIMEOUT", "OUTPUT_LIMIT", "START_FAILED", "DEPENDENCY_MISSING"})
-_DEPENDENCIES = {"nanobot": "nanobot-ai", "quickjs": "quickjs-ng", "pypdf": "pypdf",
-                 "docx": "python-docx", "pptx": "python-pptx", "openpyxl": "openpyxl"}
+
 
 
 @dataclass(frozen=True)
@@ -245,302 +244,75 @@ class HealthDependencies:
         return result
 
 
-_METADATA_SCRIPT = r'''
-import importlib.util, importlib.metadata, json, sys
-names = {"nanobot":"nanobot-ai","quickjs":"quickjs-ng","pypdf":"pypdf","docx":"python-docx","pptx":"python-pptx","openpyxl":"openpyxl"}
-result = {"python": ".".join(map(str, sys.version_info[:3])), "packages": {}}
-for module, distribution in names.items():
-    try:
-        present = importlib.util.find_spec(module) is not None
-        version = importlib.metadata.version(distribution) if present else None
-    except Exception:
-        present, version = False, None
-    result["packages"][module] = {"present": present, "version": version}
-print(json.dumps(result))
-'''
-
-_PROBE_PREFIX = r'''
-import contextlib, io, json, os, pathlib, sys
-root = pathlib.Path.cwd().resolve()
-class Discard:
-    def write(self, text): return len(text)
-    def flush(self): pass
-def fixture_path(path):
-    return isinstance(path,(str,bytes,os.PathLike)) and pathlib.Path(os.fsdecode(path)).resolve().is_relative_to(root)
-def audit(event, args):
-    if event.startswith("socket.") or event in {"subprocess.Popen","os.system","os.startfile","os.posix_spawn"}:
-        raise PermissionError("DOCTOR_OFFLINE_PROBE")
-    if event == "open":
-        path, mode, flags = args
-        writing = any(flag in str(mode) for flag in "wax+") or (isinstance(flags,int) and flags & (os.O_WRONLY|os.O_RDWR|os.O_CREAT|os.O_TRUNC))
-        if writing and isinstance(path,(str,bytes,os.PathLike)):
-            if not fixture_path(path):
-                raise PermissionError("DOCTOR_FIXTURE_ONLY")
-    if event in {"os.mkdir","os.remove","os.unlink","os.rmdir","os.rename","os.replace"}:
-        paths = args[:2] if event in {"os.rename","os.replace"} else args[:1]
-        if any(not fixture_path(path) for path in paths):
-            raise PermissionError("DOCTOR_FIXTURE_ONLY")
-sys.addaudithook(audit)
-result = {"passed": False}
-try:
-    with contextlib.redirect_stdout(Discard()), contextlib.redirect_stderr(Discard()):
-'''
-_PROBE_SUFFIX = r'''
-except BaseException:
-    result = {"passed": False}
-print(json.dumps(result))
-'''
-
-
-def _probe_script(body):
-    return _PROBE_PREFIX + "\n".join("        " + line for line in body.strip().splitlines()) + "\n" + _PROBE_SUFFIX
-
-
-_SDK_PROBE = _probe_script('''
-from nanobot.agent.tools.filesystem import ReadFileTool
-from nanobot.agent.tools.registry import ToolRegistry
-fixture = root / "doctor-fixture.txt"
-fixture.write_text("AURA_ISOLATED_DOCTOR_FIXTURE", encoding="utf-8")
-registry = ToolRegistry()
-registry.register(ReadFileTool(workspace=root, allowed_dir=root, restrict_to_workspace=True))
-read = registry.get("read_file").execute(path=str(fixture))
-try:
-    read.send(None)
-except StopIteration as completed:
-    reply = completed.value
-else:
-    read.close()
-    result = {"passed": False, "scope_unverified": True}
-if not result.get("scope_unverified"):
-    result = {"passed": "AURA_ISOLATED_DOCTOR_FIXTURE" in str(reply), "sdk_tool_readback": True}
-''')
-
-_VM_PROBE = _probe_script('''
-import quickjs
-vm = quickjs.Context()
-vm.set_memory_limit(8 * 1024 * 1024)
-vm.set_time_limit(1)
-result = {"passed": vm.eval("[1,2,3].reduce((a,b)=>a+b,0)") == 6, "pure_computation": True}
-''')
-
-_DOCUMENT_PROBE = _probe_script('''
-from docx import Document
-from pptx import Presentation
-from openpyxl import Workbook, load_workbook
-from pypdf import PdfReader, PdfWriter
-import sqlite3
-word = root / "doctor-fixture.docx"
-doc = Document(); doc.add_paragraph("AURA_FIXTURE"); doc.save(word)
-word_ok = Document(word).paragraphs[0].text == "AURA_FIXTURE"
-slides = root / "doctor-fixture.pptx"
-deck = Presentation(); deck.slides.add_slide(deck.slide_layouts[6]); deck.save(slides)
-slides_ok = len(Presentation(slides).slides) == 1
-sheet = root / "doctor-fixture.xlsx"
-book = Workbook(); book.active["A1"] = 42; book.save(sheet); book.close()
-check = load_workbook(sheet, read_only=True); sheet_ok = check.active["A1"].value == 42; check.close()
-pdf = root / "doctor-fixture.pdf"
-writer = PdfWriter(); writer.add_blank_page(width=100,height=100)
-with pdf.open("wb") as target: writer.write(target)
-pdf_ok = len(PdfReader(pdf).pages) == 1
-with sqlite3.connect(root / "doctor-fixture.sqlite3") as database:
-    db_ok = database.execute("PRAGMA quick_check").fetchone()[0] == "ok"
-result = {"passed": all((word_ok,slides_ok,sheet_ok,pdf_ok,db_ok)), "fixture_formats": 5}
-''')
-
-_NODE_PROBE = r'''
-const write = process.stdout.write.bind(process.stdout);
-process.stdout.write=()=>true;
-for(const key of ['log','info','warn','error','debug']) console[key]=()=>{};
-const blocked=()=>{throw new Error('DOCTOR_OFFLINE_PROBE')};
-globalThis.fetch=blocked;
-for(const name of ['node:net','node:tls','node:http','node:https','node:child_process']) {
- const module=(await import(name)).default;
- for(const key of ['connect','createConnection','request','get','spawn','spawnSync','exec','execSync','execFile','execFileSync','fork'])
-   if(typeof module[key]==='function') module[key]=blocked;
- if(module.Socket?.prototype) module.Socket.prototype.connect=blocked;
-}
-(await import('node:module')).syncBuiltinESMExports();
-try {
- const {pathToFileURL}=await import('node:url');
- const {loadRuntime}=await import(pathToFileURL(process.argv[1]).href);
- const runtime=await loadRuntime();
- write(JSON.stringify({passed:typeof runtime.GUIAgent==='function'&&typeof runtime.NutJSOperator==='function',constructors_only:true})+'\n');
-} catch {write('{"passed":false}\n');process.exitCode=1;}
-'''
-
-
 def collect_agent_health(request=None, *, dependencies=None):
-    """Run explicitly, off the GUI thread. No credentials are accepted or read."""
+    """Inspect the installed official DSH runtime; probes never call a model."""
+    from .service import _BACKEND_ROOT, _WORKER_PATH, _DSH_VERSION, dsh_installation, node_executable
+    from .activity import DSH_TOOL_NAMES, COMPUTER_TOOLS
+    from ..node_runtime import node_supported
     started = time.monotonic()
     request = DoctorRequest() if request is None else request
-    if not isinstance(request, DoctorRequest) or type(request.probe) is not bool or \
-        isinstance(request.timeout_seconds, bool) or not isinstance(request.timeout_seconds, (int, float)) or \
-        not math.isfinite(request.timeout_seconds) or not 0.05 <= request.timeout_seconds <= 120 or \
-        any(type(value) is not bool for value in (request.tools_enabled, request.computer_enabled)) or \
-        request.gui_configured is not None and type(request.gui_configured) is not bool:
+    if (not isinstance(request, DoctorRequest) or type(request.probe) is not bool
+            or isinstance(request.timeout_seconds, bool) or not isinstance(request.timeout_seconds, (int, float))
+            or not math.isfinite(request.timeout_seconds) or not .05 <= request.timeout_seconds <= 120
+            or any(type(value) is not bool for value in (request.tools_enabled, request.computer_enabled))):
         raise ValueError("DOCTOR_INVALID_REQUEST")
     dependencies = dependencies or HealthDependencies()
     cancel = request.cancel_event or threading.Event()
-    if cancel.is_set():
-        return HealthReport(1, "probe" if request.probe else "metadata", "cancelled", 0,
-            (HealthCheck("doctor", "skipped", "DOCTOR_CANCELLED", "诊断已停止，未启动探测", "", 0),), ())
-    deadline = started + request.timeout_seconds
-    root = Path(__file__).absolute().parents[2]
-    python = request.backend_python or DEFAULT_PYTHON
-    node = request.node_path or bundled_node_executable() or shutil.which("node")
-    workspace = request.workspace or frozen_workspace_root() or AGENT_WORKSPACE_ROOT
     checks = []
-
-    def add(identity, status, code, summary, recommendation="", evidence=None, at=None):
+    def add(identity, status, code, summary, recommendation="", evidence=None):
         checks.append(HealthCheck(identity, status, code, summary, recommendation,
-            max(0, int((time.monotonic() - (at or started)) * 1000)), evidence or {}))
-
-    def command(kind, argv, *, cwd=root, home=None):
-        if cancel.is_set(): return CommandResult("CANCELLED")
-        remaining = deadline - time.monotonic()
-        if remaining <= 0: return CommandResult("TIMEOUT")
-        try:
-            result = dependencies.run(kind, argv, timeout=remaining, cancel_event=cancel, cwd=str(cwd), environment=_environment(home))
-        except Exception:
-            return CommandResult("START_FAILED")
-        if not isinstance(result, CommandResult) or result.code not in _COMMAND_CODES or not isinstance(result.stdout, bytes) or len(result.stdout) > 65536:
-            return CommandResult("START_FAILED")
-        return result
-
-    def path_info(path, *, directory=False):
-        try:
-            value = dependencies.path_metadata(path, directory=directory)
-            return value if isinstance(value, dict) else {}
-        except Exception:
-            return {"selected": path is not None}
-
-    def object_result(result):
-        if result.code != "OK" or result.returncode != 0: return {}
-        try:
-            value = json.loads(result.stdout)
-            return value if isinstance(value, dict) else {}
-        except Exception: return {}
-
-    at = time.monotonic()
-    metadata = path_info(python)
-    python_result = command("python_metadata", [str(python), "-I", "-B", "-c", _METADATA_SCRIPT]) if metadata.get("exists") and metadata.get("local") else CommandResult("MISSING")
-    values = object_result(python_result)
-    python_version = _safe_version(values.get("python"))
-    python_parts = re.match(r"v?(\d+)\.(\d+)", python_version or "")
-    python_ok = python_parts is not None and tuple(map(int, python_parts.groups())) >= (3, 11)
-    python_code = ("PYTHON_METADATA_OK" if python_ok else "PYTHON_VERSION_UNSUPPORTED" if python_version else
-        "PYTHON_METADATA_INVALID" if python_result.code == "OK" and python_result.returncode == 0 else
-        "PYTHON_PROCESS_FAILED" if python_result.code == "OK" else "PYTHON_" + python_result.code)
-    add("backend_python", "pass" if python_ok else "blocked", python_code,
-        "独立 Python 版本已核对" if python_ok else "独立 Python 尚不可用或版本不受支持", "请检查后端解释器；后端需要 Python 3.11 或更高版本。" if not python_ok else "",
-        {"version": python_version, "runtime_scope": "version_and_package_metadata", "sdk_loaded": False}, at)
-    packages = values.get("packages") if isinstance(values.get("packages"), dict) else {}
-    present = {}
-    for module, distribution in _DEPENDENCIES.items():
-        package = packages.get(module) if isinstance(packages.get(module), dict) else {}
-        version = _safe_version(package.get("version"))
-        present[module] = package.get("present") is True and version is not None
-        if module in ("nanobot", "quickjs"):
-            add(module, "unverified" if present[module] else "blocked", ("NANOBOT" if module == "nanobot" else "QUICKJS") + ("_METADATA_ONLY" if present[module] else "_MISSING"),
-                "任务 SDK 依赖元数据已找到" if module == "nanobot" and present[module] else "JavaScript VM 依赖元数据已找到" if present[module] else "任务依赖尚未就绪",
-                "可使用 --probe 检查隔离运行；包存在不代表任务可执行。" if present[module] else "请使用后端依赖清单修复独立环境。",
-                {"package": distribution, "version": version, "runtime_verified": False}, at)
-    documents_ok = all(present[name] for name in ("docx", "pptx", "openpyxl", "pypdf"))
-    add("documents", "unverified" if documents_ok else "blocked", "DOCUMENT_METADATA_ONLY" if documents_ok else "DOCUMENT_DEPENDENCY_MISSING",
-        "文档依赖元数据已找到" if documents_ok else "文档处理依赖不完整", "可使用 --probe 验证独立样例文件。" if documents_ok else "请修复后端文档依赖后重试。",
-        {"packages": {name: bool(present[name]) for name in ("docx", "pptx", "openpyxl", "pypdf")},
-         "versions": {name: _safe_version(packages.get(name, {}).get("version")) if isinstance(packages.get(name), dict) else None
-                      for name in ("docx", "pptx", "openpyxl", "pypdf")}, "runtime_verified": False}, at)
-
-    at = time.monotonic()
-    node_meta = path_info(node)
-    node_result = command("node_version", [str(node), "--version"]) if node_meta.get("exists") and node_meta.get("local") else CommandResult("MISSING")
-    node_version = _safe_version(node_result.stdout.decode("ascii", "ignore").strip()) if node_result.code == "OK" and node_result.returncode == 0 else None
-    node_ok = node_version is not None and int(node_version.lstrip("v").split(".")[0]) >= 22
-    node_code = ("NODE_VERSION_OK" if node_ok else "NODE_VERSION_UNSUPPORTED" if node_version else
-        "NODE_VERSION_INVALID" if node_result.code == "OK" and node_result.returncode == 0 else
-        "NODE_PROCESS_FAILED" if node_result.code == "OK" else "NODE_" + node_result.code)
-    add("node", "pass" if node_ok else "blocked", node_code,
-        "Node.js 版本已核对" if node_ok else "电脑操作所需 Node.js 尚未就绪", "请安装 Node.js 22 或更高版本并重启桌宠。" if not node_ok else "",
-        {"version": node_version, "runtime_scope": "version_command"}, at)
-    ui_root = root / "agent_backend" / "ui_tars"
-    try: ui_versions = dependencies.ui_tars_metadata(ui_root)
-    except Exception: ui_versions = {}
-    if not isinstance(ui_versions, dict): ui_versions = {}
-    ui_versions = {name: _safe_version(ui_versions.get(name)) for name in ("sdk", "operator-nut-js")}
-    ui_ok = all(ui_versions.values())
-    add("ui_tars", "unverified" if ui_ok else "blocked", "UI_TARS_METADATA_ONLY" if ui_ok else "UI_TARS_DEPENDENCY_MISSING",
-        "UI-TARS 包元数据已找到" if ui_ok else "UI-TARS 本地依赖不完整", "可使用 --probe 验证模块加载；不会截图或操作鼠标键盘。" if ui_ok else "请修复本地 UI-TARS 依赖。",
-        {"versions": ui_versions, "runtime_verified": False}, at)
-
-    at = time.monotonic()
-    try: windows = dependencies.windows_metadata()
-    except Exception: windows = {"supported": sys.platform == "win32"}
-    if not isinstance(windows, dict): windows = {"supported": sys.platform == "win32"}
-    supported = windows.get("supported") is True
-    active = windows.get("session_active") is True
-    desktop = windows.get("input_default") is True
-    count = windows.get("monitor_count") if type(windows.get("monitor_count")) is int and 0 <= windows["monitor_count"] <= 128 else None
-    dpi = windows.get("dpi_awareness") if type(windows.get("dpi_awareness")) is int and windows["dpi_awareness"] in (0, 1, 2) else None
-    add("windows_session", "pass" if active else "blocked" if supported else "unsupported", "WINDOWS_SESSION_ACTIVE" if active else "WINDOWS_SESSION_UNAVAILABLE" if supported else "WINDOWS_REQUIRED",
-        "当前 Windows 交互会话可用" if active else "当前交互会话尚不可确认", "请恢复并解锁 Windows 桌面后重试。" if not active else "",
-        {"windows": supported, "session_active": active, "screenshots_captured": False}, at)
-    add("input_desktop", "pass" if desktop and active else "blocked" if supported else "unsupported", "INPUT_DESKTOP_DEFAULT" if desktop and active else "INPUT_DESKTOP_UNAVAILABLE",
-        "当前输入桌面为普通桌面" if desktop and active else "普通输入桌面尚不可用", "锁屏、安全桌面或断开的会话需要在电脑上处理。" if not desktop or not active else "",
-        {"default_desktop": desktop, "input_executed": False}, at)
-    add("display", "unverified" if count == 1 and dpi is not None else "warning", "SINGLE_DISPLAY_METADATA_ONLY" if count == 1 and dpi is not None else "MULTI_DISPLAY_UNSUPPORTED" if count and count > 1 else "DISPLAY_METADATA_UNAVAILABLE",
-        "单屏和 DPI 元数据已核对" if count == 1 and dpi is not None else "显示环境超出已核对范围", "截图和输入坐标仍需实际任务核验；当前桥接以单屏为支持范围。",
-        {"monitor_count": count, "caller_dpi_awareness": dpi, "coordinate_runtime_verified": False}, at)
-
-    for identity, path, directory in (("workspace", workspace, True), ("database", request.database, False)):
-        at = time.monotonic(); info = path_info(path, directory=directory)
-        selected = info.get("selected") is True
-        accessible = info.get("local") is True and info.get("exists") is True and info.get("readable") is True
-        add(identity, "unverified" if accessible else "skipped" if not selected else "blocked", identity.upper() + ("_METADATA_ONLY" if accessible else "_NOT_SELECTED" if not selected else "_UNAVAILABLE"),
-            "工作目录元数据可访问" if identity == "workspace" and accessible else "数据库元数据可访问" if accessible else "未指定数据库；未读取聊天记录" if not selected else "本地存储路径尚不可访问",
-            "未写入目标位置；存在和访问标志不代表实际读写或数据库结构健康。" if accessible else "请选择可访问的本地位置；诊断不会自动创建或修复。",
-            {"selected": selected, "exists": info.get("exists") is True, "readable_metadata": info.get("readable") is True,
-             "writable_metadata": info.get("writable") is True, "contents_read": False, "runtime_verified": False}, at)
-
-    if request.probe and not cancel.is_set():
-        # The only writes happen below, in a new directory owned by this call.
-        with tempfile.TemporaryDirectory(prefix="aura-doctor-") as fixture:
-            for identity, available, script, argv, summary in (
-                ("sdk_probe", python_ok and present["nanobot"], _SDK_PROBE, None, "SDK 已完成受控文本回读；未测试事件循环和模型执行链"),
-                ("vm_probe", python_ok and present["quickjs"], _VM_PROBE, None, "JavaScript VM 已完成无宿主绑定的纯计算"),
-                ("document_probe", python_ok and documents_ok, _DOCUMENT_PROBE, None, "文档与 SQLite 已完成独立样例回读"),
-                ("ui_tars_probe", node_ok and ui_ok, None, [str(node), "--input-type=module", "-e", _NODE_PROBE, str(ui_root / "sdk-adapter.mjs")], "UI-TARS 模块和构造器已加载；未截图或输入"),
-            ):
-                if cancel.is_set(): break
-                at = time.monotonic()
-                result = command(identity, argv or [str(python), "-I", "-B", "-c", script], cwd=fixture, home=fixture) if available else CommandResult("DEPENDENCY_MISSING")
-                data = object_result(result)
-                passed = data.get("passed") is True
-                scope_unverified = identity == "sdk_probe" and data.get("scope_unverified") is True
-                code = identity.upper() + ("_ASYNC_UNVERIFIED" if scope_unverified else "_PASSED" if passed else "_" + result.code if result.code != "OK" else "_FAILED")
-                add(identity, "pass" if passed else "unverified" if scope_unverified else "blocked", code,
-                    summary if passed else "当前 SDK 工具需要事件循环，离线样例未覆盖该路径" if scope_unverified else "隔离运行探测未通过",
-                    "请用实际只读任务核验 SDK 事件循环执行链。" if scope_unverified else "请检查对应依赖；诊断未自动修复或调用模型。" if not passed else "",
-                    {"fixture_only": True, "runtime_scope": identity, "probe_passed": passed, "network_requests": False,
-                     "screenshots_captured": False, "physical_input_executed": False,
-                     **({"sdk_read_fixture_verified": passed, "asyncio_runner_verified": False, "model_loop_verified": False}
-                        if identity == "sdk_probe" else {})}, at)
-
-    from agent_backend.nanobot.tool_catalog import CATALOG
-    capabilities = []
-    for name, spec in CATALOG.items():
-        allowed = spec.available(tools_enabled=request.tools_enabled, computer_enabled=request.computer_enabled,
-            gui_configured=request.gui_configured is True)
-        requires_backend = python_ok and present["nanobot"]
-        blocked = not requires_backend or spec.requires_gui and not (node_ok and ui_ok and active and desktop and count == 1)
-        capabilities.append({"name": name, "declared_enabled": bool(allowed), "state": "disabled" if not allowed else "dependency_blocked" if blocked else "unverified",
-                             "runtime_ready": None, "model_access_checked": False})
-    cancelled = cancel.is_set()
-    if cancelled:
-        add("doctor", "skipped", "DOCTOR_CANCELLED", "诊断已停止，未继续启动探测")
-    overall = ("cancelled" if cancelled else "blocked" if any(check.status == "blocked" for check in checks) else
-        "degraded" if any(check.status in ("warning", "unsupported") for check in checks) else
-        "probe_partial" if any(check.id.endswith("_probe") and check.status == "unverified" for check in checks) else
-        "probe_passed" if request.probe else "metadata_only")
+            max(0, int((time.monotonic() - started) * 1000)), evidence or {}))
+    if cancel.is_set():
+        add("doctor", "skipped", "DOCTOR_CANCELLED", "诊断已停止")
+        return HealthReport(1, "probe" if request.probe else "metadata", "cancelled", 0, tuple(checks), ())
+    node = request.node_path or node_executable()
+    try: node_info = dependencies.path_metadata(node)
+    except Exception: node_info = {}
+    node_present = bool(node_info.get("exists") and node_info.get("local") and node_info.get("readable") and node_supported(node))
+    add("node", "unverified" if node_present else "blocked", "NODE_METADATA_ONLY" if node_present else "NODE_MISSING",
+        "Node.js 运行文件及版本已确认" if node_present else "Node.js 运行环境缺失或版本过旧",
+        "" if node_present else "请修复或重新安装应用")
+    versions = dsh_installation()
+    packages_present = all(value == _DSH_VERSION for value in versions.values())
+    add("dsh", "unverified" if packages_present else "blocked", "DSH_METADATA_ONLY" if packages_present else "DSH_MISSING",
+        "DeepSeek Harness 安装版本已确认" if packages_present else "DeepSeek Harness 安装不完整",
+        "" if packages_present else "请修复或重新安装应用",
+        {"packages": {name: value if _safe_version(value) else None for name, value in versions.items()}})
+    runner_present = _WORKER_PATH.is_file()
+    add("runner", "passed" if runner_present else "blocked", "RUNNER_PRESENT" if runner_present else "RUNNER_MISSING",
+        "任务连接组件已找到" if runner_present else "任务连接组件缺失")
+    workspace = request.workspace or frozen_workspace_root() or AGENT_WORKSPACE_ROOT
+    try: workspace_info = dependencies.path_metadata(workspace, directory=True)
+    except Exception: workspace_info = {}
+    add("workspace", "passed" if workspace_info.get("writable") else "unverified",
+        "WORKSPACE_WRITABLE" if workspace_info.get("writable") else "WORKSPACE_NOT_VERIFIED",
+        "任务目录可写" if workspace_info.get("writable") else "任务目录将在首次使用时检查")
+    loaded = False
+    if request.probe and node_present and packages_present and runner_present:
+        with tempfile.TemporaryDirectory(prefix="aura-dsh-doctor-") as temporary:
+            remaining = max(.001, request.timeout_seconds - (time.monotonic() - started))
+            try:
+                result = dependencies.run("dsh_sdk", [str(node), str(_WORKER_PATH), "--doctor"],
+                    timeout=remaining, cancel_event=cancel, cwd=str(_BACKEND_ROOT), environment=_environment(temporary))
+                data = json.loads(result.stdout) if result.code == "OK" and result.returncode == 0 else {}
+                version = _safe_version(data.get("version"))
+                loaded = data.get("loaded") is True and data.get("sdk") == "deepseek-harness" and version == _DSH_VERSION
+                add("dsh_sdk", "passed" if loaded else "blocked", "DSH_SDK_IMPORTED" if loaded else "DSH_SDK_PROBE_FAILED",
+                    "官方 DSH SDK 已加载" if loaded else "官方 DSH SDK 无法加载", evidence={"version": version})
+            except Exception:
+                add("dsh_sdk", "blocked", "DSH_SDK_PROBE_FAILED", "官方 DSH SDK 无法加载")
+    computer_available = request.computer_enabled and sys.platform == "win32"
+    if request.computer_enabled:
+        try: windows = dependencies.windows_metadata()
+        except Exception: windows = {"supported": False}
+        computer_available = computer_available and windows.get("supported") is True
+        add("desktop", "unverified" if computer_available else "blocked",
+            "DESKTOP_METADATA_ONLY" if computer_available else "DESKTOP_UNSUPPORTED",
+            "电脑操作由 DSH 工具提供，尚未执行操作" if computer_available else "当前平台不支持电脑操作")
+    capabilities = tuple({"name": name, "available": bool(node_present and packages_present and runner_present
+        and (computer_available if name in COMPUTER_TOOLS else request.tools_enabled)),
+        "reason_code": "" if node_present and packages_present and runner_present else "runtime_missing"}
+        for name in DSH_TOOL_NAMES if name != ("bash" if sys.platform == "win32" else "pwsh"))
+    overall = "cancelled" if cancel.is_set() else "blocked" if any(item.status == "blocked" for item in checks) else "passed" if loaded else "unverified"
     return HealthReport(1, "probe" if request.probe else "metadata", overall,
-        max(0, int((time.monotonic() - started) * 1000)), tuple(checks), tuple(capabilities))
+        int((time.monotonic() - started) * 1000), tuple(checks), capabilities)

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, Signal
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QLineEdit, QPushButton
 
 from desktop_pet.ui.agent_interaction import public_interaction
 from tests.test_assistant_ui import AssistantUiChat, make_panel, eval_js, set_dom_text, click_dom, wait_js, bridge_action
@@ -180,6 +180,28 @@ class AgentInteractionUiTests(unittest.TestCase):
         button.click()
         self.assertEqual(self.chat.answers, [("question-1", {"allowed": False}, "current")])
 
+    def test_native_emoji_answer_preserves_over_limit_draft_and_full_valid_boundary(self):
+        self.question()
+        self.panel._activate_native()
+        QTest.qWait(30)
+        card = self.panel.agent_interaction_card
+        editor = card.findChild(QLineEdit)
+        button = next(item for item in card.findChildren(QPushButton) if item.text() == "继续")
+        oversized = "🐳" * 4000 + "字" * 4001
+        editor.setText(oversized)
+        button.click()
+        self.assertTrue(editor.text() == oversized)
+        self.assertTrue(card.error.isVisible())
+        self.assertIn("8000", card.error.text())
+        self.assertTrue(editor.isEnabled())
+        self.assertEqual(self.chat.answers, [])
+        boundary = "🐳" * 8000
+        editor.setText(boundary)
+        self.assertTrue(editor.text() == boundary)
+        button.click()
+        self.assertEqual(len(self.chat.answers), 1)
+        self.assertTrue(self.chat.answers[0][1]["text"] == boundary)
+
     def test_delivery_card_opens_native_save_dialog_only_after_click_with_current_reference(self):
         reference = "artifact_" + "a" * 64
         self.chat.agent_artifacts = [{"reference": reference, "name": "报告.docx", "mime": "application/octet-stream",
@@ -212,6 +234,39 @@ class AgentInteractionUiTests(unittest.TestCase):
         wait_js(self.panel, "!document.querySelector('[data-testid=agent-interaction]')")
         self.assertEqual(self.chat.answers[-1][1], {"text": option})
         self.assertIsNone(public_interaction({**value, "options": [option + "x"]}, "current"))
+
+    def test_long_emoji_question_and_option_reach_actual_dom_without_truncation(self):
+        question, option = "🐳" * 16000, "🐬" * 240
+        value = self.question()
+        value.update(question=question, options=[option])
+        self.chat.agent_interaction_changed.emit(value)
+        wait_js(self.panel, "Array.from(document.querySelector('.agent-interaction > p')?.textContent || '').length === 16000")
+        self.assertTrue(eval_js(self.panel, "document.querySelector('.agent-interaction > p').textContent") == question)
+        self.assertTrue(eval_js(self.panel, "document.querySelector('.agent-interaction-options button').textContent") == option)
+        click_dom(self.panel, ".agent-interaction-options button")
+        wait_js(self.panel, "!document.querySelector('[data-testid=agent-interaction]')")
+        self.assertEqual(self.chat.answers, [("question-1", {"text": option}, "current")])
+        self.assertIsNone(public_interaction({**value, "question": question + "字"}, "current"))
+        self.assertIsNone(public_interaction({**value, "options": [option + "字"]}, "current"))
+
+    def test_emoji_answer_limit_preserves_oversized_draft_then_accepts_full_boundary(self):
+        self.question()
+        selector = "[data-testid=agent-answer-input]"
+        wait_js(self.panel, "Boolean(document.querySelector('[data-testid=agent-answer-input]'))")
+        oversized = "🐳" * 4000 + "字" * 4001
+        set_dom_text(self.panel, selector, oversized)
+        click_dom(self.panel, ".agent-interaction form button")
+        wait_js(self.panel, "document.querySelector('.agent-interaction-error')?.textContent.includes('8000')")
+        self.assertEqual(self.chat.answers, [])
+        self.assertTrue(eval_js(self.panel, "document.querySelector('[data-testid=agent-answer-input]').value") == oversized)
+        self.assertFalse(eval_js(self.panel, "document.querySelector('[data-testid=agent-answer-input]').disabled"))
+        boundary = "🐳" * 8000
+        set_dom_text(self.panel, selector, boundary)
+        self.assertTrue(eval_js(self.panel, "document.querySelector('[data-testid=agent-answer-input]').value") == boundary)
+        click_dom(self.panel, ".agent-interaction form button")
+        wait_js(self.panel, "!document.querySelector('[data-testid=agent-interaction]')")
+        self.assertEqual(len(self.chat.answers), 1)
+        self.assertTrue(self.chat.answers[0][1]["text"] == boundary)
 
     def test_dark_permission_button_remains_readable_and_long_paths_wrap_at_narrow_width(self):
         value = self.question("file_access")

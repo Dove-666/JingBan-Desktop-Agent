@@ -24,7 +24,7 @@ from ..agent_presentation import AGENT_ACTIVITY, public_agent_trace_sql
 
 
 SCHEMA_VERSION = 3
-REMOTE_SYNC_SCHEMA_VERSION = 11
+REMOTE_SYNC_SCHEMA_VERSION = 12
 REMOTE_SYNC_MAX_CHANGES = 10000
 REMOTE_SYNC_MAX_CHANGE_BYTES = 32 * 1024 * 1024
 REMOTE_SYNC_PRUNE_BATCH = 512
@@ -276,7 +276,7 @@ class ConversationStore:
             raise StoreError("远程同步数据库来自更新版本，请升级程序后再打开。")
         if version == REMOTE_SYNC_SCHEMA_VERSION:
             return
-        if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10):
+        if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
             if version == 1:
                 ConversationStore._migrate_remote_retention(connection)
             ConversationStore._migrate_remote_image_refs(connection, publish_conversations=True)
@@ -389,6 +389,7 @@ class ConversationStore:
                                    publish_conversations: bool = False) -> None:
         """Refresh public projections without rewriting immutable journal rows.
 
+        v12 publishes DeepSeek Harness tool labels and errors after upgrade.
         v11 publishes direct-request delegation labels in existing traces.
         v10 maps queued to wire pending and refreshes startup error labels;
         v9 publishes boolean title provenance. Already caught-up clients

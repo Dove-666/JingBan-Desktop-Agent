@@ -1,0 +1,60 @@
+--- a/native/entry/NativeServer.cs
++++ b/native/entry/NativeServer.cs
+@@ -83,6 +83,7 @@
+         {
+             var state = new ClientState();
+             Task? active = null;
++            TaskCompletionSource? responseReady = null;
+             CancellationTokenSource? cancellation = null;
+             string? latestRequestId = null;
+             var closeRequested = false;
+@@ -116,19 +117,26 @@
+                     var value = WireJson.Parse(line);
+                     if (value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type", out _))
+                     {
+-                        var control = NativeControlFrame.Parse(value, latestRequestId, active?.IsCompleted != false);
++                        var control = NativeControlFrame.Parse(value, latestRequestId,
++                            active?.IsCompleted != false || responseReady?.Task.IsCompleted == true);
+                         if (control == NativeControl.Close) { closeRequested = true; break; }
+                         if (control == NativeControl.Cancel) cancellation!.Cancel();
+                         continue;
+                     }
+                     var request = NativeRequest.Parse(value);
+-                    if (active is { IsCompleted: false }) throw new NativeFailure("NATIVE_BUSY", "Native requests must be sequential");
++                    // A peer can receive the final newline before Dispatch's final
++                    // await has resumed. Only an operation still executing is busy;
++                    // once its response is ready, finish flushing before admission.
++                    if (active is { IsCompleted: false } && responseReady?.Task.IsCompleted != true)
++                        throw new NativeFailure("NATIVE_BUSY", "Native requests must be sequential");
+                     if (active is not null) await active;
+                     cancellation?.Dispose();
+                     cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token);
+                     cancellation.CancelAfter(request.Method == "screenshot" ? Math.Min(config.TimeoutMs, config.ScreenshotTimeoutMs) : config.TimeoutMs);
+                     latestRequestId = request.Id;
+-                    active = Dispatch(request, state, executor, config, pipe, writer, cancellation.Token, lifetime.Token);
++                    responseReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
++                    active = Dispatch(request, state, executor, config, pipe, writer, responseReady,
++                        cancellation.Token, lifetime.Token);
+                 }
+             }
+             catch (Exception error)
+@@ -153,7 +161,8 @@
+     }
+ 
+     private static async Task Dispatch(NativeRequest request, ClientState state, DesktopExecutor executor, NativeConfig config,
+-        Stream pipe, SemaphoreSlim writer, CancellationToken cancellation, CancellationToken connection)
++        Stream pipe, SemaphoreSlim writer, TaskCompletionSource responseReady,
++        CancellationToken cancellation, CancellationToken connection)
+     {
+         var operation = executor.Execute(request, state, config, cancellation);
+         using var monitorStop = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+@@ -170,6 +179,9 @@
+         finally { monitorStop.Cancel(); await monitor; }
+         var bytes = JsonSerializer.SerializeToUtf8Bytes(response, WireJson.Options);
+         if (bytes.Length + 1 > config.MaxResponseBytes) response = Failure(request.Id, "NATIVE_RESPONSE_LIMIT", "Native response exceeded its configured byte limit");
++        // Publish completion before making any response bytes visible. Admission
++        // still awaits the entire Dispatch task, so desktop actions never overlap.
++        responseReady.SetResult();
+         await Write(pipe, writer, response, config.MaxResponseBytes, config.GraceMs, connection);
+     }
+ 

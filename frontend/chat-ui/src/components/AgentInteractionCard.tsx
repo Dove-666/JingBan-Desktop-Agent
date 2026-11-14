@@ -12,6 +12,9 @@ export function AgentInteractionCard({ interaction, dispatch }: { interaction: A
   const resource = interaction.resource;
   const answer = (value: Record<string, unknown>) => {
     if (submitting || answered) return;
+    if (typeof value.text === 'string' && Array.from(value.text).length > 8000) {
+      setError('回答最多 8000 字，请缩短后再发送。'); return;
+    }
     setSubmitting(true); setError('');
     dispatch('answerAgentInteraction', { conversationId: interaction.conversation_id,
       interactionId: interaction.id, answer: value }, (result) => {
@@ -42,7 +45,7 @@ export function AgentInteractionCard({ interaction, dispatch }: { interaction: A
           onClick={() => answer({ text: option })}>{option}</button>)}</div> : null}
       <form onSubmit={(event) => { event.preventDefault(); if (text.trim()) answer({ text: text.trim() }); }}>
         <label className="sr-only" htmlFor={`answer-${interaction.id}`}>补充回答</label>
-        <input id={`answer-${interaction.id}`} data-testid="agent-answer-input" value={text} maxLength={8000}
+        <input id={`answer-${interaction.id}`} data-testid="agent-answer-input" value={text} maxLength={16000}
           placeholder="补充回答…" disabled={submitting || answered} onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter' && (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) event.preventDefault(); }} />
         <button type="submit" className="agent-interaction-primary" disabled={!text.trim() || submitting || answered}>继续</button>
