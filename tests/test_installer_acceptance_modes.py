@@ -59,6 +59,30 @@ class InstallerAcceptanceModesTests(unittest.TestCase):
             self.assertEqual(call.kwargs['env'], original)
         self.assertEqual(set(report['checks']), {'installed_dsh_runtime', 'installed_private_literals'})
 
+    def test_new_owned_start_menu_link_is_distinguished_from_existing_desktop(self):
+        before={'desktop':'user-original','test-group':None,'default-group':None}
+        installed={'desktop':'user-original','test-group':'installed-link','default-group':None}
+        result=self.driver.classify_install_shortcuts(before,installed,{'test-group'})
+        self.assertEqual(result['preexisting'],{'desktop':'user-original'})
+        self.assertEqual(result['created_by_test_install'],{'test-group':'installed-link'})
+        # Correct uninstall returns to BEFORE install, not the installed snapshot.
+        self.assertNotEqual(installed,before)
+
+    def test_overwriting_preexisting_start_menu_link_is_a_failure(self):
+        with self.assertRaisesRegex(AssertionError,'preexisting'):
+            self.driver.classify_install_shortcuts({'start-menu':'original'},
+                {'start-menu':'replacement'},{'start-menu'})
+
+    def test_creating_default_start_menu_link_outside_owned_group_is_a_failure(self):
+        with self.assertRaisesRegex(AssertionError,'outside'):
+            self.driver.classify_install_shortcuts({'default':None,'owned':None},
+                {'default':'unexpected','owned':None},{'owned'})
+
+    def test_missing_existing_desktop_link_is_a_failure(self):
+        with self.assertRaisesRegex(AssertionError,'preexisting'):
+            self.driver.classify_install_shortcuts({'desktop':'original'},
+                {'desktop':None},set())
+
 
 if __name__ == '__main__':
     unittest.main()

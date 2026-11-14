@@ -81,6 +81,43 @@ class PrivateLiteralAuditTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "CANDIDATE_INVENTORY_MISMATCH"):
                 audit(payload, Literals(), {"unreadable_stores": 0})
 
+    def test_only_unshipped_root_uninstaller_profile_paths_are_generated_metadata(self):
+        profile, key = r"X:\SyntheticUser", "fake-audit-key"
+        scenarios = [
+            ("unins000.dat", False, False, True, True),
+            ("unins000.dat", False, True, False, True),
+            ("unins000.dat", True, False, False, False),
+            ("unins000.exe", False, False, False, False),
+            ("unins000.msg", False, False, False, False),
+            ("nested/unins000.dat", True, False, False, False),
+        ]
+        for name, tracked, include_key, passed, generated in scenarios:
+            with self.subTest(name=name, tracked=tracked, include_key=include_key), tempfile.TemporaryDirectory() as directory:
+                payload = self.installed_fixture(directory)
+                target = payload / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((profile + (key if include_key else "")).encode("utf-16-le"))
+                if tracked:
+                    manifest_path = payload / "PACKAGE-MANIFEST.json"
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    manifest["files"].append({"path": name, "bytes": target.stat().st_size, "sha256": "0" * 64})
+                    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                reader = Mock()
+                reader.return_value.toc = {}
+                readers = ModuleType("PyInstaller.archive.readers")
+                readers.CArchiveReader = reader
+                with patch.dict("sys.modules", {"PyInstaller": ModuleType("PyInstaller"),
+                                                 "PyInstaller.archive": ModuleType("PyInstaller.archive"),
+                                                 "PyInstaller.archive.readers": readers}):
+                    report = audit(payload, Literals([profile], [key]), {"unreadable_stores": 0})
+                self.assertEqual(report["passed"], passed)
+                self.assertEqual(bool(report["generated_installer_metadata"]), generated)
+                self.assertEqual(report["generated_installer_metadata_match_count"], 1 if generated else 0)
+                self.assertEqual({row["kind"] for row in report["findings"]},
+                                 {"api_key"} if include_key else set() if passed else {"profile_path"})
+                self.assertNotIn(profile, json.dumps(report))
+                self.assertNotIn(key, json.dumps(report))
+
 
 if __name__ == "__main__":
     unittest.main()

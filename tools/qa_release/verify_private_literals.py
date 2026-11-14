@@ -137,14 +137,21 @@ def audit(payload: Path, literals: Literals, key_status: dict):
     # through the raw-byte scan; unrelated/unregistered files remain an error.
     if expected - names or extras - INSTALLER_EXTRA_FILES:
         raise ValueError("CANDIDATE_INVENTORY_MISMATCH")
-    findings, total, embedded_count = [], 0, 0
+    findings, generated_metadata, total, embedded_count = [], [], 0, 0
     for path in files:
         with path.open("rb") as stream:
             counts, size = literals.scan(stream)
         total += size
         name = path.relative_to(payload).as_posix()
-        findings.extend({"path": literals.safe_label(name), "kind": kind, "count": count}
-                        for kind, count in counts.items())
+        for kind, count in counts.items():
+            finding = {"path": literals.safe_label(name), "kind": kind, "count": count}
+            # Inno writes the current installation/profile locations into its
+            # local uninstall log. This exception is only for that unshipped
+            # root file's profile paths, never credentials or shipped bytes.
+            if name == "unins000.dat" and name in extras and kind == "profile_path":
+                generated_metadata.append(finding)
+            else:
+                findings.append(finding)
     # Python code constants are compressed inside the executable. Scan those
     # separately so the raw-byte pass cannot miss an embedded account literal.
     from PyInstaller.archive.readers import CArchiveReader
@@ -170,9 +177,11 @@ def audit(payload: Path, literals: Literals, key_status: dict):
             "timestamp_utc": datetime.now(timezone.utc).isoformat(), "files_scanned": len(files),
             "bytes_scanned": total, "embedded_modules_scanned": embedded_count,
             "installer_extra_files": sorted(extras),
+            "generated_installer_metadata": generated_metadata,
+            "generated_installer_metadata_match_count": sum(item["count"] for item in generated_metadata),
             "api_key_comparison": key_status, "findings": findings,
             "match_count": sum(item["count"] for item in findings),
-            "scope": "All candidate raw bytes in UTF-8/UTF-16 plus slash/JSON variants; PyInstaller embedded code constants. Other compressed archive contents are not decoded. Counts are matching literal representations, not unique secrets.",
+            "scope": "All candidate raw bytes in UTF-8/UTF-16 plus slash/JSON variants; PyInstaller embedded code constants. Profile paths only in root unins000.dat absent from the payload manifest are retained separately as generated installer metadata; API keys always fail in every file. Other compressed archive contents are not decoded. Counts are matching literal representations, not unique secrets.",
             "network_calls": 0, "production_configuration_modified": False}
 
 

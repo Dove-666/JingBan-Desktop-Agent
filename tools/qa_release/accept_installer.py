@@ -40,6 +40,37 @@ def startup_digest():
     except FileNotFoundError:value=None
     return hashlib.sha256(json.dumps(value,ensure_ascii=False).encode('utf-8')).hexdigest()
 
+def shortcut_locations(group_name):
+    desktops={Path.home()/'Desktop'}
+    programs=set()
+    for variable in ('APPDATA','PROGRAMDATA'):
+        if os.environ.get(variable):
+            programs.add(Path(os.environ[variable])/'Microsoft/Windows/Start Menu/Programs')
+    if os.environ.get('PUBLIC'):
+        desktops.add(Path(os.environ['PUBLIC'])/'Desktop')
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders') as key:
+            for name,collection in (('Desktop',desktops),('Programs',programs)):
+                try:collection.add(Path(os.path.expandvars(winreg.QueryValueEx(key,name)[0])))
+                except FileNotFoundError:pass
+    except FileNotFoundError:pass
+    owned={directory/group_name/'鲸伴.lnk' for directory in programs}
+    paths={directory/'鲸伴.lnk' for directory in desktops}|owned
+    for directory in programs:
+        paths.update({directory/'鲸伴.lnk',directory/'鲸伴/鲸伴.lnk',directory/'Startup/鲸伴.lnk'})
+    return tuple(sorted(paths)),frozenset(str(path) for path in owned)
+
+def shortcut_digests(paths):
+    return {str(path):sha(path) if path.is_file() else None for path in paths}
+
+def classify_install_shortcuts(before,after,owned_paths):
+    assert set(before)==set(after),'Shortcut observation locations changed during installation'
+    preexisting={path:digest for path,digest in before.items() if digest is not None}
+    assert all(after[path]==digest for path,digest in preexisting.items()),'The installer changed a preexisting user shortcut'
+    created={path:digest for path,digest in after.items() if digest is not None and before[path] is None}
+    assert set(created)<=set(owned_paths),'The installer created a shortcut outside the isolated test group'
+    return {'preexisting':preexisting,'created_by_test_install':created}
+
 def parse_arguments(argv=None):
     parser=argparse.ArgumentParser();parser.add_argument('installer',type=Path);parser.add_argument('payload',type=Path)
     parser.add_argument('--report-directory',type=Path,default=OUT)
@@ -117,14 +148,20 @@ def main(argv=None):
     assert work.is_relative_to(boundary) and not installation.exists()
     report={'installer':str(installer),'installer_sha256':sha(installer),'source_payload':str(payload),
         'installation':str(installation),'profile':str(profile),'preexisting_app_registration':before,
-        'no_icons':True,'same_host_fresh_profile':True,'success':False,'checks':{},
+        'no_icons_requested':True,'same_host_fresh_profile':True,'success':False,'checks':{},
         'non_interactive':args.non_interactive,
         'scope':'install-bytes-cli-uninstall-preservation' if args.non_interactive else 'install-native-ui-bridge-uninstall-preservation',
         'interactive_ui_test':'not_run_desktop_busy' if args.non_interactive else 'pending',
         'startup_probe':'installed_exe_help_only' if args.non_interactive else 'native_webengine'}
-    shortcut=Path.home()/'Desktop/鲸伴.lnk'
-    shortcut_before=sha(shortcut) if shortcut.is_file() else None
+    # /NOICONS is only a request: Inno can still create its default program
+    # group. Use a unique test group and capture all baselines before install.
+    group_name='鲸伴验收-'+work.name.rsplit(' ',1)[-1]
+    shortcut_paths,owned_shortcuts=shortcut_locations(group_name)
+    shortcuts_before=shortcut_digests(shortcut_paths)
+    assert all(shortcuts_before[path] is None for path in owned_shortcuts),'The owned test shortcut group already exists'
     startup_before=startup_digest()
+    report['preinstall_baseline']={'shortcuts':shortcuts_before,'startup':startup_before}
+    report['test_start_menu_group']=group_name
     marker=profile/'必须保留的测试资料.txt';marker.write_text('This test user data must survive uninstall.',encoding='utf-8')
     if args.non_interactive:
         # Seed only owned synthetic preservation fixtures. The installed
@@ -146,14 +183,21 @@ def main(argv=None):
         if any(word in key.upper() for word in ('API_KEY','API_TOKEN','AUTH_TOKEN','SECRET','PYTHONPATH','PYTHONHOME','VIRTUAL_ENV')):env.pop(key,None)
     env['PATH']=str(Path(env.get('SystemRoot',r'C:\Windows'))/'System32')+os.pathsep+env.get('SystemRoot',r'C:\Windows')
     try:
+        # Keep the actual pre-install evidence even if a later audit stops.
+        (OUT/'installer_acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         result=subprocess.run([str(installer),'/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/NOICONS','/TASKS=',
             '/NOCLOSEAPPLICATIONS','/NORESTARTAPPLICATIONS','/LANG=chinesesimp','/DIR='+str(installation),
+            '/GROUP='+group_name,
             '/LOG='+str(OUT/'installer_install.log')],stdin=subprocess.DEVNULL,capture_output=True,timeout=900,
             creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
         assert result.returncode==0,('Installer failed',result.returncode)
         installed=True
         report['checks']['install_exit_0']=True
         assert registration(),'The installer did not register uninstall support.'
+        shortcuts_installed=shortcut_digests(shortcut_paths)
+        report['shortcut_classification']=classify_install_shortcuts(shortcuts_before,shortcuts_installed,owned_shortcuts)
+        assert startup_digest()==startup_before,'The installer changed the user startup entry'
+        report['checks']['preexisting_shortcuts_and_startup_unchanged_by_install']=True
         manifest=json.loads((payload/'PACKAGE-MANIFEST.json').read_text(encoding='utf-8'))
         for row in manifest['files']:
             path=installation/row['path']
@@ -207,9 +251,10 @@ def main(argv=None):
         assert all((profile/name).is_file() and sha(profile/name)==digest for name,digest in before_data.items())
         report['checks']['uninstall_exit_0_and_executable_removed']=True
         report['checks']['user_profile_retained_unchanged']=True
-        assert (sha(shortcut) if shortcut.is_file() else None)==shortcut_before
+        assert shortcut_digests(shortcut_paths)==shortcuts_before,'Uninstall did not restore the pre-install shortcut state'
         assert startup_digest()==startup_before
         report['checks']['existing_user_shortcut_and_startup_unchanged']=True
+        report['checks']['test_created_start_menu_shortcuts_removed']=True
         report['success']=True
     except BaseException as error:
         report['error']={'type':type(error).__name__,'message':str(error)[-3000:]}
