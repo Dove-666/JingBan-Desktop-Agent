@@ -1,6 +1,7 @@
 package com.aura.companion.data
 
 import android.content.Context
+import android.net.Uri
 import android.os.SystemClock
 import android.util.Base64
 import com.aura.companion.BuildConfig
@@ -96,6 +97,8 @@ class AppRepository internal constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val localReady = CompletableDeferred<Unit>()
     private val imageCache = ImageCache(context.applicationContext)
+    private val applicationContext = context.applicationContext
+    private val fileCache = FileAttachmentCache(applicationContext)
     private val contextCache = ConversationContextCache(database)
     private val mutableState = MutableStateFlow(AppState())
     val state: StateFlow<AppState> = mutableState.asStateFlow()
@@ -128,6 +131,11 @@ class AppRepository internal constructor(
                 val active = directConfig
                 if (persona != null && active != null && active.systemPrompt != active.redact(persona.systemPrompt)) {
                     val updated = active.withPersona(persona)
+                    apiVault.save(updated); directConfig = updated
+                } else if (persona == null && active?.source == ApiConfigSource.LOCAL &&
+                    active.systemPrompt == LEGACY_DEFAULT_PHONE_PROMPT) {
+                    // Upgrade only our old built-in default, never a saved character's instructions.
+                    val updated = active.withPersona(SyncedPersona(LOCAL_PHONE_AUTHORITY, "default", "鲸鱼娘", DEFAULT_PHONE_PROMPT))
                     apiVault.save(updated); directConfig = updated
                 }
             }
@@ -181,7 +189,7 @@ class AppRepository internal constructor(
                     messages.filter { message -> message.id != preview.id } + preview
                 } ?: messages
             }, outbox = database.outbox(),
-            images = database.images(), pendingImages = database.pendingImages(),
+            images = database.images(), pendingImages = database.pendingImages(), pendingFiles = database.pendingFiles(),
             desktopAgentConversations = database.desktopAgentConversations(),
             lastSyncedAt = database.getSetting("last_synced_at")?.toLongOrNull(), historyPendingCount = database.historyPendingCount(),
             error = directError ?: it.error,
@@ -552,7 +560,7 @@ class AppRepository internal constructor(
                         require(database.getSetting("selected_conversation") == conversationId) { "会话已切换，请重新选择文件" }
                         val chunk = call("artifact.get", JSONObject().put("conversation_id", conversationId)
                             .put("reference", reference).put("offset", offset).put("limit", 262144))
-                        require(parseAgentArtifact(chunk) == original && (chunk.opt("offset") is Int || chunk.opt("offset") is Long) &&
+                        require(parseAgentArtifact(chunk)?.copy(messageId = null) == original.copy(messageId = null) && (chunk.opt("offset") is Int || chunk.opt("offset") is Long) &&
                             chunk.getLong("offset") == offset && (chunk.opt("total_bytes") is Int || chunk.opt("total_bytes") is Long) &&
                             chunk.getLong("total_bytes") == original.bytes) { "文件元信息发生变化，下载已停止" }
                         val encoded = chunk.opt("data_base64") as? String ?: error("文件内容无效")
@@ -586,6 +594,10 @@ class AppRepository internal constructor(
 
     suspend fun sendMessage(conversationId: String, text: String): Boolean {
         localReady.await()
+        if (database.pendingFile(conversationId) != null) {
+            mutableState.update { it.copy(error = "文件请切换到电脑 Agent 后发送；附件和草稿已保留") }
+            return false
+        }
         // Do not acquire the PC mutex before choosing the cached direct route:
         // a desktop reconnect may be waiting on its 30-second network timeout.
         val config = directConfig
@@ -624,11 +636,17 @@ class AppRepository internal constructor(
             require(!checkedStatus.optBoolean("agent_busy") || permitsQueuedAgent(checkedStatus)) {
                 "电脑 Agent 正在处理其他请求，请完成后重新发送"
             }
-            val body = text.trim().ifEmpty { if (database.pendingImage(conversationId) != null) "请结合这张图片完成任务。" else "" }
-            require(canonicalUuid(conversationId) && body.length in 1..8000) { "请输入 1～8000 字的电脑 Agent 请求，或先选择一张图片" }
+            val pendingFile = database.pendingFile(conversationId)
+            val body = text.trim().ifEmpty { when {
+                pendingFile != null -> "请查看这个文件。"
+                database.pendingImage(conversationId) != null -> "请结合这张图片完成任务。"
+                else -> ""
+            } }
+            require(canonicalUuid(conversationId) && body.length in 1..8000) { "请输入 1～8000 字的电脑 Agent 请求，或先选择附件" }
             require(!database.isConversationDeleted(conversationId)) { "该会话已删除，请新建会话" }
             database.createConversation(conversationId)
-            val requestId = database.queueAgentMessage(conversationId, body)
+            if (pendingFile != null) uploadFile(pendingFile, expectedAuthority)
+            val requestId = database.queueAgentMessage(conversationId, body, pendingFile)
             refreshState()
             try {
                 flushOutbox(initialStatus = checkedStatus, onlyRequestId = requestId)
@@ -639,6 +657,9 @@ class AppRepository internal constructor(
                 if (operation?.attempted == false) database.updateOutbox(requestId, "needs_attention",
                     "电脑 Agent 请求尚未投递；不会在重连后自动执行，请确认后重新发送")
                 accepted = database.operation(requestId)?.item?.status in setOf("sending", "unknown", "pending", "sent")
+                if (!accepted && pendingFile != null && pendingFile.authorityId == database.device()?.endpointId &&
+                    !database.isConversationDeleted(conversationId))
+                    database.stageFile(pendingFile, onlyIfEmpty = true)
             }
         }
         return accepted
@@ -970,7 +991,7 @@ class AppRepository internal constructor(
         if (syncedPersona == null) return
         apiVault.clearPersona(); syncedPersona = null
         directConfig?.takeIf { it.source == ApiConfigSource.LOCAL }?.let { active ->
-            val updated = active.withPersona(SyncedPersona(LOCAL_PHONE_AUTHORITY, "default", "鲸伴", DEFAULT_PHONE_PROMPT))
+            val updated = active.withPersona(SyncedPersona(LOCAL_PHONE_AUTHORITY, "default", "鲸鱼娘", DEFAULT_PHONE_PROMPT))
             apiVault.save(updated); directConfig = updated
         }
     }
@@ -1270,6 +1291,56 @@ class AppRepository internal constructor(
 
     private fun protectedImages(): Set<String> = database.protectedImageIds()
 
+    suspend fun stageFile(conversationId: String, uri: Uri) = localAction {
+        require(canonicalUuid(conversationId) && !database.isConversationDeleted(conversationId)) { "该会话已删除或无效" }
+        val owner = database.device()?.endpointId ?: throw IllegalArgumentException("请先连接电脑，再选择文件")
+        val file = fileCache.prepare(applicationContext, uri, conversationId, owner, database.protectedFileIds())
+        require(database.device()?.endpointId == owner && !database.isConversationDeleted(conversationId)) { "会话或目标电脑已变更，请重新选择文件" }
+        database.createConversation(conversationId, select = false)
+        database.stageFile(file)
+    }
+
+    /** Uploading is a bounded byte transfer; only the separate durable agent.send starts a task. */
+    private suspend fun uploadFile(pending: PendingFile, authority: String?) {
+        requireDesktopReady("file.upload", authority)
+        require(pending.authorityId == authority) { "待发文件属于原电脑，请移除后重新选择" }
+        val file = fileCache.verifiedFile(pending)
+        file.inputStream().use { input ->
+            var offset = 0L
+            do {
+                currentCoroutineContext().ensureActive()
+                requireDesktopReady("file.upload", authority)
+                require(!database.isConversationDeleted(pending.conversationId) && database.pendingFile(pending.conversationId) == pending) {
+                    "待发送附件或会话已变更，请重新发送"
+                }
+                val count = minOf(FILE_UPLOAD_CHUNK_BYTES.toLong(), pending.sizeBytes - offset).toInt()
+                val buffer = ByteArray(count)
+                var read = 0
+                while (read < count) {
+                    val n = input.read(buffer, read, count - read)
+                    require(n > 0) { "文件读取中断，请重新选择" }
+                    read += n
+                }
+                val response = call("file.upload", JSONObject().put("conversation_id", pending.conversationId)
+                    .put("filename", pending.filename).put("mime_type", pending.mimeType).put("size", pending.sizeBytes)
+                    .put("sha256", pending.id).put("offset", offset)
+                    .put("data_base64", Base64.encodeToString(buffer, Base64.NO_WRAP)))
+                val returned = response.opt("offset")
+                val next = (returned as? Number)?.toLong()
+                require(response.optString("id") == pending.id && response.optString("sha256") == pending.id &&
+                    response.optLong("size", -1) == pending.sizeBytes &&
+                    (returned is Int || returned is Long) && next != null && next in (offset + count)..pending.sizeBytes &&
+                    response.opt("complete") == (next == pending.sizeBytes)) { "文件上传响应无效，附件已保留" }
+                if (next!! > offset + count) {
+                    var skip = next - offset - count
+                    while (skip > 0) { val n = input.skip(skip); require(n > 0) { "无法恢复文件上传" }; skip -= n }
+                }
+                offset = next
+            } while (offset < pending.sizeBytes)
+        }
+        requireDesktopReady("agent.send", authority)
+    }
+
     suspend fun stageImage(conversationId: String, bytes: ByteArray, filename: String, mimeType: String) = localAction {
         require(canonicalUuid(conversationId)) { "会话标识无效" }
         require(!database.isConversationDeleted(conversationId)) { "该会话已在电脑删除，请新建会话" }
@@ -1388,6 +1459,8 @@ class AppRepository internal constructor(
                 if (!database.claimOutboxForSend(item.requestId, messageId)) continue
                 attempted = true
                 refreshState()
+                params.remove("local_file_name")
+                params.remove("local_file_size")
                 val result = call(item.method, params, item.requestId)
                 touched = true
                 // Queue-capable hosts can return the durable ACK itself with
@@ -1644,7 +1717,12 @@ class AppRepository internal constructor(
             "切换结果待确认，请刷新角色卡", "角色库已变化，请刷新后重试", "角色卡同步数据无效，请刷新后重试",
             "角色卡已变化，请刷新后重新选择")
         private const val REFRESH_INTERVAL_MS = 30_000L
-        private const val DEFAULT_PHONE_PROMPT = "你是鲸伴，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
+        private const val LEGACY_DEFAULT_PHONE_PROMPT = "你是鲸伴，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
+        private const val DEFAULT_PHONE_PROMPT = "你是桌面宠物鲸鱼娘，温柔可爱，偶尔俏皮。自然地称用户为主人，但不句句重复。" +
+            "喜欢陪主人聊天，愿意尽力帮主人处理大小事；偶尔轻轻邀请聊天，不催促、不撒娇施压。表达自然，少用套话、表情和波浪号。" +
+            "遇到任务先认真办事，进度和结果清楚简洁，不用调皮话打断、不为闲聊拖延。" +
+            "只说有依据的事实和已完成的操作，能力以实际工具和权限为准。" +
+            "请依据当前对话回答，不猜测不可见的图片或电脑状态。手机聊天没有电脑操作工具，不声称已经执行电脑操作。"
         internal const val IMAGE_CHAT_UPDATE_REQUIRED = "电脑端尚不支持图文识别，请更新并重启电脑端后重试；图片和文字已保留，未发送。"
         internal fun canonicalUuid(value: String): Boolean = try { UUID.fromString(value).toString() == value } catch (_: IllegalArgumentException) { false }
 

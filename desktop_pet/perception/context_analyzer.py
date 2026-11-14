@@ -11,7 +11,7 @@ from PySide6.QtCore import QBuffer, QIODevice
 
 from ..api_client import ApiClient, ApiError, redact_secret
 from ..character_cards import CharacterCard
-from ..character_prompts import CHARACTER_EXPRESSION_POLICY, character_identity_prompt
+from ..character_prompts import character_expression_prompt
 from ..emotion_policy import EMOTION_CONTEXT_PROMPT, EMOTIONS, normalize_emotion
 from .screen_observer import Observation
 from .settings import COMMENTARY_MODES
@@ -166,9 +166,7 @@ class ContextAnalyzer:
             prompt += COMMENTARY_PROMPTS[commentary_mode]
         if requested_comment and not camera:
             prompt += REQUESTED_COMMENT_PROMPT
-        if character_card is not None:
-            prompt = (character_identity_prompt(character_card) + CHARACTER_EXPRESSION_POLICY
-                      + prompt.replace("鲸鱼娘", "当前角色"))
+        prompt = character_expression_prompt(character_card) + prompt.replace("鲸鱼娘", "当前角色")
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": [

@@ -457,20 +457,23 @@ class ChatController(QObject):
     def remote_agent_authority_changed(self):
         if self._agent_queue is not None: self._agent_queue.authority_changed(self.stop_request)
 
-    def admit_remote_agent(self,peer,request_id,cid,text,*,image_id=None):
+    def set_file_inbox(self, inbox):
+        self._file_inbox = inbox
+
+    def admit_remote_agent(self,peer,request_id,cid,text,*,image_id=None,file_metadata=None):
         if self._closed: raise CoordinatorError("QUEUE_UNAVAILABLE")
         admission = self._image_storage_admission(feedback=False)
         if admission is None: raise CoordinatorError("QUEUE_BUSY")
         try:
             return self._image_storage_gate.run(admission,
-                lambda: self._admit_remote_agent(peer,request_id,cid,text,image_id=image_id))
+                lambda: self._admit_remote_agent(peer,request_id,cid,text,image_id=image_id,file_metadata=file_metadata))
         finally:
             self.notify_image_storage_changed()
 
-    def _admit_remote_agent(self,peer,request_id,cid,text,*,image_id=None):
+    def _admit_remote_agent(self,peer,request_id,cid,text,*,image_id=None,file_metadata=None):
         if self._agent_queue is None: raise CoordinatorError("QUEUE_UNAVAILABLE")
         self._capture_agent_queue_policy()
-        result=self._agent_queue.admit(peer,request_id,cid,text,image_id=image_id)
+        result=self._agent_queue.admit(peer,request_id,cid,text,image_id=image_id,file_metadata=file_metadata)
         if cid==self._current_id and not any(item["id"]==result["message_id"] for item in self._messages):
             message=self.store.read_message(cid,result["message_id"])
             if message is not None:
@@ -545,6 +548,32 @@ class ChatController(QObject):
     def agent_settings(self):
         return self._agent_settings
 
+    @property
+    def agent_approval_mode(self):
+        return self._agent_settings.approval_mode
+
+    def set_agent_approval_mode(self, mode):
+        from .agents.settings import APPROVAL_MODES
+        if (not isinstance(mode, str) or mode not in APPROVAL_MODES
+                or self._closed or self._busy or self._history_loading):
+            return False
+        with self.agent_authority_guard():
+            saver = getattr(self._settings_manager, "save_agent_settings", None)
+            loader = getattr(self._settings_manager, "load_agent_settings", None)
+            if not callable(saver) or not callable(loader):
+                return False
+            try:
+                current = loader()
+                current.validate()
+                updated = replace(current, approval_mode=mode)
+                if updated != current:
+                    saver(updated)
+                self._refresh_agent_settings()
+            except Exception:
+                self._set_error("操作权限未能保存，请检查本地设置。")
+                return False
+            return self._agent_settings.approval_mode == mode
+
     def refresh_agent_settings(self):
         with self.agent_authority_guard(): self._refresh_agent_settings()
 
@@ -564,6 +593,7 @@ class ChatController(QObject):
         if active is not None and active.get("agent_kind") and (
                 not value.enabled or active["agent_kind"] == "computer" and not value.computer_enabled
                 or active["agent_kind"] == "tools" and not value.tools_enabled
+                or previous.approval_mode != value.approval_mode
                 or active["agent_kind"] == "agent" and previous != value):
             self.stop_request()
         self.agent_settings_changed.emit()
@@ -623,7 +653,30 @@ class ChatController(QObject):
         if not callable(artifacts):
             return []
         try:
-            return artifacts(conversation_id)
+            values = artifacts(conversation_id)
+            owners = {}
+            messages = self.store.load_messages(conversation_id)
+            valid_replies = {row["id"] for row in messages if row.get("role") == "assistant"}
+            for row in messages:
+                if row.get("role") != "assistant":
+                    continue
+                metadata = row.get("metadata", {})
+                refs = metadata.get("artifact_refs", metadata.get("artifacts", []))
+                if isinstance(refs, list):
+                    for ref in refs:
+                        reference = ref.get("reference") if isinstance(ref, dict) else ref
+                        if isinstance(reference, str):
+                            owners.setdefault(reference, row["id"])
+            queue = getattr(getattr(self, "_agent_queue", None), "queue", None)
+            if queue is not None:
+                try:
+                    for job in queue.list_jobs(conversation_id=conversation_id, limit=500):
+                        if job.state == "completed" and job.reply_id in valid_replies:
+                            for ref in job.artifact_refs:
+                                owners.setdefault(ref, job.reply_id)
+                except Exception:
+                    pass  # A missing historical queue cannot invent an owner.
+            return [dict(value, message_id=owners.get(value.get("reference"))) for value in values]
         except (ValueError, OSError):
             return []
 
@@ -2397,7 +2450,7 @@ class ChatController(QObject):
                             return
                         from desktop_pet.agents.activity_subject import subject_detail_for_label
                         detail = (subject_detail_for_label(event.get("label"), event.get("subject"))
-                                  if event.get("kind") == "tool" else None)
+                                  if event.get("kind") in {"tool", "computer"} else None)
                         if request["trace"].event(event.get("id"), event.get("kind"), event.get("label"),
                                                   event.get("status", "running"), step=event.get("step"),
                                                   detail=detail):
@@ -2419,6 +2472,16 @@ class ChatController(QObject):
                                     agent_options["guardian_launch"] = self._agent_queue.guardian_launch(request,job_context)
                         agent_context = {"api": settings, "messages": agent_messages, "gui_api_key": gui_key}
                         agent_context["personality"] = harness_personality(request["character_card"])
+                        if image_metadata.get("file_id"):
+                            inbox = getattr(self, "_file_inbox", None)
+                            origin = image_metadata.get("agent_queue_origin", {})
+                            if inbox is None or not isinstance(origin, dict) or not origin.get("peer_id"):
+                                raise ApiError("agent_invalid_request", "本次文件附件不可用，请重新选择并发送。")
+                            try:
+                                agent_context["current_file"] = inbox.materialize(origin["peer_id"], conversation_id,
+                                    image_metadata["file_id"], agent_settings.workspace)
+                            except Exception:
+                                raise ApiError("agent_invalid_request", "本次文件附件校验失败，未执行任务；请重新上传。") from None
                         agent_context["conversation_id"] = conversation_id
                         agent_context["conversation_generation"] = all_messages[0]["id"] if all_messages else user_message["id"]
                         window = getattr(self._budget, "model_context_tokens", None)
@@ -2476,7 +2539,8 @@ class ChatController(QObject):
                     execution = self._save_execution(request, persist=False)
                     try:
                         saved_reply = self.store.complete_request(conversation_id, user_message["id"], reply.reply,
-                                                                 emotion=reply.emotion, execution=execution)
+                                                                 emotion=reply.emotion, execution=execution,
+                                                                 artifact_refs=request.get("agent_artifact_refs", ()))
                     except Exception:
                         try:
                             saved_reply = self._read_committed_reply(request, reply, execution, generation)

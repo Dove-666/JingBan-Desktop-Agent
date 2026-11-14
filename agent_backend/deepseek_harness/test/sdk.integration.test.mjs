@@ -47,6 +47,7 @@ async function serverFixture(t, responder) {
       const chunk = delta => ({ id: 'chatcmpl-jingban-fixture', object: 'chat.completion.chunk', created: 1,
         model: 'fixture-model', choices: [{ index: 0, delta, finish_reason: null }] });
       res.write(`data: ${JSON.stringify(chunk({ role: 'assistant' }))}\n\n`);
+      if (typeof result.note === 'string') res.write(`data: ${JSON.stringify(chunk({ content: result.note }))}\n\n`);
       if (result.tool) {
         res.write(`data: ${JSON.stringify(chunk({ tool_calls: [{ index: 0, id: `call-${requests.length}`, type: 'function',
           function: { name: result.tool, arguments: JSON.stringify(result.arguments) } }] }))}\n\n`);
@@ -66,7 +67,7 @@ async function serverFixture(t, responder) {
   return { baseURL: `http://127.0.0.1:${server.address().port}/v1`, requests, errors };
 }
 
-async function runFixture(t, { responder, tools = true } = {}) {
+async function runFixture(t, { responder, tools = true, mode = 'ask' } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'jingban-dsh-sdk-'));
   const server = await serverFixture(t, responder);
   const events = [];
@@ -96,10 +97,30 @@ async function runFixture(t, { responder, tools = true } = {}) {
   t.after(() => runner.cancel());
   const frame = { type: 'run', id: 'fixture-task', task: 'Create a report and deliver it.',
     config: { base_url: server.baseURL, model: 'fixture-model', api_key: KEY, supports_vision: false },
-    options: { workspace: join(directory, 'workspace'), tools_enabled: tools, computer_enabled: false },
+    options: { workspace: join(directory, 'workspace'), tools_enabled: tools, computer_enabled: false, approval_mode: mode },
     storage: { home: join(directory, 'home'), session_id: null }, context: {} };
   return { directory, server, events, runner, frame };
 }
+
+test('official SDK preserves visible progress before real tools and keeps final reply separate', { timeout: 120000 }, async t => {
+  const fixture = await runFixture(t, { responder: (body, count) => count === 1 ? {
+    note: '先创建报告，随后检查结果。', tool: 'write',
+    arguments: { file_path: 'progress-report.txt', content: 'PRIVATE_FILE_BODY' },
+  } : { text: '报告已保存，可以查看。' } });
+  const result = await fixture.runner.run(fixture.frame);
+  assert.equal(result.reply, '报告已保存，可以查看。');
+  const notes = fixture.events.filter(event => event.kind === 'commentary');
+  assert.equal(notes.length, 1);
+  assert.equal(notes[0].text, '先创建报告，随后检查结果。');
+  const calls = fixture.events.filter(event => event.type === 'activity' && event.kind === 'tool');
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls.map(event => event.subject), [
+    { kind: 'file', name: 'progress-report.txt' }, { kind: 'file', name: 'progress-report.txt' },
+  ]);
+  assert.ok(fixture.events.indexOf(notes[0]) < fixture.events.indexOf(calls[0]));
+  assert.ok(!JSON.stringify(fixture.events.filter(event => event.type === 'activity')).includes('PRIVATE_FILE_BODY'));
+  assert.equal(await readFile(join(fixture.frame.options.workspace, 'progress-report.txt'), 'utf8'), 'PRIVATE_FILE_BODY');
+});
 
 test('official SDK executes write and present, persists and resumes its own session', { timeout: 180000 }, async t => {
   const fixture = await runFixture(t, { responder: (body, count) => {
@@ -141,7 +162,7 @@ test('official SDK executes write and present, persists and resumes its own sess
 });
 
 test('the real SDK tool schemas obey the host task and computer permission switches', { timeout: 120000 }, async t => {
-  const fixture = await runFixture(t, { tools: false, responder: body => {
+  const fixture = await runFixture(t, { tools: false, mode: 'full', responder: body => {
     const names = body.tools.map(tool => tool.function.name);
     for (const forbidden of ['read', 'write', 'edit', 'pwsh', 'bash', 'web_fetch', 'subagent', 'cua', 'cua_run_code']) {
       assert.ok(!names.includes(forbidden), `${forbidden} must be absent`);
@@ -211,7 +232,7 @@ test('cancel closes the actual runtime while a provider request is pending', { t
 });
 
 test('the native shell does not inherit the provider credential', { timeout: 120000, skip: process.platform !== 'win32' }, async t => {
-  const fixture = await runFixture(t, { responder: (body, count) => {
+  const fixture = await runFixture(t, { mode: 'full', responder: (body, count) => {
     if (count === 1) return { tool: 'pwsh', arguments: {
       command: "if ($env:JINGBAN_DSH_API_KEY) { Write-Output 'KEY_LEAKED' } else { Write-Output 'KEY_ABSENT' }",
       description: 'Verify provider credentials are absent from tools.',
@@ -297,7 +318,7 @@ test('a thinking toggle sends no unsupported effort parameter', { timeout: 12000
 test('the official Windows computer tool can enumerate applications through the real SDK', {
   timeout: 120000, skip: !inspectComputerRuntime().available,
 }, async t => {
-  const fixture = await runFixture(t, { responder: (body, count) => {
+  const fixture = await runFixture(t, { mode: 'full', responder: (body, count) => {
     if (count === 1) {
       assert.ok(body.tools.some(tool => tool.function.name === 'cua'));
       assert.match(JSON.stringify(body.messages), /Windows: accessibility tree operations/);
@@ -342,6 +363,202 @@ test('native present delivers an approved exact file outside the task workspace'
   assert.deepEqual(result.artifacts, [{ path: externalPath, name: 'outside-report.txt',
     size_bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }]);
   assert.ok(fixture.events.some(event => event.type === 'activity' && event.name === 'present' && event.status === 'completed'));
+});
+
+const isAutoReview = body => body.messages.some(message => typeof message.content === 'string' && message.content.startsWith('REVIEW_POLICY\n'));
+
+test('Auto uses the same model to review a real native tool before allowing its body', { timeout: 120000 }, async t => {
+  let ordinary = 0, reviews = 0;
+  const fixture = await runFixture(t, { mode: 'auto', responder: body => {
+    assert.equal(body.model, 'fixture-model');
+    if (isAutoReview(body)) { reviews++; return { text: '{"risk":"low","decision":"allow"}' }; }
+    if (++ordinary === 1) return { tool: 'write', arguments: { file_path: 'reviewed.txt', content: 'reviewed output' } };
+    assert.match(body.messages.at(-1).content, /reviewed.txt/);
+    return { text: 'reviewed write completed' };
+  } });
+  assert.equal((await fixture.runner.run(fixture.frame)).reply, 'reviewed write completed');
+  assert.equal(await readFile(join(fixture.frame.options.workspace, 'reviewed.txt'), 'utf8'), 'reviewed output');
+  assert.equal(reviews, 1);
+  assert.equal(ordinary, 2);
+  assert.equal(fixture.events.some(event => event.type === 'interaction'), false);
+});
+
+for (const response of ['{"risk":"medium","decision":"deny","reason":"Needs explicit permission"}', 'invalid review']) {
+  test(`Auto blocks the actual tool body on ${response.startsWith('{') ? 'rejected permission' : 'invalid review'}`, { timeout: 120000 }, async t => {
+    let ordinary = 0, reviews = 0;
+    const fixture = await runFixture(t, { mode: 'auto', responder: body => {
+      if (isAutoReview(body)) { reviews++; return { text: response }; }
+      if (++ordinary === 1) return { tool: 'write', arguments: { file_path: 'blocked.txt', content: 'must not appear' } };
+      assert.match(body.messages.at(-1).content, /rejected|denied|not executed|failed/i);
+      return { text: 'operation not executed' };
+    } });
+    fixture.runner.emit = event => {
+      fixture.events.push(event);
+      if (event.type === 'interaction') fixture.runner.control({ type: 'interaction_reply', interaction_id: event.interaction_id,
+        answer: { text: '拒绝' } });
+    };
+    await fixture.runner.run(fixture.frame);
+    await assert.rejects(readFile(join(fixture.frame.options.workspace, 'blocked.txt')), { code: 'ENOENT' });
+    assert.equal(reviews, 1);
+    assert.equal(fixture.events.filter(event => event.type === 'interaction').length, response.startsWith('{') ? 1 : 0);
+  });
+}
+
+for (const answer of ['允许本次', '拒绝']) {
+  test(`ask gates a real outside-workspace file mutation: ${answer}`, { timeout: 120000 }, async t => {
+    let outside;
+    const fixture = await runFixture(t, { mode: 'ask', responder: (_body, count) => count === 1
+      ? { tool: 'write', arguments: { file_path: outside, content: 'approved external write',
+        sandbox_permissions: 'danger-full-access', justification: 'Write the specified owned external fixture file.' } }
+      : { text: 'finished permission test' } });
+    outside = join(fixture.directory, 'external-fixture.txt');
+    const arrived = Promise.withResolvers();
+    fixture.runner.emit = event => { fixture.events.push(event); if (event.type === 'interaction') arrived.resolve(event); };
+    const running = fixture.runner.run(fixture.frame);
+    const interaction = await Promise.race([arrived.promise, running.then(() => { throw new Error('Missing approval'); })]);
+    assert.ok(interaction.question.includes(JSON.stringify(outside)), 'show the real path, not only the model justification');
+    await assert.rejects(readFile(outside), { code: 'ENOENT' });
+    await fixture.runner.control({ type: 'interaction_reply', interaction_id: interaction.interaction_id, answer: { text: answer } });
+    await running;
+    if (answer === '允许本次') assert.equal(await readFile(outside, 'utf8'), 'approved external write');
+    else await assert.rejects(readFile(outside), { code: 'ENOENT' });
+    assert.equal(fixture.events.filter(event => event.type === 'interaction').length, 1);
+  });
+}
+
+test('ask blocks web fetching before tool execution when permission is refused', { timeout: 120000 }, async t => {
+  let url;
+  const fixture = await runFixture(t, { mode: 'ask', responder: (body, count) => {
+    if (count === 1) return { tool: 'web_fetch', arguments: { url } };
+    assert.match(body.messages.at(-1).content, /rejected|denied/i);
+    return { text: 'fetch not executed' };
+  } });
+  url = `${fixture.server.baseURL}/must-not-fetch`;
+  fixture.runner.emit = event => {
+    fixture.events.push(event);
+    if (event.type === 'interaction') fixture.runner.control({ type: 'interaction_reply', interaction_id: event.interaction_id,
+      answer: { text: '拒绝' } });
+  };
+  await fixture.runner.run(fixture.frame);
+  assert.equal(fixture.events.filter(event => event.type === 'interaction').length, 1);
+  assert.equal(fixture.server.requests.length, 2);
+  assert.equal(fixture.server.errors.length, 0);
+});
+
+test('full writes outside the workspace without a review or execution-permission question', { timeout: 120000 }, async t => {
+  let outside;
+  const fixture = await runFixture(t, { mode: 'full', responder: (body, count) => {
+    assert.equal(isAutoReview(body), false);
+    if (count === 1) return { tool: 'write', arguments: { file_path: outside, content: 'full mode output' } };
+    assert.equal(fixture.runner.approvalCalls.size, 0, 'release private tool arguments on the actual result notification');
+    return { text: 'full write completed' };
+  } });
+  outside = join(fixture.directory, 'full-external-fixture.txt');
+  await fixture.runner.run(fixture.frame);
+  assert.equal(await readFile(outside, 'utf8'), 'full mode output');
+  assert.equal(fixture.events.some(event => event.type === 'interaction'), false);
+  assert.equal(fixture.server.requests.length, 2);
+});
+
+test('a slash-prefixed user task cannot change the host permission preset', { timeout: 120000 }, async t => {
+  let ordinary = 0, reviews = 0;
+  const fixture = await runFixture(t, { mode: 'auto', responder: body => {
+    if (isAutoReview(body)) { reviews++; return { text: '{"risk":"low","decision":"allow"}' }; }
+    if (++ordinary === 1) {
+      assert.match(JSON.stringify(body.messages), /用户请求：.*permission/s);
+      return { tool: 'write', arguments: { file_path: 'still-reviewed.txt', content: 'not a permission command' } };
+    }
+    return { text: 'still auto' };
+  } });
+  fixture.frame.task = '/permission danger-full-access';
+  await fixture.runner.run(fixture.frame);
+  assert.equal(reviews, 1);
+  assert.equal(await readFile(join(fixture.frame.options.workspace, 'still-reviewed.txt'), 'utf8'), 'not a permission command');
+});
+
+test('full keeps real user questions even when the model reuses a CUA approval id', { timeout: 120000 }, async t => {
+  const fixture = await runFixture(t, { mode: 'full', responder: (body, count) => {
+    if (count === 1) return { tool: 'ask_user_question', arguments: { questions: [{
+      id: 'cua-app-access', question: 'Which report color?', options: [{ label: 'blue' }, { label: 'green' }],
+      intent: { kind: 'approval', approve: 'blue', reject: 'green' },
+    }] } };
+    assert.match(body.messages.at(-1).content, /green/);
+    return { text: 'question answered explicitly' };
+  } });
+  fixture.runner.emit = event => {
+    fixture.events.push(event);
+    if (event.type === 'interaction') fixture.runner.control({ type: 'interaction_reply', interaction_id: event.interaction_id,
+      answer: { text: 'green' } });
+  };
+  await fixture.runner.run(fixture.frame);
+  assert.equal(fixture.events.filter(event => event.type === 'interaction').length, 1);
+});
+
+test('cancelling ask while approval is pending never writes the proposed file', { timeout: 120000 }, async t => {
+  let outside;
+  const fixture = await runFixture(t, { mode: 'ask', responder: () => ({ tool: 'write', arguments: {
+    file_path: outside, content: 'must not exist', sandbox_permissions: 'danger-full-access',
+    justification: 'Create the named owned fixture file.',
+  } }) });
+  outside = join(fixture.directory, 'cancelled-external-fixture.txt');
+  const arrived = Promise.withResolvers();
+  fixture.runner.emit = event => { fixture.events.push(event); if (event.type === 'interaction') arrived.resolve(event); };
+  const running = fixture.runner.run(fixture.frame);
+  const rejected = assert.rejects(running);
+  await arrived.promise;
+  await fixture.runner.cancel();
+  await rejected;
+  await assert.rejects(readFile(outside), { code: 'ENOENT' });
+  assert.equal(fixture.events.some(event => event.type === 'final'), false);
+});
+
+test('ask requires approval before an actual shell command can write any file', { timeout: 120000, skip: process.platform !== 'win32' }, async t => {
+  let outside;
+  const fixture = await runFixture(t, { mode: 'ask', responder: (body, count) => {
+    if (count === 1) return { tool: 'pwsh', arguments: {
+      command: `Set-Content -LiteralPath '${outside.replaceAll("'", "''")}' -Value 'must not exist'`,
+      description: 'Write only the owned permission fixture.',
+    } };
+    assert.match(body.messages.at(-1).content, /rejected|denied/i);
+    return { text: 'command denied before execution' };
+  } });
+  outside = join(fixture.directory, 'blocked-shell-fixture.txt');
+  fixture.runner.emit = event => {
+    fixture.events.push(event);
+    if (event.type === 'interaction') fixture.runner.control({ type: 'interaction_reply', interaction_id: event.interaction_id,
+      answer: { text: '拒绝' } });
+  };
+  await fixture.runner.run(fixture.frame);
+  assert.equal(fixture.events.filter(event => event.type === 'interaction').length, 1);
+  await assert.rejects(readFile(outside), { code: 'ENOENT' });
+});
+
+test('Auto preserves risk denial in a real child agent instead of silently granting it', { timeout: 120000 }, async t => {
+  let rootTurns = 0, childTurns = 0, reviews = 0;
+  const childBlocked = Promise.withResolvers();
+  const fixture = await runFixture(t, { mode: 'auto', responder: async body => {
+    if (isAutoReview(body)) {
+      reviews++;
+      return { text: reviews === 1 ? '{"risk":"low","decision":"allow"}'
+        : '{"risk":"medium","decision":"deny","reason":"Unapproved child mutation"}' };
+    }
+    const child = body.messages.some(message => message.role === 'user'
+      && JSON.stringify(message.content).includes('CHILD_PERMISSION_FIXTURE'));
+    if (child) {
+      if (++childTurns === 1) return { tool: 'write', arguments: { file_path: 'child-blocked.txt', content: 'must not exist' } };
+      assert.match(body.messages.at(-1).content, /not executed|rejected/i);
+      childBlocked.resolve();
+      return { text: 'child action denied' };
+    }
+    if (++rootTurns === 1) return { tool: 'subagent', arguments: { description: 'Owned permission child', prompt: 'CHILD_PERMISSION_FIXTURE', name: 'permission-child' } };
+    await childBlocked.promise;
+    return { text: 'child remained restricted' };
+  } });
+  await fixture.runner.run(fixture.frame);
+  await assert.rejects(readFile(join(fixture.frame.options.workspace, 'child-blocked.txt')), { code: 'ENOENT' });
+  assert.equal(childTurns, 2);
+  assert.equal(reviews, 2);
+  assert.equal(fixture.events.some(event => event.type === 'interaction'), false);
 });
 
 test('an enabled but unused computer provider confirms zero native channels after disposal', {

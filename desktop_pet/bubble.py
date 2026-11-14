@@ -45,6 +45,7 @@ class SpeechBubble(QWidget):
         self._text = ""
         self._source_text = ""
         self._conversation_link = None
+        self._compact_reply = False
         self._scale = 1.0
         self._character_scale = 1.0
         self._font_points = int(BASE_FONT_POINTS)
@@ -53,8 +54,6 @@ class SpeechBubble(QWidget):
         self._paused_page_ms = 0
         self._previous_page_rect = QRectF()
         self._next_page_rect = QRectF()
-        self._close_rect = QRectF()
-        self._header_height = 0.0
         self._layout = QTextLayout()
         self._text_rect = QRectF()
         self._body_rect = QRectF()
@@ -107,9 +106,13 @@ class SpeechBubble(QWidget):
     def _theme_color(light, role):
         return color(role) if current_theme() == "dark" else light
 
-    def say(self, text: str, duration_ms: int, *, conversation_link=None) -> None:
+    def say(self, text: str, duration_ms: int, *, conversation_link=None, compact=False) -> None:
         clickable = bool(conversation_link and conversation_link.get("conversation_id")
                          and conversation_link.get("message_id"))
+        self._compact_reply = bool(compact or (clickable and conversation_link.get("source_kind", "chat") == "chat"))
+        if self._compact_reply and len(text.strip()) > LINKED_PREVIEW_MAX_CHARS:
+            self._omit_reply()
+            return
         if clickable != bool(self._conversation_link):
             # Only linked proactive comments accept a click. Ordinary feedback
             # keeps the established native input-transparent behavior.
@@ -117,9 +120,10 @@ class SpeechBubble(QWidget):
             self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, not clickable)
             self.setCursor(Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor)
         self._conversation_link = dict(conversation_link) if clickable else None
-        self.setToolTip("点击正文查看完整对话；点击 × 关闭；最多显示 60 秒" if clickable else "")
+        self.setToolTip("点击查看完整对话" if clickable else "")
         self._source_text = text
-        self._text = (LONG_REPLY_NOTICE if clickable and len(text) > LINKED_PREVIEW_MAX_CHARS else text)
+        self._text = (LONG_REPLY_NOTICE if not self._compact_reply and clickable
+                      and len(text) > LINKED_PREVIEW_MAX_CHARS else text)
         self.setAccessibleDescription(self._text)
         self._speech_sequence += 1
         self._placement = None
@@ -132,7 +136,7 @@ class SpeechBubble(QWidget):
         self._paused_hide_ms = self._paused_page_ms = 0
         self.reposition()
         # A hidden owner must not leave an independent visible speech window.
-        if not self.parentWidget().isVisible():
+        if not self._text or not self.parentWidget().isVisible():
             return
         self.show()
         self.update()
@@ -141,12 +145,25 @@ class SpeechBubble(QWidget):
         self._deadline_timer.start(MAX_VISIBLE_MS)
         self._schedule_page()
 
+    def _omit_reply(self) -> None:
+        """Long chat replies remain in the transcript, with no leftover bubble."""
+        self.dismiss()
+        self._text = self._source_text = self._page_text = ""
+        self._pages = [""]
+        self._page_index = 0
+        self._conversation_link = None
+        self._paused_hide_ms = self._paused_page_ms = 0
+        self._previous_page_rect = self._next_page_rect = QRectF()
+        self._layout_key = self._page_layout_key = self._text_layer_key = None
+        self._text_layer = QImage()
+        self.setAccessibleDescription("")
+        self.setToolTip("")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, True)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self._conversation_link:
-            if self._close_rect.contains(event.position()):
-                self.dismiss()
-                event.accept()
-                return
             if self._previous_page_rect.contains(event.position()):
                 self._previous_page()
                 event.accept()
@@ -307,7 +324,6 @@ class SpeechBubble(QWidget):
             width = min(maximum_width, math.ceil(max(64 * scale, min(MAX_TEXT_WIDTH * scale, natural_width + 48 * scale))))
             self._tail_margin = min(TAIL_MARGIN * scale, width * .16, maximum_height * .16)
             self._padding = min(12 * scale, width * .12, maximum_height * .12)
-            self._header_height = min(24 * scale, maximum_height * .24) if self._conversation_link else 0.0
             # An unusually short work area still needs room for a text line
             # and the page hint. Reduce decoration before clipping either one.
             vertical_budget = max(0.0, (maximum_height - 2 * metrics.height()) / 2 - .5)
@@ -318,7 +334,7 @@ class SpeechBubble(QWidget):
                 self._padding *= ratio
             inset = 2 * (self._padding + self._tail_margin)
             text_width = max(1.0, width - inset)
-            text_height = max(1.0, maximum_height - inset - self._header_height)
+            text_height = max(1.0, maximum_height - inset)
             full = self._make_layout(self._text, text_width)
             previous_pages = self._pages
             reading_offset = sum(len(page) for page in previous_pages[:self._page_index])
@@ -327,6 +343,12 @@ class SpeechBubble(QWidget):
                 self._pages = self._paginate(full, text_width, text_height)
             else:
                 self._pages = [self._text]
+            if self._compact_reply and len(self._pages) > 1:
+                # Line breaks, larger fonts and small work areas can overflow
+                # even when the character count is short. Never show a page
+                # carousel or a replacement notice for an ordinary reply.
+                self._omit_reply()
+                return self._relayout(available)
             if (self._conversation_link and len(self._pages) > LINKED_PREVIEW_MAX_PAGES
                     and self._text != LONG_REPLY_NOTICE):
                 # Only the small preview changes. The stored chat message is
@@ -350,8 +372,7 @@ class SpeechBubble(QWidget):
             self._footer_height = metrics.height() if len(self._pages) > 1 else 0.0
             # Keep the card still as pages advance, even when the final page is short.
             content_height = max([metrics.height()] + [item.boundingRect().height() for item in self._page_layouts])
-            self.resize(width, min(maximum_height, math.ceil(content_height + inset
-                                                          + self._header_height + self._footer_height)))
+            self.resize(width, min(maximum_height, math.ceil(content_height + inset + self._footer_height)))
         page_key = (key, self._page_index)
         if page_key == self._page_layout_key:
             return pages_changed
@@ -382,13 +403,8 @@ class SpeechBubble(QWidget):
             self.move(position)
         margin = self._tail_margin
         self._body_rect = QRectF(self.rect()).adjusted(margin, margin, -margin, -margin)
-        self._text_rect = self._body_rect.adjusted(self._padding, self._padding + self._header_height, -self._padding,
+        self._text_rect = self._body_rect.adjusted(self._padding, self._padding, -self._padding,
                                                   -self._padding - self._footer_height)
-        self._close_rect = QRectF()
-        if self._conversation_link:
-            side = self._header_height
-            self._close_rect = QRectF(self._text_rect.right() - side,
-                                       self._body_rect.top() + self._padding, side, side)
         self._previous_page_rect = self._next_page_rect = QRectF()
         if len(self._pages) > 1 and self._conversation_link:
             footer_y = self._text_rect.bottom()
@@ -517,9 +533,6 @@ class SpeechBubble(QWidget):
         text.setFont(self.font())
         text.setPen(QColor(self._theme_color("#243449", "text")))
         self._layout.draw(text, self._text_origin())
-        if not self._close_rect.isEmpty():
-            text.setPen(QColor(self._theme_color("#415d78", "accent")))
-            self._draw_footer_text(text, "×", self._close_rect)
         if len(self._pages) > 1:
             text.setPen(QColor(self._theme_color("#65788d", "muted")))
             footer = QRectF(self._text_rect.left(), self._text_rect.bottom(),
@@ -562,10 +575,6 @@ class SpeechBubble(QWidget):
         painter.setPen(QPen(QColor(self._theme_color("#d7e3ee", "border")), max(.55, .85 * self._scale)))
         painter.setBrush(QColor(self._theme_color("#fcfdff", "surface")))
         painter.drawPath(outline)
-        if not self._close_rect.isEmpty():
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(QColor(self._theme_color("#e8eff6", "border")))
-            painter.drawEllipse(self._close_rect)
         self._ensure_text_layer()
         painter.drawImage(QPointF(0, 0), self._text_layer)
 

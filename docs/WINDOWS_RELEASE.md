@@ -1,6 +1,6 @@
 # 鲸伴 Windows
 
-当前源码版本为 **1.1.0**，Agent 已切换到官方 DeepSeek Harness。发布文件仍使用 `鲸伴安装.exe`、`鲸伴.zip` 和 `鲸伴.exe`，界面只在设置中显示版本号。最终安装包验收与交付状态以 [验证记录](RELEASE_VALIDATION.md) 中明确标注 **1.1.0** 的记录为准；下文的 1.0.2 和 Beta 验收不能用于证明新包通过。
+当前源码版本为 **1.1.1**，使用选定的 P01 像素鲸鱼娘启动图标，Agent 使用官方 DeepSeek Harness。发布文件仍使用 `鲸伴安装.exe`、`鲸伴.zip` 和 `鲸伴.exe`，界面只在设置中显示版本号。最终安装包验收与交付状态以 [验证记录](RELEASE_VALIDATION.md) 中对应版本的记录为准；下文的 1.1.0、1.0.2 和 Beta 验收不能用于证明新包通过。
 
 全新配置默认浅色、角色大小 100%，电脑 Agent、任务工具与电脑操作开启。API 与模型由使用者填写，打包输入不包含个人设置、密钥、聊天、配对数据或 DSH 会话目录。新 API／新模型选择已识别支持的最高思考档位，手动保存的选择保留。手机安装包单独构建与验收。
 
@@ -24,7 +24,7 @@ Beta.3 基于当前源码重新冻结并应用截图默认值，复核 exe 内�
 
 浏览器扩展源码位于包内 `browser-extension/whale-ask`。有需要的测试者可加载该扩展，再运行包内 `tools/install_browser_ask.ps1 -Apply` 配置当前用户连接；安装程序不会自动修改浏览器配置。已包含独立的 `鲸伴网页桥.exe`，此步骤无需 Python。
 
-## 1.1.0 构建输入与流程
+## 当前构建输入与流程
 
 构建脚本为 `tools/build_windows_release.py`，PyInstaller 描述为 `tools/packaging/jingban.spec`，Inno 安装描述为 `tools/packaging/jingban.iss`。版本由 `desktop_pet/__init__.py` 中的 `APP_VERSION` 读取；更新版本时也须同步 `windows_version.txt` 的 PE 版本资源。
 

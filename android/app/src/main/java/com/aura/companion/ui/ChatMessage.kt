@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,6 +60,19 @@ internal fun MessageRow(message: UiMessage, onRetry: (String) -> Unit,
             if (reply.isNotBlank()) Spacer(Modifier.height(8.dp))
         }
         val body: @Composable ColumnScope.() -> Unit = {
+            message.fileName?.let { name ->
+                Row(Modifier.fillMaxWidth().testTag("message-file-${message.id}"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "文件附件", tint = colors.primary)
+                    Column(Modifier.weight(1f)) {
+                        Text(name, style = MaterialTheme.typography.bodyMedium)
+                        message.fileSize?.let { size -> Text(attachmentSizeLabel(size),
+                            style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant) }
+                    }
+                }
+                if (reply.isNotBlank()) Spacer(Modifier.height(8.dp))
+            }
             if (message.attachmentUri != null || message.attachmentId != null) {
                 Surface(onClick = { message.attachmentId?.let(onOpenImage) },
                     enabled = message.attachmentId != null,

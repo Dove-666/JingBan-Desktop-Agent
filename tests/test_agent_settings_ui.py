@@ -65,10 +65,12 @@ class MemorySettings:
 
 class ChatDouble(QObject):
     agent_settings_changed = Signal()
+    busy_changed = Signal(bool)
 
     def __init__(self):
         super().__init__()
         self.refreshes = 0
+        self.busy = False
 
     def refresh_agent_settings(self):
         self.refreshes += 1
@@ -97,9 +99,10 @@ class AgentSettingsUiTests(unittest.TestCase):
             panel = AgentSettingsPanel(self.settings, self.chat)
             self.assertTrue(panel.enabled_checkbox.isChecked())
             self.assertTrue(panel.tools_checkbox.isChecked())
-            self.assertFalse(panel.computer_checkbox.isChecked())
+            self.assertTrue(panel.computer_checkbox.isChecked())
             self.assertEqual(panel.findChildren(QLineEdit), [])
-            self.assertEqual(panel.findChildren(QComboBox), [])
+            self.assertEqual(panel.findChildren(QComboBox), [panel.approval_selector])
+            self.assertEqual(panel.approval_selector.currentData(), "auto")
             spawn.assert_not_called()
             panel.deleteLater()
         self.assertEqual(self.settings.calls, [])
@@ -168,7 +171,7 @@ class AgentSettingsUiTests(unittest.TestCase):
         self.assertEqual(self.panel.findChildren(QLineEdit), [])
         self.assertIsNone(self.panel.findChild(QSpinBox, "agentTimeoutSeconds"))
         self.assertIsNone(self.panel.findChild(QSpinBox, "agentMaxSteps"))
-        self.assertEqual(self.panel.findChildren(QComboBox), [])
+        self.assertEqual(self.panel.findChildren(QComboBox), [self.panel.approval_selector])
         self.assertFalse(any("测试连接" in button.text() for button in self.panel.findChildren(QPushButton)))
 
     def test_reload_failure_is_static_and_does_not_consume_credentials(self):
@@ -189,6 +192,41 @@ class AgentSettingsUiTests(unittest.TestCase):
         self.panel.save_button.click()
         self.assertEqual(self.settings.settings.max_steps, 0)
         self.assertEqual(self.settings.settings.timeout_seconds, 0)
+
+    def test_approval_mode_is_saved_explicitly_and_loaded_again(self):
+        self.panel.approval_selector.setCurrentIndex(self.panel.approval_selector.findData("full"))
+        self.assertEqual(self.settings.settings.approval_mode, "auto")
+        self.panel.save_button.click()
+        self.assertEqual(self.settings.settings.approval_mode, "full")
+        self.assertEqual(self.chat.refreshes, 1)
+        self.panel.reload_settings()
+        self.assertEqual(self.panel.approval_selector.currentData(), "full")
+        self.assertEqual(self.settings.key_reads, 0)
+
+    def test_running_task_blocks_unsaved_approval_change_until_finished(self):
+        self.panel.approval_selector.setCurrentIndex(self.panel.approval_selector.findData("full"))
+        self.chat.busy = True
+        self.chat.busy_changed.emit(True)
+        self.assertFalse(self.panel.approval_selector.isEnabled())
+        self.panel.save_button.click()
+        self.assertEqual(self.settings.settings.approval_mode, "auto")
+        self.assertIn("任务结束", self.panel.error_label.text())
+        self.chat.busy = False
+        self.chat.busy_changed.emit(False)
+        self.assertTrue(self.panel.approval_selector.isEnabled())
+        self.panel.save_button.click()
+        self.assertEqual(self.settings.settings.approval_mode, "full")
+
+    def test_external_approval_change_keeps_other_unsaved_fields_without_reverting_mode(self):
+        self.panel.tools_checkbox.setChecked(False)
+        self.settings.settings = replace(self.settings.settings, approval_mode="ask")
+        self.chat.agent_settings_changed.emit()
+        self.assertFalse(self.panel.tools_checkbox.isChecked())
+        self.assertEqual(self.panel.approval_selector.currentData(), "ask")
+        self.assertTrue(self.panel._dirty)
+        self.panel.save_button.click()
+        self.assertEqual(self.settings.settings.approval_mode, "ask")
+        self.assertFalse(self.settings.settings.tools_enabled)
 
 
 if __name__ == "__main__":

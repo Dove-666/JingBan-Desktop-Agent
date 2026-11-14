@@ -25,6 +25,7 @@ from ..chat_images import IMAGE_ERRORS, IMAGE_ID, MAX_CHAT_IMAGE_BYTES
 from ..image_storage import ImageStorageGate, ImageStorageGateError
 from ..agent_presentation import public_agent_metadata
 from .agent_interaction import AgentInteractionCard, public_interaction
+from .agent_approval import approval_description, populate_approval_selector
 from .theme import current_theme, style_widget, theme_manager
 from .draft_state import shared_draft_state
 
@@ -71,10 +72,13 @@ def safe_execution(value, redactor=None):
     events = []
     for index, event in enumerate(value.get("events", []) if isinstance(value.get("events"), list) else []):
         if (not isinstance(event, dict) or not isinstance(event.get("kind"), str)
-                or event.get("kind") not in {"progress", "tool", "computer", "summary"}
+                or event.get("kind") not in {"progress", "tool", "computer", "summary", "commentary"}
                 or not isinstance(event.get("status"), str) or event.get("status") not in {"running", "completed", "failed"}):
             continue
         label, detail = _execution_text(event.get("label")), _execution_text(event.get("detail"))
+        if event["kind"] == "commentary":
+            from ..agents.activity_text import public_commentary
+            label, detail = public_commentary(label), ""
         if not label or re.match(r"\s*(?:thought|analysis|reasoning(?:_content)?)\s*:", label, re.I):
             continue
         row = {"id": _execution_text(event.get("id")) or f"event-{index}", "elapsed_ms": _execution_count(event.get("elapsed_ms")),
@@ -454,6 +458,11 @@ class ChatPanel(QWidget):
         self.agent_mode_hint = QLabel("当前对话持续使用电脑 Agent")
         self.agent_mode_hint.setObjectName("chatModeHint")
         mode_row.addWidget(self.agent_mode_hint, 1)
+        self.agent_approval_selector = QComboBox()
+        self.agent_approval_selector.setObjectName("chatAgentApprovalMode")
+        populate_approval_selector(self.agent_approval_selector)
+        self.agent_approval_selector.currentIndexChanged.connect(self._set_agent_approval_mode)
+        mode_row.addWidget(self.agent_approval_selector)
         layout.addLayout(mode_row)
         self.input = MessageInput()
         self.input.setObjectName("chatInput")
@@ -496,6 +505,9 @@ class ChatPanel(QWidget):
         self.clear_button.clicked.connect(self._confirm_clear)
         self.controller.messages_changed.connect(self._render_messages)
         self.controller.busy_changed.connect(self._busy_changed)
+        settings_signal = getattr(self.controller, "agent_settings_changed", None)
+        if settings_signal is not None:
+            settings_signal.connect(self._update_buttons)
         self.controller.error_changed.connect(self._show_error)
         interaction_signal = getattr(self.controller, "agent_interaction_changed", None)
         if interaction_signal is not None:
@@ -727,7 +739,6 @@ class ChatPanel(QWidget):
     def _execution_html(self, message_id, execution):
         muted = _native_color("#52677a", "#a7b5c8")
         label_color = _native_color("#38566f", "#c0d5ea")
-        detail_color = _native_color("#607489", "#a7b5c8")
         expanded = self._execution_expanded.get(message_id, execution["state"] == "running")
         operations = sum(event["kind"] in {"tool", "computer"} for event in execution["events"])
         elapsed = "用时 " + _duration_text(execution["duration_ms"])
@@ -737,14 +748,23 @@ class ChatPanel(QWidget):
         href = "aura-execution:" + quote(message_id, safe="")
         html = f'<p><a href="{escape(href, quote=True)}">{("▾" if expanded else "▸")} {escape(elapsed + (" · " + caption if caption else ""))}</a></p>'
         if expanded:
-            html += f'<p style="font-size:12px;color:{muted}">执行过程 · 公开的操作摘要</p>'
             for event in execution["events"]:
+                if event["kind"] == "commentary":
+                    html += f'<p style="font-size:14px;color:{label_color};margin-top:10px;margin-bottom:10px">' + escape(event["label"]).replace("\n", "<br>") + '</p>'
+                    continue
                 if event["kind"] not in {"tool", "computer"}:
                     continue
                 label = "操作已暂停" if event["label"] == "需要手动接手" else event["label"]
-                html += f'<p style="font-size:12px;color:{label_color}">' + escape(_duration_text(event["elapsed_ms"]) + " · " + label) + '</p>'
-                if event.get("detail"):
-                    html += f'<p style="font-size:12px;color:{detail_color}">' + escape(event["detail"]).replace("\n", "<br>") + '</p>'
+                detail = event.get("detail", "")
+                if re.fullmatch(r"\s*第\s*\d+\s*步\s*", detail):
+                    detail = ""
+                if detail:
+                    label += " · " + re.sub(r"^(?:文件|网站|应用|子任务)：", "", detail)
+                if event["status"] == "failed":
+                    label += " · " + ("已停止" if execution["state"] == "cancelled" else "未完成")
+                elif event["status"] == "running" and execution["state"] == "running":
+                    label += " · 进行中"
+                html += f'<p style="font-size:13px;color:{muted};margin-top:5px;margin-bottom:5px">' + escape(label) + '</p>'
         return html
 
     def _render_conversations(self) -> None:
@@ -1274,6 +1294,15 @@ class ChatPanel(QWidget):
         self.agent_mode_selector.blockSignals(True)
         self.agent_mode_selector.setCurrentIndex(1 if agent_mode else 0)
         self.agent_mode_selector.blockSignals(False)
+        approval_supported = callable(getattr(self.controller, "set_agent_approval_mode", None))
+        approval_mode = getattr(self.controller, "agent_approval_mode", "auto")
+        self.agent_approval_selector.setVisible(mode_supported and agent_mode and approval_supported)
+        self.agent_approval_selector.setEnabled(not busy and not loading)
+        with QSignalBlocker(self.agent_approval_selector):
+            approval_index = self.agent_approval_selector.findData(approval_mode)
+            self.agent_approval_selector.setCurrentIndex(approval_index if approval_index >= 0
+                                                        else self.agent_approval_selector.findData("auto"))
+        self.agent_approval_selector.setToolTip("任务结束后可修改操作权限" if busy else approval_description(approval_mode))
         self.input.setPlaceholderText("补充当前任务…" if can_steer else "告诉电脑 Agent 下一步…" if agent_mode else "发消息…")
         self.stop_button.setText("停止任务" if agent_mode else "停止生成")
         staged = self._current_staged_image()
@@ -1304,6 +1333,14 @@ class ChatPanel(QWidget):
         setter = getattr(self.controller, "set_agent_mode", None)
         if callable(setter) and not self.controller.busy and not getattr(self.controller, "history_loading", False):
             setter(bool(self.agent_mode_selector.itemData(index)))
+        self._update_buttons()
+
+    def _set_agent_approval_mode(self, index) -> None:
+        setter = getattr(self.controller, "set_agent_approval_mode", None)
+        if (callable(setter) and getattr(self.controller, "agent_mode", False)
+                and not self.controller.busy and not getattr(self.controller, "history_loading", False)):
+            if setter(self.agent_approval_selector.itemData(index)) is False:
+                self._show_error("权限未能保存，请重试。")
         self._update_buttons()
 
     def _send(self) -> None:

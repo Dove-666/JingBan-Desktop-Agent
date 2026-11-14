@@ -19,8 +19,9 @@ from desktop_pet.agents.routing import ROUTING_PROMPT, agent_system_prompt
 from desktop_pet.character_cards import CharacterCard, CharacterCardError
 from desktop_pet.character_prompts import (
     CHARACTER_PROMPT_MARKER, DIRECT_AGENT_PROMPT, character_system_prompt,
-    direct_agent_system_prompt,
+    direct_agent_system_prompt, harness_personality,
 )
+from desktop_pet.default_persona import DEFAULT_PERSONA, TASK_FOCUS_POLICY
 from desktop_pet.chat_controller import ChatController
 from desktop_pet.conversations import ContextBudget, ConversationStore
 from desktop_pet.conversations.context import estimate_tokens
@@ -85,6 +86,24 @@ class CharacterProfileTests(unittest.TestCase):
         self.assertEqual(character_system_prompt(None), SYSTEM_PROMPT)
         self.assertEqual(direct_agent_system_prompt(None), DIRECT_AGENT_PROMPT)
         self.assertEqual(agent_system_prompt(SYSTEM_PROMPT), ROUTING_PROMPT)
+        for prompt in (SYSTEM_PROMPT, DIRECT_AGENT_PROMPT, ROUTING_PROMPT, harness_personality(None)):
+            self.assertEqual(prompt.count(DEFAULT_PERSONA), 1)
+            self.assertEqual(prompt.count(TASK_FOCUS_POLICY), 1)
+            self.assertLessEqual(estimate_tokens(prompt) + 12, ContextBudget().system_tokens)
+
+    def test_card_replaces_default_identity_in_every_chat_and_task_mode(self):
+        selected = card("星璃", personality="沉稳，称呼用户为旅伴")
+        chat_prompt = character_system_prompt(selected)
+        for prompt in (chat_prompt, agent_system_prompt(chat_prompt),
+                       direct_agent_system_prompt(selected), harness_personality(selected)):
+            with self.subTest(prompt=prompt[:50]):
+                self.assertIn("星璃", prompt)
+                self.assertIn("旅伴", prompt)
+                self.assertNotIn("鲸鱼娘", prompt)
+                self.assertNotIn("主人", prompt)
+                self.assertIn(TASK_FOCUS_POLICY, prompt)
+        self.assertNotIn('"reply"', harness_personality(None))
+        self.assertNotIn("agent_request", harness_personality(None))
 
     def test_persona_macros_and_modes_preserve_host_rules(self):
         selected = CharacterCard.from_dict({"spec": "chara_card_v3", "spec_version": "3.0", "data": {

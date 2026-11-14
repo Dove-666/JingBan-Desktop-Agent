@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>鲸鱼娘 · 像素风</title>
+  <style>
+    :root{color-scheme:light;--ink:#18354e;--muted:#788b9c;--line:#e0e8ef;--stage:#f5f8fb}
+    *{box-sizing:border-box}
+    body{margin:0;background:#eef3f7;color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+    button{font:inherit;cursor:pointer}
+    button:focus-visible,a:focus-visible{outline:3px solid #72c3e8;outline-offset:4px}
+    main{max-width:1600px;margin:auto;padding:40px 44px 42px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-bottom:30px}
+    .eyebrow{margin:0 0 10px;font-size:11px;font-weight:700;color:#7491aa;letter-spacing:2px}
+    h1{margin:0;font-size:32px;font-weight:650;line-height:1.25;letter-spacing:-.6px}
+    .subtitle{margin:10px 0 0;font-size:13px;color:var(--muted);line-height:1.7}
+    .controls{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+    .segment{display:flex;gap:3px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#e7eef4}
+    .segment button{border:0;border-radius:8px;background:transparent;padding:9px 12px;font-size:13px;color:#657e92;white-space:nowrap}
+    .segment button[aria-pressed="true"]{background:white;color:#1a4a6b;box-shadow:0 1px 5px #234c6817}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+    .card{margin:0;min-width:0;padding:14px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 3px 12px #193b5503}
+    .stage{background:var(--stage)}
+    .art-button{display:grid;place-items:center;width:100%;aspect-ratio:1;border:0;border-radius:13px;padding:12px;overflow:hidden}
+    .art{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;transition:transform .18s ease,border-radius .18s ease}
+    .art-button:hover .art{transform:scale(1.025)}
+    figcaption{display:flex;align-items:center;gap:10px;margin:15px 2px 12px;font-size:15px;font-weight:600;line-height:24px}
+    .number{display:inline-block;min-width:35px;border-radius:7px;background:#edf4f9;color:#5b7e99;font-size:11px;font-weight:650;line-height:24px;text-align:center;font-variant-numeric:tabular-nums}
+    .comparison{margin-left:auto;font-size:10px;font-weight:400;color:#98a5af;white-space:nowrap}
+    .sizes{display:flex;justify-content:center;align-items:flex-end;gap:26px;min-height:96px;padding:8px 0 0;border-top:1px solid #edf2f6}
+    .size-sample{display:flex;flex-direction:column;align-items:center;gap:8px}
+    .sample-stage{display:grid;place-items:center;padding:4px;border-radius:7px}
+    .sample-stage img{display:block;object-fit:contain;image-rendering:pixelated}
+    .size-label{font-size:10px;line-height:16px;color:#91a0ad;font-variant-numeric:tabular-nums}
+    footer{margin-top:26px;text-align:center;color:#8a9ba8;font-size:12px;line-height:1.8}
+    body[data-background="dark"]{--stage:#172738}
+    body[data-background="checker"] .stage{background-color:#fff;background-image:linear-gradient(45deg,#e4eaf0 25%,transparent 25%),linear-gradient(-45deg,#e4eaf0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e4eaf0 75%),linear-gradient(-45deg,transparent 75%,#e4eaf0 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}
+    body[data-shape="rounded"] .art,body[data-shape="rounded"] .sample-stage img{border-radius:24%}
+    body[data-shape="circle"] .art,body[data-shape="circle"] .sample-stage img{border-radius:50%}
+    dialog{padding:0;width:860px;max-width:94vw;max-height:94vh;overflow:auto;border:1px solid #d8e4ed;border-radius:24px;background:white;box-shadow:0 24px 100px #0005}
+    dialog::backdrop{background:#142637aa;backdrop-filter:blur(10px)}
+    .viewer-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px}
+    .viewer-title{margin:0;font-size:16px;font-weight:650}
+    .viewer-actions{display:flex;align-items:center;gap:14px}
+    .original-link{font-size:13px;color:#4b7898;text-decoration:none}
+    .close{display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:50%;background:#edf3f7;color:#58738a;font-size:24px;line-height:1}
+    .viewer-stage{margin:0 16px 16px;padding:18px;border-radius:14px}
+    .viewer-stage img{display:block;max-width:100%;max-height:76vh;width:auto;height:auto;margin:auto;object-fit:contain;image-rendering:pixelated}
+    @media(max-width:1150px){main{padding:28px}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}header{align-items:flex-start;flex-direction:column}.controls{justify-content:flex-start}}
+    @media(max-width:760px){main{padding:24px 16px 32px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{padding:10px;border-radius:16px}.art-button{padding:6px}h1{font-size:27px}figcaption{font-size:13px;gap:7px;margin:12px 0}.sizes{gap:10px}.segment button{padding:8px 10px}.comparison{display:none}}
+    @media(max-width:430px){.grid{grid-template-columns:1fr}.sizes{gap:28px}.comparison{display:inline}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+    body.sheet{width:1600px;min-width:1600px}
+    .sheet main{width:1600px;max-width:none;padding:34px 48px 24px}
+    .sheet header{display:block;height:104px;margin-bottom:20px}
+    .sheet h1{font-size:34px}
+    .sheet .controls,.sheet .sizes,.sheet footer{display:none}
+    .sheet .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;grid-auto-rows:390px}
+    .sheet .card{height:390px;padding:16px;border-radius:18px;box-shadow:none}
+    .sheet .art-button{height:318px;aspect-ratio:auto;padding:8px;border-radius:10px;pointer-events:none}
+    .sheet figcaption{margin:16px 2px 0;font-size:16px;line-height:24px}
+    .sheet .number{font-size:12px}
+  </style>
+</head>
+<body data-background="light" data-shape="original">
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">鲸伴 / PIXEL COLLECTION</p>
+        <h1>鲸鱼娘 · 像素风</h1>
+        <p class="subtitle">保留原设 · 8 款透明底候选</p>
+      </div>
+      <div class="controls" aria-label="图标预览选项">
+        <div class="segment" role="group" aria-label="预览背景">
+          <button type="button" data-background="light" aria-pressed="true">浅色</button>
+          <button type="button" data-background="dark" aria-pressed="false">深色</button>
+          <button type="button" data-background="checker" aria-pressed="false">透明棋盘</button>
+        </div>
+        <div class="segment" role="group" aria-label="图标裁切形状">
+          <button type="button" data-shape="original" aria-pressed="true">原图</button>
+          <button type="button" data-shape="rounded" aria-pressed="false">圆角</button>
+          <button type="button" data-shape="circle" aria-pressed="false">圆形</button>
+        </div>
+      </div>
+    </header>
+    <section class="grid" id="candidates" aria-label="八款像素风图标候选"></section>
+    <footer>点击图标查看原图 · 下方为 32 / 48 / 64 CSS 像素预览<br>P08 为全身对比选项，小尺寸辨识度可能不如头像。</footer>
+  </main>
+  <dialog id="viewer" aria-labelledby="viewer-title">
+    <div class="viewer-bar">
+      <p id="viewer-title" class="viewer-title"></p>
+      <div class="viewer-actions">
+        <a id="original-link" class="original-link" target="_blank" rel="noopener">打开原图</a>
+        <button id="close-viewer" class="close" type="button" aria-label="关闭预览">×</button>
+      </div>
+    </div>
+    <div class="viewer-stage stage"><img id="viewer-image" alt=""></div>
+  </dialog>
+  <script>
+    const choices = [
+      ['P01-classic.png', '经典笑脸'],
+      ['P02-detailed.png', '细腻头像'],
+      ['P03-wink.png', '俏皮眨眼'],
+      ['P04-three-quarter.png', '微侧头像'],
+      ['P05-chunky.png', '复古大像素'],
+      ['P06-soft-smile.png', '温柔微笑'],
+      ['P07-bust.png', '原设半身'],
+      ['P08-full-body.png', '迷你全身'],
+    ];
+    if (new URLSearchParams(location.search).get('sheet') === '1') document.body.classList.add('sheet');
+    const gallery = document.getElementById('candidates');
+    const viewer = document.getElementById('viewer');
+    for (const [index, [file, name]] of choices.entries()) {
+      const number = `P${String(index + 1).padStart(2, '0')}`;
+      const card = document.createElement('figure');
+      card.className = 'card';
+      const button = document.createElement('button');
+      button.className = 'art-button stage';
+      button.type = 'button';
+      button.setAttribute('aria-label', `放大 ${number} ${name}`);
+      const image = document.createElement('img');
+      image.className = 'art';
+      image.src = file;
+      image.alt = `${number} ${name}鲸鱼娘像素图标`;
+      image.decoding = 'sync';
+      button.append(image);
+      const caption = document.createElement('figcaption');
+      const badge = document.createElement('span');
+      badge.className = 'number';
+      badge.textContent = number;
+      const label = document.createElement('span');
+      label.textContent = name;
+      caption.append(badge, label);
+      if (index === 7) {
+        const note = document.createElement('span');
+        note.className = 'comparison';
+        note.textContent = '全身对比';
+        caption.append(note);
+      }
+      const sizes = document.createElement('div');
+      sizes.className = 'sizes';
+      for (const size of [32, 48, 64]) {
+        const sample = document.createElement('div');
+        sample.className = 'size-sample';
+        const stage = document.createElement('span');
+        stage.className = 'sample-stage stage';
+        const small = document.createElement('img');
+        small.src = file;
+        small.alt = `${size} 像素预览`;
+        small.width = size;
+        small.height = size;
+        stage.append(small);
+        const sizeLabel = document.createElement('span');
+        sizeLabel.className = 'size-label';
+        sizeLabel.textContent = `${size} px`;
+        sample.append(stage, sizeLabel);
+        sizes.append(sample);
+      }
+      button.addEventListener('click', () => {
+        const expanded = document.getElementById('viewer-image');
+        expanded.src = file;
+        expanded.alt = `${number} ${name}原图`;
+        document.getElementById('viewer-title').textContent = `${number} · ${name}`;
+        document.getElementById('original-link').href = file;
+        viewer.showModal();
+      });
+      card.append(button, caption, sizes);
+      gallery.append(card);
+    }
+    for (const attribute of ['background', 'shape']) {
+      document.querySelectorAll(`button[data-${attribute}]`).forEach(button => {
+        button.addEventListener('click', () => {
+          document.body.dataset[attribute] = button.dataset[attribute];
+          document.querySelectorAll(`button[data-${attribute}]`).forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+        });
+      });
+    }
+    document.getElementById('close-viewer').addEventListener('click', () => viewer.close());
+    viewer.addEventListener('click', event => {
+      if (event.target !== viewer) return;
+      const rect = viewer.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) viewer.close();
+    });
+    Promise.all([...document.images].map(image => image.complete ? Promise.resolve() : new Promise(resolve => {
+      image.addEventListener('load', resolve, { once: true });
+      image.addEventListener('error', resolve, { once: true });
+    }))).then(() => { document.documentElement.dataset.galleryReady = 'true'; });
+  </script>
+</body>
+</html>

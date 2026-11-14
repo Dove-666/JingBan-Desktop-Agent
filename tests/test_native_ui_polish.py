@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from desktop_pet.config import PetConfig
 from desktop_pet.pet_window import PetWindow
+from desktop_pet.perception.settings import PerceptionSettings
 from desktop_pet.tray import DesktopTray
 from desktop_pet.ui.debug_panel import DebugPanel
 from desktop_pet.ui.settings_page import SettingsPage
@@ -33,7 +34,7 @@ class FakeObservation(QObject):
 
     def __init__(self, enabled=False, allow_remote=False):
         super().__init__()
-        self.settings = SimpleNamespace(enabled=enabled, allow_remote=allow_remote)
+        self.settings = PerceptionSettings(enabled=enabled, allow_remote=allow_remote)
         self.paused = False
         self.observer = FakeObserver()
         self.saved_changes = []
@@ -43,9 +44,18 @@ class FakeObservation(QObject):
         self.paused_changed.emit(paused)
 
     def set_enabled(self, enabled):
-        self.saved_changes.append(enabled)
-        self.settings.enabled = enabled
+        self.update_settings(replace(self.settings, enabled=enabled))
+
+    def update_settings(self, settings):
+        self.saved_changes.append(settings.enabled)
+        self.settings = settings
         self.settings_changed.emit(self.settings)
+        return True
+
+    def revoke_permissions(self, *, local=False, remote=False):
+        return self.update_settings(replace(
+            self.settings, enabled=False if local else self.settings.enabled,
+            allow_remote=False if remote else self.settings.allow_remote))
 
 
 class NativeUiPolishTests(unittest.TestCase):
@@ -82,6 +92,7 @@ class NativeUiPolishTests(unittest.TestCase):
         self.widgets.append(pet)
         session = SimpleNamespace(pet=pet, perception=FakeObservation(True), camera=FakeObservation(),
                                   open_chat_window=Mock(), open_settings=Mock(), open_memory_window=Mock(),
+                                  open_remote_settings=Mock(),
                                   open_camera_settings=Mock(), toggle_pet_visibility=Mock(), shutdown=Mock())
         with patch("desktop_pet.tray.QSystemTrayIcon.isSystemTrayAvailable", return_value=False):
             tray = DesktopTray(session, "")
@@ -124,40 +135,44 @@ class NativeUiPolishTests(unittest.TestCase):
         self.assertEqual(page.section_key, "agent")
         self.assertEqual(page.section_title.text(), "电脑 Agent")
 
-    def test_tray_refresh_and_temporary_pause_never_change_saved_camera_consent(self):
+    def test_compact_tray_routes_actions_without_changing_camera_consent(self):
         session, tray = self.tray()
-        self.assertIn("屏幕感知：已启用 · 仅本地", tray.icon.toolTip())
-        self.assertIn("摄像头：已关闭", tray.icon.toolTip())
-        self.assertFalse(tray.camera_pause_action.isEnabled())
+        labels = [action.text() for action in tray.menu.actions() if not action.isSeparator()]
+        self.assertEqual(labels, ["设置", "远程连接", "显示桌宠", "关闭屏幕感知", "退出"])
+        tray.settings_action.trigger()
+        tray.remote_action.trigger()
+        session.open_settings.assert_called_once()
+        session.open_remote_settings.assert_called_once()
         tray.refresh()
+        tray.screen_action.trigger()
+        self.assertFalse(session.perception.settings.enabled)
+        self.assertEqual(tray.screen_action.text(), "开启屏幕感知")
+        tray.screen_action.trigger()
+        self.assertTrue(session.perception.settings.enabled)
+        self.assertFalse(session.perception.settings.allow_remote)
+        self.assertEqual(session.perception.saved_changes, [False, True])
         self.assertEqual(session.camera.saved_changes, [])
-        tray.camera_action.trigger()
-        self.assertEqual(session.camera.saved_changes, [True])
-        self.assertIn("准备中", tray.camera_status_action.text())
-        session.camera.observer.active = True
-        session.camera.observer.active_changed.emit(True)
-        self.assertIn("使用中 · 仅本地", tray.camera_status_action.text())
-        tray.camera_pause_action.trigger()
-        self.assertTrue(session.camera.paused)
-        self.assertTrue(session.camera.settings.enabled)
-        self.assertIn("摄像头：已暂停", tray.icon.toolTip())
-        tray.camera_pause_action.trigger()
-        self.assertFalse(session.camera.paused)
-        self.assertEqual(session.camera.saved_changes, [True])
+        self.assertFalse(session.camera.settings.enabled)
+        self.assertFalse(session.camera.settings.allow_remote)
 
     def test_screen_pause_and_saved_shutdown_have_distinct_truthful_states(self):
         session, tray = self.tray()
-        tray.pause_action.trigger()
+        session.perception.set_paused(True)
         self.assertTrue(session.perception.paused)
-        self.assertIn("屏幕感知：已暂停", tray.icon.toolTip())
-        session.perception.settings.enabled = False
-        session.perception.settings_changed.emit(session.perception.settings)
-        self.assertIn("屏幕感知：已关闭", tray.icon.toolTip())
-        tray.pause_action.trigger()
+        self.assertEqual(tray.screen_action.text(), "开启屏幕感知")
+        tray.screen_action.trigger()
         self.assertFalse(session.perception.paused)
-        self.assertFalse(tray.pause_action.isEnabled())
+        self.assertTrue(session.perception.settings.enabled)
+        self.assertEqual(tray.screen_action.text(), "关闭屏幕感知")
         self.assertFalse(session.camera.settings.enabled)
         self.assertEqual(session.perception.saved_changes, [])
+        session.perception.set_paused(True)
+        session.perception.set_enabled(False)
+        tray.screen_action.trigger()
+        self.assertFalse(session.perception.paused)
+        self.assertTrue(session.perception.settings.enabled)
+        self.assertFalse(session.perception.settings.allow_remote)
+        self.assertEqual(session.perception.saved_changes, [False, True])
 
     def test_pet_hover_explains_existing_hits_without_changing_interaction(self):
         with tempfile.TemporaryDirectory(prefix="aura-native-hover-") as directory:

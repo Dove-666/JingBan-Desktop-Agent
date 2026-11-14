@@ -77,6 +77,7 @@ class ApplicationController(QObject):
         self.pet.bubble.conversation_requested.connect(self.open_linked_conversation)
         self.pet.click_handler = self._pet_clicked
         self.tray = DesktopTray(self, config.image_path, self)
+        self.pet.context_menu = self.tray.menu
         self.remote = RemoteController(self, parent=self)
         self._selection_dialogs = {}
         self.selection_inbox = None

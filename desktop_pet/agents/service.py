@@ -866,6 +866,26 @@ class AgentService:
             raise AgentValidationError("图片参考资料无效。")
         safe["image_catalog"] = [{"attachment_id": item["attachment_id"],
                                   "label": _redact(item["label"], secrets)} for item in catalog]
+        attachment = context.get("current_file")
+        if attachment is not None:
+            try:
+                if (not isinstance(attachment, dict) or set(attachment) != {"path", "name", "size", "sha256"}
+                        or not isinstance(attachment["path"], str) or not isinstance(attachment["name"], str)
+                        or type(attachment["size"]) is not int or not 0 <= attachment["size"] <= 32 * 1024 * 1024
+                        or not isinstance(attachment["sha256"], str) or not re.fullmatch(r"[a-f0-9]{64}", attachment["sha256"])):
+                    raise ValueError
+                path = Path(attachment["path"])
+                workspace = Path(settings.workspace).expanduser().resolve()
+                if (not path.is_absolute() or path.resolve() != path or not path.is_relative_to(workspace / ".aura-attachments")
+                        or path.name != attachment["name"] or path.stat().st_size != attachment["size"]):
+                    raise ValueError
+                with path.open("rb") as stream:
+                    raw = stream.read(32 * 1024 * 1024 + 1)
+                if len(raw) != attachment["size"] or hashlib.sha256(raw).hexdigest() != attachment["sha256"]:
+                    raise ValueError
+                safe["current_file"] = dict(attachment)
+            except (ValueError, OSError):
+                raise AgentValidationError("本次文件附件不可用，请重新上传。") from None
         image = current_image(context.get("current_image_url"))
         if image:
             safe["current_image_url"] = image
@@ -973,6 +993,7 @@ class AgentService:
                 raise _error("guardian_unavailable")
         options = {"workspace": str(Path(settings.workspace or _workspace_root()).resolve()),
                    "tools_enabled": settings.tools_enabled, "computer_enabled": settings.computer_enabled,
+                   "approval_mode": settings.approval_mode,
                    "max_steps": settings.max_steps, "timeout_seconds": settings.timeout_seconds}
         self._check_guardian_scope(options["workspace"])
         payload = {"type": "run", "id": task_id, "kind": request.kind,
@@ -1099,8 +1120,8 @@ class AgentService:
                     if kind == "progress":
                         notify(frame["phase"])
                     elif kind == "activity":
-                        value = public_activity(frame)
-                        if callable(event_callback):
+                        value = public_activity(frame, lambda text: _redact(text, secrets))
+                        if value is not None and callable(event_callback):
                             try: event_callback(value)
                             except Exception: pass
                     elif kind == "session":
@@ -1229,12 +1250,16 @@ class AgentService:
             if kind == "progress":
                 if frame.get("phase") not in PROGRESS_MESSAGES: raise ValueError()
             elif kind == "activity":
-                if (frame.get("kind") not in {"tool", "computer", "progress"}
+                if (frame.get("kind") not in {"tool", "computer", "progress", "commentary"}
                         or not isinstance(frame.get("name"), str) or len(frame["name"]) > 160
                         or frame.get("status") not in {"running", "completed", "failed"}
                         or not isinstance(frame.get("event_id"), str)
                         or not re.fullmatch(r"[a-zA-Z0-9_-]{1,160}", frame["event_id"])
                         or "step" in frame and (type(frame["step"]) is not int or frame["step"] < 0)):
+                    raise ValueError()
+                if frame["kind"] == "commentary" and (
+                        frame["name"] != "assistant_commentary" or frame["status"] != "completed"
+                        or not isinstance(frame.get("text"), str) or not 0 < len(frame["text"]) <= 3000):
                     raise ValueError()
             elif kind == "session":
                 if not valid_session_id(frame.get("dsh_session_id")): raise ValueError()

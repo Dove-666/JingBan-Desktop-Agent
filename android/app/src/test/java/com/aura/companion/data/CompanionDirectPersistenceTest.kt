@@ -174,15 +174,16 @@ class CompanionDirectPersistenceTest {
         try {
             val upgraded = CompanionDatabase(context, name)
             try {
-            assertEquals(5, upgraded.readableDatabase.version)
+                assertEquals(6, upgraded.readableDatabase.version)
                 assertEquals("public-ticket", upgraded.device()!!.ticket)
                 assertEquals("desktop", upgraded.device()!!.endpointId)
                 assertEquals(42L, upgraded.cursor())
-            assertFalse(upgraded.initialized()) // Refresh old records once to fetch public process history.
+                assertFalse(upgraded.initialized()) // Refresh old records once to fetch public process history and file labels.
                 assertEquals("升级前已保存的正文", upgraded.messages(cid).single { it.id == mid }.content)
                 assertEquals("queued", upgraded.operation(queued)!!.item.status)
                 assertFalse(upgraded.operation(queued)!!.item.hidden)
                 assertTrue(upgraded.directTurns().isEmpty())
+                assertTrue(upgraded.pendingFiles().isEmpty())
                 val turn = upgraded.beginDirectTurn(cid, "升级后手机提问", null)
                 upgraded.finishDirectTurn(turn.id, "升级后手机回复")
                 assertEquals(setOf(mid, queued, turn.userId, turn.assistantId), upgraded.messages(cid).map { it.id }.toSet())

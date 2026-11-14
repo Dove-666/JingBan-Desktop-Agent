@@ -16,8 +16,8 @@ android {
         applicationId = "com.aura.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "1.20.0"
+        versionCode = 31
+        versionName = "1.21.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -69,6 +69,9 @@ android {
 }
 
 dependencies {
+    implementation("org.commonmark:commonmark:0.32.0")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.32.0")
+    implementation("org.commonmark:commonmark-ext-gfm-strikethrough:0.32.0")
     implementation(platform("androidx.compose:compose-bom:2025.04.01"))
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.activity:activity-compose:1.10.1")
@@ -87,6 +90,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
+    testImplementation(platform("androidx.compose:compose-bom:2025.04.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

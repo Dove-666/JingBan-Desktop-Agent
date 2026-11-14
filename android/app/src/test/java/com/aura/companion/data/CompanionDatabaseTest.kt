@@ -235,6 +235,27 @@ class CompanionDatabaseTest {
         }
     }
 
+    @Test fun specificComputerActionsPersistWithoutDesktopCommentaryOrDetails() {
+        val trace = JSONObject().put("version", 1).put("state", "running")
+            .put("started_at", "2026-11-15T02:00:00Z").put("duration_ms", 1000)
+            .put("events", JSONArray().put(JSONObject().put("id", "step-0").put("kind", "computer")
+                .put("label", "向下滚动").put("status", "completed").put("elapsed_ms", 10)
+                .put("detail", "PRIVATE_WINDOW_DETAIL"))
+                .put(JSONObject().put("id", "step-1").put("kind", "computer")
+                    .put("label", "选择应用").put("status", "completed").put("elapsed_ms", 15))
+                .put(JSONObject().put("id", "step-2").put("kind", "commentary")
+                    .put("label", "执行命令").put("status", "completed").put("elapsed_ms", 20)))
+        val item = message()
+        item.getJSONObject("data").put("execution_mode", "agent").put("request_status", "pending")
+            .put("agent_activity", "子任务开始工作").put("agent_trace", trace)
+        db.stageSnapshotPage(snapshot(listOf(conversation(), item), 3), true)
+        val saved = db.messages(cid).single()
+        assertEquals("子任务开始工作", saved.agentActivity)
+        assertEquals(listOf("向下滚动", "选择应用"), saved.execution?.events?.map { it.label })
+        assertFalse(saved.execution!!.canonicalJson().contains("PRIVATE"))
+        assertFalse(saved.execution!!.canonicalJson().contains("commentary"))
+    }
+
     @Test fun stagedImageIsConversationSpecificAndQueueConsumptionIsAtomic() {
         val first = db.createConversation(); val second = db.createConversation()
         db.stageImage(first, image()); db.stageImage(second, image("b".repeat(64)))
@@ -282,6 +303,22 @@ class CompanionDatabaseTest {
         assertTrue(db.outbox().isEmpty())
     }
 
+    @Test fun deletedConversationReleasesBothComposerAndQueuedFileCachePins() {
+        db.saveDevice(DeviceInfo("PC", "desktop", "synthetic-ticket"), "phone")
+        db.stageSnapshotPage(snapshot(listOf(conversation(), message()), 7), true)
+        val first = PendingFile(cid, "a".repeat(64), "first.pdf", "application/pdf", 32L * 1024 * 1024,
+            "synthetic-cache-a", "desktop")
+        db.stageFile(first)
+        val request = db.queueAgentMessage(cid, "Old task", first)
+        db.stageFile(first.copy(id = "b".repeat(64), filename = "second.pdf", localPath = "synthetic-cache-b"))
+        assertEquals(setOf("a".repeat(64), "b".repeat(64)), db.protectedFileIds())
+        db.stageSnapshotPage(snapshot(emptyList(), 8), true)
+        assertTrue(db.isConversationDeleted(cid)); assertNull(db.pendingFile(cid))
+        assertTrue(db.protectedFileIds().isEmpty())
+        assertEquals("needs_attention", db.operation(request)!!.item.status)
+        assertEquals("Old task", db.operation(request)!!.item.text)
+    }
+
     @Test fun versionOneUpgradePreservesHistoryLegacyInboxQueueAndPairing() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val name = "version-one-${UUID.randomUUID()}.db"
@@ -317,14 +354,16 @@ class CompanionDatabaseTest {
         try {
             val upgraded = CompanionDatabase(context, name)
             try {
-            assertEquals(5, upgraded.readableDatabase.version)
+                assertEquals(6, upgraded.readableDatabase.version)
                 assertEquals("public-ticket", upgraded.device()!!.ticket)
                 assertEquals(42L, upgraded.cursor())
+                assertFalse(upgraded.initialized())
                 assertEquals("已有消息", upgraded.messages(cid).first { it.id == mid }.content)
                 assertNull(upgraded.messages(cid).first { it.id == mid }.attachmentId)
                 assertEquals("image.upload", upgraded.operation("legacy-upload")!!.item.method)
                 assertNull(upgraded.operation("legacy-upload")!!.dependencyId)
                 assertEquals(listOf("legacy-upload"), upgraded.outgoing().map { it.item.requestId })
+                assertTrue(upgraded.pendingFiles().isEmpty())
                 upgraded.stageImage(cid, image())
                 assertNotNull(upgraded.pendingImage(cid))
                 assertEquals("chat.send", upgraded.operation(upgraded.queueMessage(cid, "新图文"))!!.item.method)

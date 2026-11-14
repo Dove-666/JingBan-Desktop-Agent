@@ -31,13 +31,15 @@ class AgentArtifactRepositoryTest {
         var corrupt = false
         var wrongOffset = false
         var changedMetadata = false
+        var messageId: String? = null
+        var chunkMessageId: String? = null
         var beforeChunk: (() -> Unit)? = null
         var gets = 0
         val reference = "artifact_" + "a".repeat(64)
         fun metadata() = JSONObject().put("reference", reference).put("name", "验收文档.docx")
             .put("mime", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
             .put("bytes", data.size).put("sha256", MessageDigest.getInstance("SHA-256").digest(data).joinToString("") { "%02x".format(it) })
-            .put("verification_scope", "format_and_readback")
+            .put("verification_scope", "format_and_readback").apply { messageId?.let { put("message_id", it) } }
         override suspend fun connect(ticket: String) = Unit
         override suspend fun close() = Unit
         override suspend fun request(method: String, params: JSONObject, requestId: String): JSONObject {
@@ -52,6 +54,7 @@ class AgentArtifactRepositoryTest {
                     val bytes = data.copyOfRange(offset, end)
                     if (corrupt && bytes.isNotEmpty()) bytes[0] = (bytes[0].toInt() xor 1).toByte()
                     ok(metadata().also { if (changedMetadata) it.put("name", "changed.docx") }
+                        .apply { chunkMessageId?.let { put("message_id", it) } }
                         .put("offset", if (wrongOffset) offset + 1 else offset).put("total_bytes", data.size)
                         .put("next_offset", if (end < data.size) end else JSONObject.NULL)
                         .put("data_base64", Base64.encodeToString(bytes, Base64.NO_WRAP)))
@@ -85,6 +88,18 @@ class AgentArtifactRepositoryTest {
             rpc.cid = repo.newConversation(); repo.reconnect()
             val result = repo.downloadArtifact(rpc.cid, rpc.reference)!!
             assertEquals(0L, result.file.length()); assertEquals(1, rpc.gets); result.file.delete()
+        } finally { repo.close() }
+    }
+
+    @Test fun artifactKeepsOwningMessageAndAllowsAssociationToArriveDuringDownload() = runBlocking<Unit> {
+        val rpc = Rpc(); val repo = AppRepository(context, rpc, database(), Vault())
+        try {
+            rpc.messageId = UUID.randomUUID().toString()
+            rpc.cid = repo.newConversation(); repo.reconnect()
+            assertEquals(rpc.messageId, repo.state.value.agentArtifacts.single().messageId)
+            rpc.chunkMessageId = UUID.randomUUID().toString()
+            val result = repo.downloadArtifact(rpc.cid, rpc.reference)!!
+            assertArrayEquals(rpc.data, result.file.readBytes()); result.file.delete()
         } finally { repo.close() }
     }
 

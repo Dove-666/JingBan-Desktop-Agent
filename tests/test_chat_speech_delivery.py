@@ -16,7 +16,6 @@ from PySide6.QtWidgets import QApplication
 
 from desktop_pet.application_controller import ApplicationController
 from desktop_pet.config import PetConfig
-from desktop_pet.bubble import LONG_REPLY_NOTICE
 from desktop_pet.perception.settings import PerceptionSettings
 from desktop_pet.settings_manager import ApiSettings
 from tests.mock_api import MockApiServer
@@ -121,23 +120,28 @@ class ChatSpeechDeliveryTests(unittest.TestCase):
             self.assertEqual(self.bubble._speech_sequence, sequence)
             self.assertFalse(self.bubble.isVisible())
 
-    def test_long_multiline_reply_uses_compact_bubble_and_preserves_complete_archive(self):
+    def test_long_multiline_reply_clears_old_bubble_and_preserves_complete_archive(self):
         reply = ("第一段：中文与鲸鱼🐳，家人👨‍👩‍👧‍👦一起看海。\n"
                  "第二段保留换行和组合字 e\u0301。\n\n") * 20
         with MockApiServer() as server:
             self.configure(server)
             self.session.pet_controller.set_scale(50)
+            self.send_reply(server, "先显示这一条短回复。", "happy")
+            self.settle()
+            self.assertTrue(self.bubble.isVisible())
             message = self.send_reply(server, reply, "neutral")
-            self.assertEqual(self.bubble._text, LONG_REPLY_NOTICE)
+            self.settle()
+            self.assertFalse(self.bubble.isVisible())
+            self.assertEqual(self.bubble._text, "")
+            self.assertIsNone(self.bubble._conversation_link)
+            for timer in (self.bubble.hide_timer, self.bubble._page_timer, self.bubble._deadline_timer):
+                self.assertFalse(timer.isActive())
             self.assertEqual(message["content"], reply.strip())
-            self.assertEqual("".join(self.bubble._pages), LONG_REPLY_NOTICE)
-            self.assertLessEqual(len(self.bubble._pages), 2)
             self.assertEqual(self.chat.store.load_messages(message["conversation_id"])[-1]["content"], reply.strip())
             focused = QSignalSpy(self.chat.message_focus_requested)
-            QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton, pos=self.bubble._text_rect.center().toPoint())
+            self.session.open_chat_window()
             spin_until(lambda: self.session.chat_window is not None and not self.chat.history_loading)
-            self.assertEqual(focused.count(), 1)
-            self.assertEqual(focused.at(0)[0], message["id"])
+            self.assertEqual(focused.count(), 0)
             self.session.chat_window.chat_panel._activate_native()
             actual = self.session.chat_window.chat_panel.transcript.toPlainText()
             self.assertIn("家人👨‍👩‍👧‍👦一起看海", actual)

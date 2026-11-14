@@ -113,6 +113,8 @@ class DshOfficialHostTests(unittest.TestCase):
                         self.wfile.write(("data: " + json.dumps(frame) + "\n\n").encode("utf-8"))
                     emit({"role": "assistant"})
                     if tool:
+                        if count == 1:
+                            emit({"content": "先创建报告，再把文件交给你。"})
                         emit({"tool_calls": [{"index": 0, "id": f"call-{count}", "type": "function",
                             "function": {"name": tool, "arguments": json.dumps(args)}}]})
                     else:
@@ -138,7 +140,10 @@ class DshOfficialHostTests(unittest.TestCase):
                 if external:
                     file_name = str(target)
                 service = AgentService(checkpoint_path=root / "private" / "legacy.sqlite3")
-                settings = AgentSettings(workspace=str(workspace), computer_enabled=False, timeout_seconds=60)
+                # This fixture checks file delivery/session resume, not review-model responses.
+                # The three permission paths have dedicated official-SDK acceptance tests.
+                settings = AgentSettings(workspace=str(workspace), computer_enabled=False,
+                                         approval_mode="full", timeout_seconds=60)
                 cid = str(uuid4())
                 context = {"api": {"base_url": f"http://127.0.0.1:{server.server_port}/v1", "model": "fixture-model"},
                     "conversation_id": cid, "conversation_generation": str(uuid4()),
@@ -183,6 +188,12 @@ class DshOfficialHostTests(unittest.TestCase):
                     self.assertNotEqual(requests[-1].get("reasoning_effort"), "high")
                     self.assertFalse(any(item["role"] == "tool" for item in requests[-1]["messages"]))
                 self.assertEqual(len([event for event in events if event["kind"] == "tool" and event["status"] == "completed"]), 2)
+                commentary = [event for event in events if event["kind"] == "commentary"]
+                self.assertEqual([event["label"] for event in commentary], ["先创建报告，再把文件交给你。"])
+                self.assertEqual(events[0]["kind"], "commentary")
+                self.assertTrue(any(event.get("subject") == {"kind": "file", "name": target.name}
+                                    for event in events if event["kind"] == "tool"))
+                self.assertNotIn(str(root), json.dumps(events, ensure_ascii=False))
                 metadata_files = list((root / "private" / "dsh_sessions").rglob("session.json"))
                 self.assertEqual(len(metadata_files), 2 if reasoning_reset else 1)
                 for metadata in metadata_files:

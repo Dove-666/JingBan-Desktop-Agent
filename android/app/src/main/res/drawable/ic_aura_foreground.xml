@@ -1,6 +1,6 @@
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:insetLeft="14.8148%" android:insetTop="11.1111%"
-    android:insetRight="14.8148%" android:insetBottom="18.5185%">
+    android:insetLeft="19.4444%" android:insetTop="19.4444%"
+    android:insetRight="19.4444%" android:insetBottom="19.4444%">
     <bitmap android:src="@drawable/whale_icon_art"
-        android:gravity="fill" android:filter="true" />
+        android:gravity="fill" android:filter="false" />
 </inset>

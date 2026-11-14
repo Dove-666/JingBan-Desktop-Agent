@@ -50,7 +50,9 @@ class NativeDarkSurfaceTests(unittest.TestCase):
         self.widgets.append(owner)
         bubble = SpeechBubble(owner)
         source = "保留 #ffffff、white 和蓝色海浪。" * 70
-        bubble.say(source, 30000, conversation_link={"conversation_id": "local-c", "message_id": "local-m"})
+        # Exercise generic pagination here; ordinary long chat replies are
+        # intentionally kept in the transcript instead of shown in a bubble.
+        bubble.say(source, 30000)
         self.assertGreater(len(bubble._pages), 1)
         bubble._next_page()
         bubble._ensure_text_layer()

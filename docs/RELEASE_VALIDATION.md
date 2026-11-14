@@ -1,5 +1,19 @@
 # 验证记录
 
+## Windows 1.1.1：P01 像素启动图标
+
+2026-11-15。使用选定的 P01 像素鲸鱼娘图标，角色本体不变。当前源码重新执行 PyInstaller 冻结，没有沿用旧主程序；159 个冻结模块、2,718 项随包输入与当前源码一致，2,886 项源输入在检查期间保持稳定。102,150 个随包文件的长度及 SHA256 全部通过，ZIP 全部成员 CRC 通过。
+
+主程序、网页桥与安装器的 PE 图标资源都含有选定 ICO 的完整 10 个尺寸，逐帧字节一致；包内 ICO 与源码一致。选稿和原始 PNG 没有进入 Windows 安装内容。
+
+在项目外的独立中文空格目录安装，102,150 个安装后文件逐一核对通过，安装后的程序 `--help` 返回 0。隐私检查覆盖 102,153 个安装后文件和 2,293 个压缩模块，与本机配置的密钥在内存中比对，未发现密钥或随包个人数据；卸载器生成的 `unins000.dat` 中 8 次路径表示匹配单独保留，不视为分发内容。没有调用模型 API，没有修改个人配置。
+
+首次自动安装验收在快捷方式归属检查处失败，原报告保留。安装器按正常设置创建了默认开始菜单链接，而没有采用验收传入的 `/GROUP`；[Inno 官方说明](https://jrsoftware.org/inno-setup/documentation/topic_setupcmdline.htm)明确该参数在开始菜单页隐藏时不生效。安装前基线证明该链接原先不存在，安装日志及 Shell 读取的目标证明其属于本次独立副本；原桌面快捷方式保持不变。没有改变产品安装行为或重新安装，在同一副本补完上述检查后由原卸载器退出，安装目录、卸载注册项及本次新建链接均已移除，原快捷方式和启动项与安装前基线一致，3 份合成用户资料完整保留。
+
+补充报告通过，明确 `single_continuous_run=false`，不能写成原自动脚本连续通过。证据在 `artifacts/release-validation/pixel-1-1-1-inputs-20261115/`、`pixel-1-1-1-payload-20261115/`、`pixel-1-1-1-installed-20261115/`；安装记录以 `installer_acceptance.json` 和 `installer_acceptance-supplemental.json` 共同说明。图标及构建记录位于 `artifacts/pixel-icon-release/windows/`。
+
+本轮仅验证图标和打包交付，不重新验证整套 Agent 能力、模型任务、真实键鼠或原生聊天界面；Windows 包未做发行者代码签名。旧版交付和全部历史失败记录保留，未上传 GitHub。
+
 ## 1.1.0 / Android 1.20.0
 
 2026-11-15。Agent 执行循环、工具调用和会话恢复改为官方 DeepSeek Harness SDK 0.2.2-rc.3，电脑操作改为上游 Windows CUA。旧 Nanobot／UI-TARS 不进入当前运行和分发链路。Windows 内置经官方 SHA256 验证的 Node 24.22.3，不依赖开发机的系统 Node。

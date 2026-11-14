@@ -1,0 +1,91 @@
+{
+  "tool": "built-in image_gen",
+  "purpose": "Original icon style candidates for selection; not installed",
+  "reference": "assets/branding/android/whale-maid-icon-v1.png",
+  "candidates": [
+    {
+      "id": "01",
+      "name": "清爽平涂",
+      "slug": "flat-mascot",
+      "file": "01-flat-mascot.png",
+      "prompt": "Use case: stylized-concept. Asset: one high-design square app launcher icon for a whale-girl desktop companion, candidate 01.\nThe reference image supplies CHARACTER IDENTITY ONLY, not composition. Make a fresh premium icon, not a detailed anime illustration.\nSTYLE: radically simplified kawaii flat mascot identity, strong rounded shapes, confident deep-navy outlines, flat cobalt and mint-cyan color areas, warm ivory face. Blue-haired whale girl with a single wave-shaped ahoge, two small whale-fin-shaped side hair lobes with pale undersides, white scalloped maid headband, large friendly blue eyes and a small warm smile. Crop to oversized head and tiny white collar; omit hands, torso, intricate lace, embroidery, thin hair strands. Mint-cyan ends. Distinct, memorable silhouette.\nCOMPOSITION: visually centered frontal head, face fully readable at 32px, all essential face features inside central 60% and silhouette inside central 80%; uncluttered periwinkle background fills the whole square. No scene, no typography, no numerals, no watermarks, no device mockup, no multiple icons, no frames outside the icon. One finished square 1024x1024 icon, polished optical balance. No generic robot, cat ears, bunny ears or human photorealism."
+    },
+    {
+      "id": "02",
+      "name": "奶油软陶",
+      "slug": "cream-clay",
+      "file": "02-cream-clay.png",
+      "prompt": "Use case: stylized-concept. Create ONE original square app launcher icon, not a sheet or mockup. The input is CHARACTER REFERENCE ONLY. Reinterpret her with a fresh silhouette and composition. Identity: cute friendly whale-girl, cobalt-blue hair with cyan ends, blue eyes, small horizontal whale-fin side lobes with white undersides, a simplified white scalloped maid headband, tiny blue bows. Head only plus a hint of collar, NO hands, torso, long flowing hair, embroidery or scene. The face must be centered around the middle of the square, not at the bottom; compact forehead, short rounded hair. Keep the top curl very small and the ears short. Head silhouette within central 80%, all facial features within central 56%. Readable at 32px and under circular Android masks. NO text, numeral, watermark, existing brand logo, borders outside tile, app screenshot, cat or rabbit ears. Background fills entire square, one polished 1024x1024 design. STYLE: high-end 3D designer vinyl toy / soft matte clay. Very simplified sculpted round head, tiny wave-shaped curl, pillowy blue hair masses with turquoise tips, smooth cream porcelain-like face, expressive glossy black-blue eyes, tiny blush dots and a sweet closed-mouth smile. Short whale flippers at temples. No anime line art, no flat painting. Warm buttery cream background, soft overhead studio light, subtle ambient shadow beneath floating head. Tactile, restrained, premium, adorable. Straight-on near-orthographic close portrait."
+    },
+    {
+      "id": "03",
+      "name": "冰蓝琉璃",
+      "slug": "ice-glass",
+      "file": "03-ice-glass.png",
+      "prompt": "Use case: stylized-concept. Create ONE original square app launcher icon, not a sheet or mockup. The input is CHARACTER REFERENCE ONLY. Reinterpret her with a fresh silhouette and composition. Identity: cute friendly whale-girl, cobalt-blue hair with cyan ends, blue eyes, small horizontal whale-fin side lobes with white undersides, a simplified white scalloped maid headband, tiny blue bows. Head only plus a hint of collar, NO hands, torso, long flowing hair, embroidery or scene. The face must be centered around the middle of the square, not at the bottom; compact forehead, short rounded hair. Keep the top curl very small and the ears short. Head silhouette within central 80%, all facial features within central 56%. Readable at 32px and under circular Android masks. NO text, numeral, watermark, existing brand logo, borders outside tile, app screenshot, cat or rabbit ears. Background fills entire square, one polished 1024x1024 design. STYLE: sophisticated liquid glass sculptural icon. A beautifully simplified whale-girl bust assembled from translucent ocean-blue glass hair lobes and frosted cyan whale fins, an opaque milky-white ceramic face and clean inlaid dark-blue eyes. One tiny warm smile. White opalescent scalloped headband. Gentle caustics and crisp rim highlights, no excessive sparkles, no hollow or creepy doll look. Pale ice-blue to pearl-lilac background. Front-facing centered sculpture, refined modern app design, broad shapes and strong readable face."
+    },
+    {
+      "id": "04",
+      "name": "珐琅徽章",
+      "slug": "enamel-badge",
+      "file": "04-enamel-badge.png",
+      "prompt": "Use case: stylized-concept. Create ONE original square app launcher icon, not a sheet or mockup. The input is CHARACTER REFERENCE ONLY. Reinterpret her with a fresh silhouette and composition. Identity: cute friendly whale-girl, cobalt-blue hair with cyan ends, blue eyes, small horizontal whale-fin side lobes with white undersides, a simplified white scalloped maid headband, tiny blue bows. Head only plus a hint of collar, NO hands, torso, long flowing hair, embroidery or scene. The face must be centered around the middle of the square, not at the bottom; compact forehead, short rounded hair. Keep the top curl very small and the ears short. Head silhouette within central 80%, all facial features within central 56%. Readable at 32px and under circular Android masks. NO text, numeral, watermark, existing brand logo, borders outside tile, app screenshot, cat or rabbit ears. Background fills entire square, one polished 1024x1024 design. STYLE: premium hard enamel character pin, graphic geometric silhouette, separated saturated cobalt/cyan/ivory enamel regions with delicate dark-navy metal ridges. Only one thin champagne-metal edge around the mascot, no external plaque or circular medal. Small glossy highlights in each enamel region, no individual hair strands. Head-on cute compact whale-girl face, gentle mischievous wink, tiny blush. Tiny collar bow integrated into bottom contour. Warm ivory background, subtle realistic cast shadow, looks like beautifully designed merchandise photographed straight on, not a detailed anime render."
+    },
+    {
+      "id": "05",
+      "name": "层叠纸雕",
+      "slug": "paper-cut",
+      "file": "05-paper-cut.png",
+      "prompt": "Create ONE designed square launcher icon of an original whale-girl maid companion. Style: exquisite modern layered paper-cut craft, entirely cut-paper shapes, clean silhouettes with a few stacked layers and softly cast shadows. A centered cheerful compact round female face in warm ivory, cobalt-blue short wavy bob with cyan lower tips, two short sideways whale fins attached as hair ornaments with pale undersides, little blue ribbons, scalloped white headband, very small curved wave tuft. Simple dark blue oval eyes and smile, rose circular cheeks. Only head, no body/hands. Use asymmetric hair sweep and a slight friendly tilt, graphic editorial composition rather than standard anime face. Cool pale seafoam background with a single subtle curved paper wave layer at the very bottom. Rich tactile uncoated paper, no plastic, no drawing linework, no complex scenography. Face centered in canvas, compact head occupies 75% square, essential features within central 55%, generous corners for circle crop. NO text, numbering, watermark, extra characters, device or frame. Square 1024x1024."
+    },
+    {
+      "id": "06",
+      "name": "复古像素",
+      "slug": "pixel",
+      "file": "06-pixel.png",
+      "prompt": "Create ONE square launcher icon, authentic deliberately chunky pixel-art design on a 64x64 logical pixel grid, hard square pixels with perfectly nearest-neighbor edges, limited coherent 12-color retro game palette, NO antialiasing, gradients, glossy 3D, blur or fine outline illustration. Original adorable blue-haired whale-girl maid HEAD: short cobalt bob with cyan hair tips, small horizontal whale-fin ears with white undersides, simplified white scalloped maid headband, tiny wave ahoge, tiny cyan bows; lively blue eyes with one bright pixel each, playful small smile and pink blush, small collar bow. Face in central area, compact chunky silhouette, forehead not exaggerated. Pale lavender flat background, one tiny 4-pixel sparkle at top-left, strong navy pixel contour. Visual center near square center and full head within central 78%, no body/hands, all key features visible under circle mask. Looks like a lovingly designed indie game's mascot app icon. No words, labels, watermark, border, collage or app screenshot. Output one square image."
+    },
+    {
+      "id": "07",
+      "name": "极简海浪标志",
+      "slug": "wave-mark",
+      "file": "07-wave-mark.png",
+      "prompt": "Design ONE original premium flat mascot LOGO as a square launcher icon for a friendly whale-girl AI desktop companion. The innovation is silhouette: dark cobalt flowing wave hair forms a compact nearly circular mark; two horizontal white-underbelly whale-fin hair lobes, a small scalloped white maid headband, two cyan hair tips, and the negative-space warm-ivory FEMALE FACE seamlessly form the emblem. Extremely reduced identity: two dark navy bean-shaped smiling eyes, tiny curved mouth, two pink cheek circles. Simple playful rounded geometric shape language, like a world-class friendly app mascot. NO elaborate anime eyes, NO realistic hair strands, NO body, NO lettering, NO letters or monogram. Matte flat screen-print shapes, 5-6 colors max, no shadows, no gradients, no textures, no 3D. The face is dominant with short rounded hair and compact forehead, very tiny wave curl, no huge top ornament. Entire emblem centered at 50% x 50%, 70% width and 70% height so it works in all circular icon crops. Bold coral-peach full square background for a fresh contrast with blue. No outer frame, no watermark, no multiple icons. One 1024x1024 square."
+    },
+    {
+      "id": "08",
+      "name": "软绒玩偶",
+      "slug": "felt-plush",
+      "file": "08-felt-plush.png",
+      "prompt": "One square app icon, a handmade felt plush head of an adorable original whale-girl maid, photographed with premium soft studio light. Clear material distinction: dense soft short wool felt, visible tiny wool fibers, stitched blue oval eyes, tiny embroidered smile, tiny rose cheeks, not anime illustration or shiny vinyl. Rounded cobalt-blue hair with turquoise ends built from a few soft felt lobes, petite horizontal blue-and-white whale-fin ears, two tiny blue bows, scalloped ivory felt maid headband and a very tiny blue wave-shaped tuft. Face visually centered, squat proportions, short bob, no body, no hands, no objects. Soft warm blush-pink seamless background filling entire square, one subtle grounded shadow. Big readable ivory face, compact outer silhouette within central 78%, eyes and smile within central 54%, suitable for circular phone icon crops. Adorable contemporary crafted toy design. No letters, numbers, watermark, outside border, picture frame, or collage. Square."
+    },
+    {
+      "id": "09",
+      "name": "清透日系",
+      "slug": "anime-portrait",
+      "file": "09-anime-portrait.png",
+      "prompt": "Create a single premium Japanese anime-style app launcher icon of an ORIGINAL gentle whale-girl maid companion. Not a recreation of existing anime IP. Polished modern character-key-art with delicate but crisp navy contours, restrained cel shading, luminous turquoise-to-sapphire eyes. Cobalt blue short wavy hair with cyan tips, two small sideways blue whale-fin-shaped hair ornaments with pale undersides, small cyan ribbon knots, white scalloped maid headband, very small wave tuft. Three-quarter head turn of just 10 degrees, warm confident gentle smile with a slightly mischievous raised brow. HEAD CLOSE-UP, not upper body or full body, tiny collar only, no hands. FACE CENTERED in square, compact forehead, short hair silhouette, head fills about 80%, details kept away from corners. Pale peach to warm ivory soft gradient background with one broad abstract teal arc, no busy scenery, no flowers or sparkles. Sophisticated illustrative composition, warm and cute without childish clutter. No text, logo, numeral, watermark, device, outside border, or multiple views. 1024 square."
+    },
+    {
+      "id": "10",
+      "name": "潮玩贴纸",
+      "slug": "pop-sticker",
+      "file": "10-pop-sticker.png",
+      "prompt": "One bold original designer kawaii mascot sticker as an app icon. Whale-girl maid HEAD in a dynamic 8-degree tilt, cheeky wink and little catlike curved smile (human girl, absolutely NO cat ears), one large bright blue eye. Chunky cobalt blue hair with mint-cyan curled tips, horizontal whale-fin ears with white underside, white scalloped maid headband, tiny blue bows and tiny wave curl. Very graphic pop illustration: heavy uniform dark ink linework, flat saturated colors, bold simple facial shapes. Thick white DIE-CUT contour hugs the mascot silhouette, with one short navy offset shadow, no thick frame around canvas. Smooth saturated apricot-orange square background, two SMALL graphic cyan accent dashes near upper right, no scene. Face is large and in square center, head compact inside 76% of square so phone mask preserves identity. No torso/hands, no intricate hair, text, numbers, watermark, interface or multiple icons. Friendly energetic memorable independent brand identity."
+    },
+    {
+      "id": "11",
+      "name": "深海霓虹",
+      "slug": "neon",
+      "file": "11-neon.png",
+      "prompt": "One elegant DARK-MODE app icon for an original whale-girl companion. Art direction: deep-sea neon, crisp simplified graphic mascot with selective luminous cyan and lavender edge light, not complex sci-fi armor. Very dark midnight blue full square background. HEAD ONLY: centered gentle youthful female face in soft frosted ice blue, large clear luminous blue eyes, little confident smile, short rounded cobalt-blue hair tips lit turquoise, two petite horizontal whale-fin ears with pale blue undersides, tiny cyan bows, simplified glowing white scalloped maid headband, one small wave curl. Strong cohesive rounded silhouette, blue hair separated from navy backdrop by clean cyan rim light. Just a single thin incomplete aqua halo BEHIND the head, a faint lavender accent opposite. Sophisticated restrained luminous linework plus broad flat shapes; no electrical circuit textures, no crowded stars, no text, no tech interface, no lettering, no watermark. Face visually centered; short forehead and hair; full head inside central 76%, facial features central 52%, good circular launcher crop. Clear and cute at small size. No body/hands, no collar detail. Single square design 1024x1024."
+    },
+    {
+      "id": "12",
+      "name": "水彩绘本",
+      "slug": "watercolor",
+      "file": "12-watercolor.png",
+      "prompt": "Design one original square app launcher icon as a refined watercolor storybook mascot portrait. A warmly smiling cute whale-girl maid, rounded short cobalt-blue hair with washed turquoise ends, soft big sapphire eyes with clear dark pupil, tiny rosy cheeks, small horizontal whale-fin hair ornaments with ivory undersides, simplified white scalloped maid headband, small blue bows and a tiny wave-shaped curl. Head plus just a hint of pale collar, no hands/body. Ink-and-watercolor illustration with broad soft transparent color washes and subtle ivory paper grain, a handful of confident deep-navy facial strokes; beautifully restrained artistic handmade quality, not generic digital anime, not 3D, not flat vector. Calm off-white full square background with one pale mint wash behind the head and tiny blue paint flecks only near the hair. Compact head centered, gentle 5-degree tilt, face large and readable, all important features inside central 64%, head inside central 80%, generous whitespace for circle mask. No detailed scenery, flowers, words, numbers, watermark, border, or collage. One finished square icon."
+    }
+  ]
+}

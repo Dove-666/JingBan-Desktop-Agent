@@ -51,7 +51,7 @@ def _message_tokens(message: dict) -> int:
 class ContextBudget:
     total_tokens: int = 8192
     output_reserve: int = 1024
-    system_tokens: int = 768
+    system_tokens: int = 1536
     summary_tokens: int = 1024
     recent_tokens: int = 4096
     event_tokens: int = 512

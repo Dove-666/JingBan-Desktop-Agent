@@ -14,7 +14,7 @@ import time
 
 STATES = {"running", "completed", "failed", "cancelled", "needs_user", "interrupted"}
 TERMINAL_STATES = STATES - {"running"}
-KINDS = {"progress", "tool", "computer", "summary"}
+KINDS = {"progress", "tool", "computer", "summary", "commentary"}
 EVENT_STATUSES = {"running", "completed", "failed"}
 SOURCE_NAMES = {"system", "history", "summary", "events", "memories", "selection", "current"}
 _DATA_URL = re.compile(r"data:[^\s\"'<>]*", re.I)
@@ -86,9 +86,15 @@ def normalize_execution(value, redact=lambda text: text):
                 or event.get("status") not in EVENT_STATUSES
                 or not isinstance(event.get("id"), str) or not event["id"]):
             continue
+        label = _text(event.get("label"), redact)
+        if event["kind"] == "commentary":
+            from .agents.activity_text import public_commentary
+            label = public_commentary(label, redact)
+            if not label:
+                continue
         clean = {"id": _text(event["id"], redact), "elapsed_ms": _integer(event.get("elapsed_ms")),
-                 "kind": event["kind"], "label": _text(event.get("label"), redact), "status": event["status"]}
-        if isinstance(event.get("detail"), str):
+                 "kind": event["kind"], "label": label, "status": event["status"]}
+        if event["kind"] != "commentary" and isinstance(event.get("detail"), str):
             clean["detail"] = _text(event["detail"], redact)
         result["events"].append(clean)
     context = value.get("context") if isinstance(value.get("context"), dict) else {}

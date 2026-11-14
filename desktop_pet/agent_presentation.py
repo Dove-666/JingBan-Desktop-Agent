@@ -2,7 +2,7 @@
 from datetime import datetime
 import re
 
-from .agents.activity import TOOL_LABELS, ACTION_LABELS
+from .agents.activity import TOOL_LABELS, ACTION_LABELS, COMPUTER_ACTION_LABELS, AGENT_ACTION_LABELS
 from .agents.service import _ERROR_MESSAGES
 
 AGENT_ERRORS = dict(_ERROR_MESSAGES)
@@ -11,6 +11,7 @@ AGENT_ACTIVITY = frozenset({
     "正在启动任务助手…", "正在规划任务…", "正在使用任务工具…",
     "正在操作电脑…", "正在整理任务结果…", "正在保存回复…",
     *TOOL_LABELS.values(), *ACTION_LABELS.values(),
+    *COMPUTER_ACTION_LABELS.values(), *AGENT_ACTION_LABELS.values(),
 })
 
 AGENT_TRACE_LABELS = AGENT_ACTIVITY | frozenset({
@@ -139,7 +140,8 @@ def public_agent_metadata(message):
         activity = None
         execution = metadata.get("execution", {})
         for event in execution.get("events", []) if isinstance(execution, dict) else []:
-            if isinstance(event, dict) and isinstance(event.get("label"), str) and event["label"] in AGENT_ACTIVITY:
+            if (isinstance(event, dict) and event.get("kind") != "commentary"
+                    and isinstance(event.get("label"), str) and event["label"] in AGENT_ACTIVITY):
                 activity = event["label"]
     trace = (public_agent_trace(metadata.get("execution"))
              if message.get("role") == "user" and mode == "agent" else None)

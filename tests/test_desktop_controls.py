@@ -43,9 +43,11 @@ class DesktopControlsTests(unittest.TestCase):
 
     def test_hide_has_recovery_and_keeps_current_conversation(self):
         original_id = self.session.chat.current_conversation_id
+        self.assertIs(self.session.pet.context_menu, self.session.tray.menu)
         self.session.toggle_pet_visibility()
         self.assertTrue(self.session.pet.isVisible(), "No hiding without a recovery tray")
         self.session.tray.available = True
+        self.session.tray.refresh()
         self.session.tray.visibility_action.trigger()
         self.assertFalse(self.session.pet.isVisible())
         self.assertEqual(self.session.tray.visibility_action.text(), "显示桌宠")
@@ -54,7 +56,7 @@ class DesktopControlsTests(unittest.TestCase):
         self.assertEqual(self.session.chat.current_conversation_id, original_id)
 
     def test_tray_opens_chat_and_reuses_it_after_close(self):
-        self.session.tray.chat_action.trigger()
+        self.session.open_chat_window()
         first = self.session.chat_window
         self.assertTrue(first.isVisible())
         first.close()
@@ -71,7 +73,7 @@ class DesktopControlsTests(unittest.TestCase):
         self.assertTrue(perception.observe_now())
         self.assertFalse(perception.preview.isNull())
         calls = scene.capture_calls
-        self.session.tray.pause_action.trigger()
+        perception.set_paused(True)
         self.assertTrue(perception.paused)
         self.assertFalse(perception._timer.isActive())
         self.assertTrue(perception.preview.isNull())
@@ -80,19 +82,38 @@ class DesktopControlsTests(unittest.TestCase):
         self.assertFalse(perception.begin_local_observation())
         self.assertEqual(scene.capture_calls, calls)
         self.assertEqual(self.settings.load_perception_settings(), preferences)
-        self.session.tray.pause_action.trigger()
+        self.assertEqual(self.session.tray.screen_action.text(), "开启屏幕感知")
+        self.session.tray.screen_action.trigger()
         self.assertFalse(perception.paused)
         self.assertTrue(perception._timer.isActive())
         self.assertTrue(perception.observe_now())
+        self.assertEqual(self.settings.load_perception_settings(), preferences)
+
+        # The concise menu's off action persists the choice, unlike runtime
+        # pause, and revokes observation before any subsequent capture.
+        calls = scene.capture_calls
+        self.session.tray.screen_action.trigger()
+        self.assertFalse(perception.settings.enabled)
+        self.assertFalse(perception._timer.isActive())
+        self.assertTrue(perception.preview.isNull())
+        self.assertFalse(perception.observe_now())
+        self.assertEqual(scene.capture_calls, calls)
+        self.assertEqual(self.settings.load_perception_settings(), replace(preferences, enabled=False))
+        self.assertEqual(self.session.tray.screen_action.text(), "开启屏幕感知")
+        self.session.tray.screen_action.trigger()
+        self.assertEqual(self.settings.load_perception_settings(), preferences)
+        self.assertFalse(perception.paused)
+        self.assertTrue(perception._timer.isActive())
+        self.assertEqual(self.session.tray.screen_action.text(), "关闭屏幕感知")
 
     def test_memory_entry_reuses_panel_and_closing_keeps_pet(self):
         spin_until(lambda: not self.session.memory.busy)
-        self.session.tray.memory_action.trigger()
+        self.session.open_memory_window()
         first = self.session.memory_panel
         self.assertTrue(first.isVisible())
         first.close()
         self.assertTrue(self.session.pet.isVisible())
-        self.session.tray.memory_action.trigger()
+        self.session.open_memory_window()
         self.assertIs(self.session.memory_panel, first)
         self.assertTrue(first.isVisible())
 
@@ -115,7 +136,8 @@ class DesktopControlsTests(unittest.TestCase):
         self.session.shutdown()
         self.assertEqual(finished.count(), 1)
         self.assertFalse(self.session.tray.icon.isVisible())
-        self.session.tray.pause_action.trigger()
+        self.assertFalse(self.session.tray.menu.isEnabled())
+        self.session.tray.screen_action.trigger()
         self.assertFalse(self.session.perception.paused)
         self.session.shutdown()
 

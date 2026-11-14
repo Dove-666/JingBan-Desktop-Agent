@@ -11,6 +11,7 @@ from PySide6.QtGui import QColor, QImage
 from desktop_pet.api_client import ApiError, ChatReply
 from desktop_pet.character_cards import CharacterCard
 from desktop_pet.character_prompts import CHARACTER_EXPRESSION_POLICY, character_identity_prompt
+from desktop_pet.default_persona import DEFAULT_PERSONA, TASK_FOCUS_POLICY
 from desktop_pet.games.xiangqi_commentary import GAME_PROMPT, MOVE_PROMPT, XiangqiCommentary
 from desktop_pet.perception.context_analyzer import (
     CAMERA_CONTEXT_PROMPT, COMMENTARY_PROMPTS, CONTEXT_PROMPT, REQUESTED_COMMENT_PROMPT,
@@ -167,7 +168,8 @@ class CharacterCommentaryTests(unittest.TestCase):
                             expected += COMMENTARY_PROMPTS[mode]
                             if requested:
                                 expected += REQUESTED_COMMENT_PROMPT
-                        self.assertEqual(client.requests[0][0][0]["content"], expected)
+                        self.assertEqual(client.requests[0][0][0]["content"],
+                            DEFAULT_PERSONA + TASK_FOCUS_POLICY + expected.replace("鲸鱼娘", "当前角色"))
 
     def test_custom_visual_prompt_changes_identity_and_retains_facts_and_privacy(self):
         for source in ("screen", "camera"):
@@ -180,7 +182,9 @@ class CharacterCommentaryTests(unittest.TestCase):
                 base = baseline_client.requests[0][0]
                 custom = custom_client.requests[0][0]
                 self.assertEqual(custom[0]["content"], character_identity_prompt(FIRST_CARD)
-                    + CHARACTER_EXPRESSION_POLICY + base[0]["content"].replace("鲸鱼娘", "当前角色"))
+                    + CHARACTER_EXPRESSION_POLICY + base[0]["content"].removeprefix(DEFAULT_PERSONA))
+                self.assertNotIn("主人", custom[0]["content"])
+                self.assertNotIn("鲸鱼娘", custom[0]["content"])
                 self.assertEqual(custom[1], base[1])
                 self.assertIn("express", custom[0]["content"])
                 self.assertIn("不可信", custom[0]["content"])
@@ -277,8 +281,9 @@ class CharacterCommentaryTests(unittest.TestCase):
                 settings.card = NEXT_CARD
                 reply = self.run_in_thread(service.runner.work)
                 service.runner.done(reply, None)
-                expected = (GAME_PROMPT if card is None else character_identity_prompt(card)
-                            + CHARACTER_EXPRESSION_POLICY + GAME_PROMPT.replace("鲸鱼娘", "当前角色"))
+                expected = ((DEFAULT_PERSONA if card is None else character_identity_prompt(card)
+                            + CHARACTER_EXPRESSION_POLICY) + TASK_FOCUS_POLICY
+                            + GAME_PROMPT.replace("鲸鱼娘", "当前角色"))
                 self.assertEqual(client.requests[0][0][0]["content"], expected)
                 self.assertEqual(settings.loads, [threading.get_ident()])
                 self.assertNotEqual(client.requests[0][2], settings.loads[0])
@@ -293,8 +298,9 @@ class CharacterCommentaryTests(unittest.TestCase):
                 settings.card = NEXT_CARD
                 move = self.run_in_thread(lambda: selector([{"move": "h2e2"}], cancellation_event=threading.Event()))
                 self.assertEqual(move["move"], "h2e2")
-                expected = (MOVE_PROMPT if card is None else character_identity_prompt(card)
-                            + CHARACTER_EXPRESSION_POLICY + MOVE_PROMPT.replace("鲸鱼娘", "当前角色"))
+                expected = ((DEFAULT_PERSONA if card is None else character_identity_prompt(card)
+                            + CHARACTER_EXPRESSION_POLICY) + TASK_FOCUS_POLICY
+                            + MOVE_PROMPT.replace("鲸鱼娘", "当前角色"))
                 self.assertEqual(client.requests[0][0][0]["content"], expected)
                 self.assertEqual(settings.loads, [threading.get_ident()])
                 client.move_reply = '{"move":"a0a9","reply":"禁止凭空走子"}'
@@ -312,11 +318,13 @@ class CharacterCommentaryTests(unittest.TestCase):
         selector = service.move_selector(service.controller.snapshot())
         selected = selector([{"move": "h2e2"}], cancellation_event=threading.Event())
         self.assertEqual(selected["move"], "h2e2")
-        self.assertEqual(client.requests[0][0][0]["content"], MOVE_PROMPT)
+        self.assertEqual(client.requests[0][0][0]["content"],
+            DEFAULT_PERSONA + TASK_FOCUS_POLICY + MOVE_PROMPT.replace("鲸鱼娘", "当前角色"))
         self.assertTrue(service.request("讲解这一步", service.controller.snapshot()))
         reply = service.runner.work()
         service.runner.done(reply, None)
-        self.assertEqual(client.requests[-1][0][0]["content"], GAME_PROMPT)
+        self.assertEqual(client.requests[-1][0][0]["content"],
+            DEFAULT_PERSONA + TASK_FOCUS_POLICY + GAME_PROMPT.replace("鲸鱼娘", "当前角色"))
         self.assertEqual(saved.loads, [])
 
 

@@ -164,13 +164,17 @@ internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore?
             drafts.preserveFirstDraft(state.selectedConversationId)
             actions.pickImage()
         }
+        fun pickChatFile() {
+            drafts.preserveFirstDraft(state.selectedConversationId)
+            actions.pickFile()
+        }
         val attachment = state.pendingAttachment?.takeIf { it.conversationId == state.selectedConversationId }
         val interaction = state.agentInteraction?.takeIf { it.conversationId == state.selectedConversationId }
         val preparingImage = state.preparingImage || attachment?.preparing == true
         val canSend = drafts.loaded && !preparingSubmission && !drafts.clearingSubmittedDraft && drafts.persistenceError == null && draft.length <= 8000 && !preparingImage && !state.directChatBusy && !state.desktopTaskBusy && !state.agentInteractionBusy && if (desktopAssistance)
             if (state.desktopTaskRunning) state.canSteerDesktop && interaction == null && draft.isNotBlank() && attachment == null
             else state.desktopTaskAvailable && (draft.isNotBlank() || attachment != null)
-            else state.directApi.available && (draft.isNotBlank() || attachment != null)
+            else state.directApi.available && attachment?.isFile != true && (draft.isNotBlank() || attachment != null)
         var pairingObserved by remember { mutableStateOf(false) }
         LaunchedEffect(state.pendingPairInfo) {
             state.pendingPairInfo?.takeIf { it.isNotBlank() }?.let {
@@ -227,6 +231,7 @@ internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore?
                             onStop = { if (!desktopAssistance && state.directChatConversationId == state.selectedConversationId)
                                 actions.cancelDirectChat() else actions.cancelDesktopTask() },
                             onAttach = ::pickChatImage,
+                            onAttachFile = ::pickChatFile,
                             onRemoveImage = actions::removePendingImage,
                             onSend = { if (canSend) {
                                 if (!desktopAssistance) cancelDesktopDraftMigration()
@@ -376,7 +381,8 @@ internal fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier,
     } }
     // A trailing anchor reaches the newest text even when the last reply is taller
     // than the screen. Scrolling to the reply itself would reset it to its beginning.
-    val tailIndex = messages.size + artifacts.size + if (interaction != null) 1 else 0
+    val deliveries = remember(messages, artifacts) { conversationArtifacts(messages, artifacts) }
+    val tailIndex = messages.size + (if (deliveries.unassigned.isNotEmpty()) 1 else 0) + if (interaction != null) 1 else 0
     LaunchedEffect(messages.lastOrNull()?.id, messages.lastOrNull()?.content, messages.lastOrNull()?.status, interaction?.id, artifacts) {
         withFrameNanos { }
         if (followLatest && !listState.isScrollInProgress) {
@@ -387,8 +393,19 @@ internal fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier,
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().nestedScroll(scrollIntent).testTag("conversation-messages"),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)) {
-        items(messages, key = { it.id }) { MessageRow(it, onRetry, onOpenImage, phoneAvailable) }
-        items(artifacts, key = { "artifact:${it.reference}" }) { AgentArtifactCard(it, artifactDownloading, onSaveArtifact) }
+        if (deliveries.unassigned.isNotEmpty()) item(key = "earlier-deliveries") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                deliveries.unassigned.forEach { AgentArtifactCard(it, artifactDownloading, onSaveArtifact) }
+            }
+        }
+        items(messages, key = { it.id }) { message ->
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MessageRow(message, onRetry, onOpenImage, phoneAvailable)
+                deliveries.byMessage[message.id].orEmpty().forEach { file ->
+                    key(file.reference) { AgentArtifactCard(file, artifactDownloading, onSaveArtifact) }
+                }
+            }
+        }
         interaction?.let { pending -> item(key = "agent-question:${pending.id}") {
             AgentInteractionCard(pending, interactionBusy, onAnswer)
         } }
@@ -412,7 +429,9 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
                             attachment: UiPendingAttachment?, preparingImage: Boolean,
                             desktopAssistance: Boolean, canSend: Boolean,
                             onDesktopAssistance: (Boolean) -> Unit, onStop: () -> Unit,
-                            onAttach: () -> Unit, onRemoveImage: () -> Unit, onSend: () -> Unit) {
+                            onAttach: () -> Unit, onAttachFile: () -> Unit,
+                            onRemoveImage: () -> Unit, onSend: () -> Unit) {
+    var attachmentMenu by remember { mutableStateOf(false) }
     val modeLineHeight = with(LocalDensity.current) { MaterialTheme.typography.labelLarge.lineHeight.toDp() }
     val modeVisualHeight = maxOf(34.dp, modeLineHeight + 8.dp)
     val modeTouchHeight = maxOf(48.dp, modeVisualHeight)
@@ -446,12 +465,22 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
                 modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth().padding(bottom = 8.dp)) {
                 Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (attachment != null) {
+                    if (attachment?.isFile == true) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = null,
+                            modifier = Modifier.padding(8.dp).size(28.dp), tint = MaterialTheme.colorScheme.primary)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(attachment.filename, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text(attachmentSizeLabel(attachment.sizeBytes), style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else if (attachment != null) {
                         LocalImage(attachment.localUri, Modifier.size(64.dp).clip(RoundedCornerShape(10.dp)), "待发送图片")
                     } else CircularProgressIndicator(Modifier.padding(16.dp).size(24.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.weight(1f))
+                    if (attachment?.isFile != true) Spacer(Modifier.weight(1f))
                     if (attachment != null) IconButton(onRemoveImage, enabled = !preparingImage && !state.desktopTaskBusy,
-                        modifier = Modifier.size(48.dp)) { Icon(Icons.Default.Close, contentDescription = "移除待发送图片") }
+                        modifier = Modifier.size(48.dp)) { Icon(Icons.Default.Close,
+                            contentDescription = if (attachment.isFile) "移除待发送文件" else "移除待发送图片") }
                 }
             }
         }
@@ -459,8 +488,15 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
             modifier = Modifier.widthIn(max = 800.dp).fillMaxWidth()) {
             Row(Modifier.padding(4.dp), verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onAttach, Modifier.size(48.dp), enabled = !preparingImage && !state.desktopTaskBusy && !state.desktopTaskRunning) {
-                    Icon(Icons.Default.Add, contentDescription = "添加图片")
+                Box {
+                    IconButton({ attachmentMenu = true }, Modifier.size(48.dp),
+                        enabled = !preparingImage && !state.desktopTaskBusy && !state.desktopTaskRunning) {
+                        Icon(Icons.Default.Add, contentDescription = "添加附件")
+                    }
+                    DropdownMenu(expanded = attachmentMenu, onDismissRequest = { attachmentMenu = false }) {
+                        DropdownMenuItem(text = { Text("图片") }, onClick = { attachmentMenu = false; onAttach() })
+                        DropdownMenuItem(text = { Text("文件") }, onClick = { attachmentMenu = false; onAttachFile() })
+                    }
                 }
                 BasicTextField(value = draft, onValueChange = onDraft,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -470,7 +506,8 @@ private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiS
                     decorationBox = { inner ->
                         if (draft.isEmpty()) Text(if (desktopAssistance && state.desktopTaskRunning && state.canSteerDesktop) "补充当前任务…" else if (desktopAssistance && !state.desktopTaskAvailable)
                             if (state.connection == ConnectionState.CONNECTED) "电脑 Agent 暂不可用" else "电脑离线，连接后可执行任务"
-                            else if (desktopAssistance) "告诉电脑 Agent 下一步…" else if (attachment != null) "问问 鲸伴 这张图片…" else "发消息给 鲸伴",
+                            else if (desktopAssistance) "告诉电脑 Agent 下一步…" else if (attachment?.isFile == true)
+                                "切换电脑 Agent 后发送文件" else if (attachment != null) "问问 鲸伴 这张图片…" else "发消息给 鲸伴",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         inner()

@@ -10,14 +10,11 @@ from PySide6.QtCore import QObject
 from ..api_client import ApiClient, ChatReply, redact_secret
 from ..async_tasks import TaskRunner
 from ..character_cards import CharacterCard
-from ..character_prompts import CHARACTER_EXPRESSION_POLICY, character_identity_prompt
+from ..character_prompts import character_expression_prompt
 from ..emotion_policy import normalize_emotion
 
 def _character_prompt(prompt, card):
-    if card is None:
-        return prompt
-    return (character_identity_prompt(card) + CHARACTER_EXPRESSION_POLICY
-            + prompt.replace("鲸鱼娘", "当前角色"))
+    return character_expression_prompt(card) + prompt.replace("鲸鱼娘", "当前角色")
 
 
 def _recent_dialogue(state):

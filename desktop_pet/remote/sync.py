@@ -16,6 +16,7 @@ import sqlite3
 import time
 from uuid import UUID, uuid4
 from ..chat_images import IMAGE_ERRORS, IMAGE_ID
+from ..chat_files import checked_file_metadata
 from ..agent_presentation import public_agent_metadata
 from ..conversations.chronology import timestamp_key
 from .chat_transfer import normalize_import
@@ -68,6 +69,14 @@ def sanitize_message(message: dict) -> dict:
     image_id = message.get("image_id", metadata.get("image_id"))
     result["image_id"] = (image_id if message.get("role") == "user" and isinstance(image_id, str)
                           and IMAGE_ID.fullmatch(image_id) else None)
+    fields = ("file_id", "file_name", "file_size", "file_mime")
+    try:
+        attachment = checked_file_metadata({name: message.get(name, metadata.get(name)) for name in fields})
+        if message.get("role") != "user":
+            attachment = {}
+    except ValueError:
+        attachment = {}
+    result.update({name: attachment.get(name) for name in fields})
     image_error = message.get("image_error", metadata.get("image_error_code"))
     result["image_error"] = (image_error if message.get("role") == "user" and status == "failed"
                              and isinstance(image_error, str) and image_error in IMAGE_ERRORS else None)

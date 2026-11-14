@@ -378,6 +378,11 @@ class DirectApiRepositoryTest {
             val cid = repo.newConversation(); repo.stageImage(cid, png(), "local.png", "image/png"); repo.sendMessage(cid, "")
             await { !repo.state.value.directChatBusy }; repo.sendMessage(cid, "上面那张图片"); await { !repo.state.value.directChatBusy }
             assertNull(db.device()); assertEquals(2, model.calls.size); assertTrue(db.directTurns().all { it.authorityId == LOCAL_PHONE_AUTHORITY && it.state == "ready" })
+            val defaultPrompt = model.calls.first().second.getJSONObject(0).getString("content")
+            assertTrue(defaultPrompt.contains("温柔可爱")); assertTrue(defaultPrompt.contains("主人"))
+            assertTrue(defaultPrompt.contains("遇到任务先认真办事"))
+            assertTrue(defaultPrompt.contains("手机聊天没有电脑操作工具"))
+            assertFalse(repo.state.value.toString().contains(defaultPrompt))
             val ids = db.messages(cid).map { it.id }; repo.close()
             db = CompanionDatabase(durableContext, name); repo = AppRepository(durableContext, rpc, db, vault, model)
             repo.selectConversation(cid)
@@ -389,6 +394,46 @@ class DirectApiRepositoryTest {
             assertEquals(2, rpc.importCalls); assertEquals(2, model.calls.size); assertEquals(ids, db.messages(cid).map { it.id })
             assertEquals(ApiConfigSource.LOCAL, repo.state.value.directApi.source)
         } finally { repo.close(); durableContext.deleteDatabase(name) }
+    }
+
+    @Test fun restartingLocalDefaultUpgradesPromptWithoutChangingProviderOrLeakingItIntoChat() = runBlocking {
+        val legacy = "你是鲸伴，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
+        val vault = Vault(DirectApiConfig(LOCAL_PHONE_AUTHORITY, "saved-local", "https://phone.example/v1", "phone-model",
+            "SYNTHETIC_PHONE_SECRET", legacy, 45, "high", 123L, ApiConfigSource.LOCAL))
+        val database = CompanionDatabase(context, null); val model = Model()
+        val repo = AppRepository(context, Rpc(), database, vault, model)
+        try {
+            val cid = repo.newConversation(); repo.sendMessage(cid, "请帮我整理计划")
+            await { !repo.state.value.directChatBusy }
+            val active = vault.value!!
+            assertEquals("https://phone.example/v1", active.baseUrl); assertEquals("phone-model", active.model)
+            assertEquals("SYNTHETIC_PHONE_SECRET", active.apiKey); assertEquals(45, active.timeoutSeconds)
+            assertEquals("high", active.reasoningEffort); assertNull(vault.persona)
+            assertNotEquals(legacy, active.systemPrompt)
+            assertTrue(active.systemPrompt.contains("温柔可爱")); assertTrue(active.systemPrompt.contains("不为闲聊拖延"))
+            assertEquals(active.systemPrompt, model.calls.single().second.getJSONObject(0).getString("content"))
+            assertEquals(listOf("请帮我整理计划", "direct reply 1"), database.messages(cid).map { it.content })
+            assertFalse(repo.state.value.toString().contains(active.systemPrompt))
+        } finally { repo.close() }
+    }
+
+    @Test fun localDefaultUpgradePreservesCustomAndExplicitlySyncedCharacterPrompts() = runBlocking {
+        val legacy = "你是鲸伴，一位温柔自然的中文陪伴助手。请依据当前对话回答，不猜测不可见的图片或电脑状态。"
+        for (synced in listOf(false, true)) {
+            val prompt = if (synced) legacy else "你是冷静的档案管理员，不使用亲昵称呼。"
+            val vault = Vault(DirectApiConfig(LOCAL_PHONE_AUTHORITY, "saved-local", "https://phone.example/v1", "phone-model",
+                "SYNTHETIC_PHONE_SECRET", prompt, 30, "default", 123L, ApiConfigSource.LOCAL)).apply {
+                if (synced) persona = SyncedPersona("desktop", "explicit-card", "当前角色", prompt)
+            }
+            val database = if (synced) db() else CompanionDatabase(context, null)
+            val model = Model(); val repo = AppRepository(context, Rpc(), database, vault, model)
+            try {
+                repo.sendMessage(repo.newConversation(), "你好")
+                await { !repo.state.value.directChatBusy }
+                assertEquals(prompt, vault.value!!.systemPrompt)
+                assertEquals(prompt, model.calls.single().second.getJSONObject(0).getString("content"))
+            } finally { repo.close() }
+        }
     }
 
     @Test fun cachedDesktopConfigSurvivesLegacyCapabilitiesUnavailableAndInvalidRefresh() = runBlocking {

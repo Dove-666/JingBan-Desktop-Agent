@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
+import re
 from pathlib import Path
 import sqlite3
 import threading
@@ -18,13 +19,14 @@ from uuid import UUID, uuid4
 
 from .chronology import register_timestamp_order
 from ..chat_images import IMAGE_ERRORS, IMAGE_ID
+from ..chat_files import checked_file_metadata
 from ..agents.service import _ERROR_MESSAGES as AGENT_ERRORS
 from ..execution_trace import normalize_execution, merge_execution, interrupted_execution
 from ..agent_presentation import AGENT_ACTIVITY, public_agent_trace_sql
 
 
 SCHEMA_VERSION = 3
-REMOTE_SYNC_SCHEMA_VERSION = 12
+REMOTE_SYNC_SCHEMA_VERSION = 14
 REMOTE_SYNC_MAX_CHANGES = 10000
 REMOTE_SYNC_MAX_CHANGE_BYTES = 32 * 1024 * 1024
 REMOTE_SYNC_PRUNE_BATCH = 512
@@ -109,6 +111,20 @@ def remote_sync_projection(entity: str, prefix: str = "") -> str:
                      + f"{column('role')} = 'user' AND json_type({metadata}, '$.image_id') = 'text' "
                      + f"AND length({image}) = 64 AND {image} NOT GLOB '*[^0-9a-f]*' "
                      + "THEN " + image + " END END")
+        file_id = f"json_extract({metadata}, '$.file_id')"
+        file_name = f"json_extract({metadata}, '$.file_name')"
+        file_size = f"json_extract({metadata}, '$.file_size')"
+        file_mime = f"json_extract({metadata}, '$.file_mime')"
+        valid_file = (f"{column('role')} = 'user' AND json_type({metadata}, '$.file_id') = 'text' "
+                      f"AND length({file_id}) = 64 AND {file_id} NOT GLOB '*[^0-9a-f]*' "
+                      f"AND json_type({metadata}, '$.file_name') = 'text' AND length({file_name}) BETWEEN 1 AND 160 "
+                      f"AND {file_name} NOT IN ('.','..') AND instr({file_name}, '/') = 0 "
+                      f"AND instr({file_name}, char(92)) = 0 AND instr({file_name}, ':') = 0 "
+                      f"AND instr({file_name}, char(10)) = 0 AND instr({file_name}, char(13)) = 0 "
+                      f"AND json_type({metadata}, '$.file_size') = 'integer' AND {file_size} BETWEEN 0 AND 33554432 "
+                      f"AND json_type({metadata}, '$.file_mime') = 'text' AND length({file_mime}) BETWEEN 3 AND 120")
+        for key, value in (("file_id", file_id), ("file_name", file_name), ("file_size", file_size), ("file_mime", file_mime)):
+            pairs.append(f"'{key}', CASE WHEN json_valid({metadata}) THEN CASE WHEN {valid_file} THEN {value} END END")
         image_error = f"json_extract({metadata}, '$.image_error_code')"
         codes = ",".join("'" + code + "'" for code in IMAGE_ERRORS)
         pairs.append("'image_error', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
@@ -126,7 +142,8 @@ def remote_sync_projection(entity: str, prefix: str = "") -> str:
         pairs.append("'agent_activity', CASE WHEN json_valid(" + metadata + ") THEN CASE WHEN "
                      + status + " = 'pending' THEN (SELECT json_extract(value, '$.label') FROM json_each("
                      + metadata + ", '$.execution.events') WHERE "
-                     + f"CASE WHEN type = 'object' THEN json_extract(value, '$.label') END IN ({labels}) "
+                     + "CASE WHEN type = 'object' THEN CASE WHEN json_extract(value, '$.kind') IS NOT 'commentary' "
+                     + f"THEN json_extract(value, '$.label') END END IN ({labels}) "
                      + "ORDER BY CAST(key AS INTEGER) DESC LIMIT 1) END END")
         pairs.append("'agent_trace', json(" + public_agent_trace_sql(metadata, column("role"), mode) + ")")
     return "json_object(" + ", ".join(pairs) + ")"
@@ -276,7 +293,7 @@ class ConversationStore:
             raise StoreError("远程同步数据库来自更新版本，请升级程序后再打开。")
         if version == REMOTE_SYNC_SCHEMA_VERSION:
             return
-        if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11):
+        if version in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13):
             if version == 1:
                 ConversationStore._migrate_remote_retention(connection)
             ConversationStore._migrate_remote_image_refs(connection, publish_conversations=True)
@@ -389,6 +406,9 @@ class ConversationStore:
                                    publish_conversations: bool = False) -> None:
         """Refresh public projections without rewriting immutable journal rows.
 
+        v14 publishes document attachment names, sizes and opaque references.
+        v13 publishes specific computer actions and subagent lifecycle labels,
+        while still excluding desktop-only commentary and operation details.
         v12 publishes DeepSeek Harness tool labels and errors after upgrade.
         v11 publishes direct-request delegation labels in existing traces.
         v10 maps queued to wire pending and refreshes startup error labels;
@@ -712,6 +732,7 @@ class ConversationStore:
                                   origin_peer_id: str, operation_id: str,
                                   authorization_scope: str, settings_scope: str,
                                   image_id: str | None = None,
+                                  file_metadata: dict | None = None,
                                   created_at: str | None = None) -> dict:
         """Persist host-approved queue origin atomically; never mint a grant.
 
@@ -726,6 +747,9 @@ class ConversationStore:
             _queued_scope(value)
         if image_id is not None:
             _queued_scope(image_id)
+        file_metadata = checked_file_metadata(file_metadata)
+        if image_id is not None and file_metadata:
+            raise StoreError("一次只能发送一个附件。")
         _text(content)
         timestamp = _text(created_at) if created_at is not None else _now()
         try:
@@ -738,6 +762,7 @@ class ConversationStore:
         metadata = {"request_status": "queued", "execution_mode": "agent", "agent_queue_origin": origin}
         if image_id is not None:
             metadata["image_id"] = image_id
+        metadata.update(file_metadata)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             if not connection.execute("SELECT 1 FROM conversations WHERE id = ?", (conversation_id,)).fetchone():
@@ -753,7 +778,8 @@ class ConversationStore:
                 if (existing["conversation_id"] != conversation_id or existing["role"] != "user"
                         or existing["source"] != "user" or existing.get("screen_event_id") is not None
                         or existing["content"] != content or previous.get("execution_mode") != "agent"
-                        or previous.get("agent_queue_origin") != origin or previous.get("image_id") != image_id):
+                        or previous.get("agent_queue_origin") != origin or previous.get("image_id") != image_id
+                        or previous.get("file_id") != file_metadata.get("file_id")):
                     raise StoreError("排队消息身份或内容发生冲突。")
                 return existing
             connection.execute("""INSERT INTO messages
@@ -823,7 +849,7 @@ class ConversationStore:
             return result
 
     def complete_request(self, conversation_id: str, user_message_id: str, content: str,
-                         *, emotion: str = "neutral", execution=None) -> dict:
+                         *, emotion: str = "neutral", execution=None, artifact_refs=()) -> dict:
         """Save the assistant turn and complete its user turn in one transaction.
 
         A disk failure cannot leave a reply with a retryable user turn. Replaying
@@ -832,6 +858,9 @@ class ConversationStore:
         _identifier(conversation_id)
         _identifier(user_message_id)
         _text(content)
+        if (not isinstance(artifact_refs, (tuple, list)) or len(artifact_refs) > 16
+                or any(not isinstance(ref, str) or not re.fullmatch(r"artifact_[a-f0-9]{64}", ref) for ref in artifact_refs)):
+            raise StoreError("交付文件标识无效。")
         if execution is not None:
             execution = normalize_execution(execution)
         timestamp, message_id = _now(), str(uuid4())
@@ -858,6 +887,8 @@ class ConversationStore:
             if execution is not None:
                 metadata["execution"] = merge_execution(metadata.get("execution"), execution)
             assistant_metadata = {"emotion": emotion, "reply_to": user_message_id}
+            if artifact_refs:
+                assistant_metadata["artifact_refs"] = list(dict.fromkeys(artifact_refs))
             if metadata.get("execution_mode") == "agent":
                 assistant_metadata["execution_mode"] = "agent"
             if isinstance(metadata.get("execution"), dict):

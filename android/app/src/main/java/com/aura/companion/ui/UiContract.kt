@@ -75,6 +75,8 @@ data class UiMessage(
     val retryOnPhone: Boolean = false,
     val desktopAgent: Boolean = false,
     val execution: UiExecution? = null,
+    val fileName: String? = null,
+    val fileSize: Long? = null,
 )
 
 data class UiPendingAttachment(
@@ -83,12 +85,15 @@ data class UiPendingAttachment(
     val localUri: String,
     val conversationId: String,
     val preparing: Boolean = false,
+    val isFile: Boolean = false,
+    val sizeBytes: Long = 0,
+    val mimeType: String = "",
 )
 
 data class UiAgentFileResource(val path: String, val access: String, val directory: Boolean)
 data class UiAgentInteraction(val id: String, val kind: String, val question: String,
     val conversationId: String, val options: List<String> = emptyList(), val resource: UiAgentFileResource? = null)
-data class UiAgentArtifact(val reference: String, val name: String, val bytes: Long)
+data class UiAgentArtifact(val reference: String, val name: String, val bytes: Long, val messageId: String? = null)
 sealed interface UiAgentAnswer {
     data class Text(val text: String) : UiAgentAnswer
     data class Permission(val allowed: Boolean) : UiAgentAnswer
@@ -191,6 +196,7 @@ interface UiActions {
     fun retryMessage(id: String)
     fun discardOutbox(requestId: String)
     fun pickImage()
+    fun pickFile() {}
     fun removePendingImage()
     fun petCommand(action: String, value: PetValue)
     fun refreshImages()

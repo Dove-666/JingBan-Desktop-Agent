@@ -25,6 +25,23 @@ test('only the explicitly attached current image becomes an SDK image block', ()
   assert.equal(promptBlocks(input).length, 2);
 });
 
+test('uploaded document is current-turn data and does not replace the user task', () => {
+  const input = frame();
+  const file = { path: resolve('workspace/.aura-attachments/document.txt'), name: 'document.txt', size: 3,
+    sha256: 'a'.repeat(64) };
+  input.context.current_file = file;
+  input.context.messages = [{ role: 'assistant', content: 'Earlier task finished.' }];
+  const blocks = promptBlocks(input);
+  assert.equal(blocks.filter(block => block.text === input.task).length, 1);
+  assert.ok(blocks.at(-1).text.includes('不要自动运行'));
+  assert.deepEqual(JSON.parse(blocks.at(-1).text.split('\n').at(-1)), file);
+  input.storage.session_id = 'existing-session';
+  delete input.context.current_file;
+  assert.deepEqual(promptBlocks(input), [{ type: 'text', text: input.task }]);
+  input.context.current_file = { ...file, path: '../external.txt' };
+  assert.throws(() => promptBlocks(input), /INVALID_FILE/);
+});
+
 test('a launch patch has no key and disabled task tools are actually removed', () => {
   const input = frame();
   input.options.tools_enabled = false;
@@ -35,6 +52,10 @@ test('a launch patch has no key and disabled task tools are actually removed', (
     assert.equal(patches.find(row => row.id === id)?.disabled, true);
   }
   assert.ok(JSON.stringify(patches).includes(input.context.personality));
+  const prefix = patches.find(row => row.id === 'system-prompt').config.personaPrefix;
+  assert.ok(prefix.startsWith(input.context.personality));
+  assert.ok(!prefix.includes('你是鲸伴'));
+  assert.ok(prefix.includes('依据实际工具结果汇报'));
   assert.ok(!JSON.stringify(patches).includes('cua-windows'));
 });
 

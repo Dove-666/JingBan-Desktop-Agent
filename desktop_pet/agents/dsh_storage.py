@@ -17,13 +17,14 @@ _SESSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}\Z")
 
 def session_scope(settings, api, *, generation="", key=""):
     """Credential changes separate sessions without storing the credential."""
-    value = {"version": 2, "generation": generation,
+    value = {"version": 3, "generation": generation,
              "api": {name: api.get(name) for name in ("base_url", "model")},
              # Native resume retains the previous effort when a new runtime
              # omits it. Reset/omit must not silently inherit an older choice.
              "reasoning": api.get("reasoning"),
              "credential": hashlib.sha256(key.encode("utf-8")).hexdigest(),
              "tools": settings.tools_enabled, "computer": settings.computer_enabled,
+             "approval_mode": settings.approval_mode,
              "workspace": str(Path(settings.workspace).resolve())}
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
 

@@ -99,6 +99,7 @@ def main(argv=None):
 
     class NoExtra(QObject):
         """No tray icon and no remote listener in the isolated test instance."""
+        menu = None
         available = False
         def __init__(self, *_args, **_kwargs):
             super().__init__()
