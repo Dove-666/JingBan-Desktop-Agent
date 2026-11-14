@@ -40,3 +40,5 @@ Windows 1.0.2；Android 1.19.1（27）。2026-11-14。
 保留全部 MD、当前开发源码、可编辑美术源文件、必要依赖及最新安装包。旧包、重复打包目录和临时生成素材按明确清单清理。当前验收脚本保留在 `tools/qa_release`；构建依赖集中在 `artifacts/windows-build`；当轮原始证据集中在 `artifacts/release-validation` 与 `artifacts/reliability-fixes`。历史版本结果见[上一版记录](qa-release-1.0.1-history.md)。
 
 生成代码的执行隔离限制保持原状，没有因本轮修复或封装而解除。
+
+[清理结果](qa-release-cleanup-20261114.md)：486,653 个旧文件、65.204 GiB；额外四份重复 APK 因自动审批拦截保留。

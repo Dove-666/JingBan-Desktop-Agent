@@ -65,7 +65,7 @@ def main():
               "base": args.base, "tree": tree, "tracked_paths_checked": len(names),
               "changed_files_checked": len(changed), "path_findings": path_findings,
               "findings": findings, "binary_changes_require_review": binary_changes, "blob_sha256": hashes,
-              "scope": "All index path names plus exact changed UTF-8 blobs. Unchanged private-repository history is retained; binary changes require independent review.",
+              "scope": "All index path names plus exact changed UTF-8 blobs. Existing Git history is retained and is outside this change-only audit; binary changes require independent review.",
               "raw_secrets_emitted": False}
     args.report.parent.mkdir(parents=True, exist_ok=True)
     with args.report.open("x", encoding="utf-8") as stream:

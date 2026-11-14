@@ -126,7 +126,7 @@ def main():
         verify_release_target(client, release, record)
         actual = request(client, "GET", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]) + "/assets?per_page=100")
         verify_remote_assets(actual, record["assets"])
-        body = "安装后在设置中填写自己的 API。已安装用户请先保存草稿并从托盘退出旧程序。\n\nWindows 安装包：Jingban-Setup.exe；免安装包：Jingban.zip。\nAndroid：Jingban.apk；通用架构：Jingban-Universal.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。可使用同页 SHA256SUMS.txt 校验下载文件。"
+        body = "修复任务续办、重复失败循环、记忆取消与手机草稿恢复。安装后在设置中填写自己的 API；升级前请保存草稿并从托盘退出旧程序。\n\nWindows 安装包：Jingban-Setup.exe；免安装包：Jingban.zip。\nAndroid：Jingban.apk；通用架构：Jingban-Universal.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。可使用同页 SHA256SUMS.txt 校验下载文件。"
         release = request(client, "PATCH", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]), json={"draft": False, "body": body})
         verify_release_target(client, release, record)
         record.update(published=True, url=release["html_url"])
@@ -165,7 +165,7 @@ def main():
         assert not any(x["tag_name"] == "v1.0.2" for x in releases), "An existing release must not be replaced"
         release = request(client, "POST", "/repos/" + REPOSITORY + "/releases", json={
             "tag_name": "v1.0.2", "target_commitish": args.commit, "name": "鲸伴", "draft": True,
-            "prerelease": False, "body": "安装后在设置中填写自己的 API。已安装用户请先保存草稿并从托盘退出旧程序。\n\nWindows：鲸伴安装.exe；免安装：鲸伴.zip。Android：鲸伴.apk；通用架构：鲸伴通用.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。"})
+            "prerelease": False, "body": "修复任务续办、重复失败循环、记忆取消与手机草稿恢复。安装后在设置中填写自己的 API；升级前请保存草稿并从托盘退出旧程序。\n\nWindows：鲸伴安装.exe；免安装：鲸伴.zip。Android：鲸伴.apk；通用架构：鲸伴通用.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。"})
         record = {"id": release["id"], "tag": "v1.0.2", "commit": args.commit, "assets": [], "assets_complete": False, "published": False}
         record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     upload_url = release["upload_url"].split("{", 1)[0]
