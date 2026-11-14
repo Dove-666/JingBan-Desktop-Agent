@@ -251,7 +251,7 @@ export function normalizeAgentInteraction(value: unknown, conversationId: unknow
   if (!raw || raw.conversation_id !== conversationId || typeof raw.conversation_id !== 'string' ||
       typeof raw.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(raw.id) ||
       typeof raw.kind !== 'string' || !['question', 'file_access'].includes(raw.kind) || typeof raw.question !== 'string' ||
-      raw.question.length < 1 || raw.question.length > 2000) return;
+      raw.question.length < 1 || Array.from(raw.question).length > 16000) return;
   const result: AgentInteraction = { id: raw.id, kind: raw.kind as AgentInteraction['kind'],
     question: raw.question, conversation_id: raw.conversation_id };
   if (raw.kind === 'file_access') {
@@ -261,7 +261,7 @@ export function normalizeAgentInteraction(value: unknown, conversationId: unknow
         typeof resource.directory !== 'boolean') return;
     result.resource = { path: resource.path, access: resource.access as 'read' | 'write', directory: resource.directory };
   } else if (raw.options !== undefined) {
-    if (!Array.isArray(raw.options) || raw.options.length > 8 || raw.options.some((item) => typeof item !== 'string' || !item || item.length > 240)) return;
+    if (!Array.isArray(raw.options) || raw.options.length > 6 || raw.options.some((item) => typeof item !== 'string' || !item || Array.from(item).length > 240)) return;
     result.options = raw.options as string[];
   }
   return result;

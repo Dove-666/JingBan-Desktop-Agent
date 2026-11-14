@@ -12,7 +12,7 @@ def public_interaction(value, conversation_id):
     if (not isinstance(value, dict) or value.get("conversation_id") != conversation_id
             or not isinstance(value.get("id"), str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", value["id"])
             or not isinstance(value.get("kind"), str) or value.get("kind") not in {"question", "file_access"}
-            or not isinstance(value.get("question"), str) or not 1 <= len(value["question"]) <= 2000):
+            or not isinstance(value.get("question"), str) or not 1 <= len(value["question"]) <= 16000):
         return None
     result = {key: value[key] for key in ("id", "kind", "question", "conversation_id")}
     if value["kind"] == "file_access":
@@ -92,7 +92,9 @@ class AgentInteractionCard(QFrame):
                 button = QPushButton(option)
                 button.clicked.connect(lambda _checked=False, text=option: self.submit({"text": text}, interaction["id"]))
                 self._layout.addWidget(button)
-            editor = QLineEdit(); editor.setMaxLength(8000); editor.setPlaceholderText("补充回答…")
+            # QLineEdit counts UTF-16 units; permit 8000 non-BMP characters.
+            # The shared answer validation below counts Unicode codepoints.
+            editor = QLineEdit(); editor.setMaxLength(16000); editor.setPlaceholderText("补充回答…")
             editor.setAccessibleName("Agent 问题回答")
             self._layout.addWidget(editor)
             submit = QPushButton("继续")
@@ -105,9 +107,15 @@ class AgentInteractionCard(QFrame):
 
     def submit(self, answer, expected_id=None):
         interaction = self._interaction
-        if (interaction is None or (expected_id is not None and interaction["id"] != expected_id)
-                or not valid_answer(interaction, answer)):
+        if interaction is None or (expected_id is not None and interaction["id"] != expected_id):
             return
+        if not valid_answer(interaction, answer):
+            if (interaction["kind"] == "question" and isinstance(answer, dict)
+                    and isinstance(answer.get("text"), str) and len(answer["text"].strip()) > 8000):
+                self.error.setText("回答最多 8000 字，请缩短后再发送。")
+                self.error.show()
+            return
+        self.error.hide()
         if self._answer(interaction["id"], answer, interaction["conversation_id"]):
             self.setEnabled(False)
         else:

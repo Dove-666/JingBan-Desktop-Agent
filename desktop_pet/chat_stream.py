@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import re
 
-from agent_backend.nanobot.redaction import _spellings, redact_text
+from desktop_pet.redaction import _spellings, redact_text
 
 
 MAX_STREAM_CHARACTERS = 1_048_576

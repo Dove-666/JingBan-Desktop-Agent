@@ -23,13 +23,14 @@ internal fun phoneConversationTitle(text: String, hasImage: Boolean): String {
 internal val AGENT_ERROR_MESSAGES = mapOf(
     "disabled" to "任务助手尚未启用，请在设置中启用后再试。",
     "kind_disabled" to "这类任务尚未启用，请先检查任务助手设置。",
-    "not_configured" to "任务助手尚未配置完成，请检查独立 Python 环境和模型设置。",
+    "not_configured" to "请先在设置中配置模型与 API。",
     "vision_rejected" to "图文请求未被模型接口接受，请确认模型支持图片并检查接口配置。",
     "missing_backend" to "未找到任务助手后端，请先完成后端安装。",
-    "missing_sdk" to "任务助手依赖尚未安装，请先完成独立后端环境安装。",
+    "missing_sdk" to "电脑任务组件不完整，请更新电脑端。",
     "sdk_unlimited_unsupported" to "当前任务 SDK 与不限步数模式不兼容，任务未执行；请检查本地后端版本。",
-    "gui_not_configured" to "电脑操作模型尚未配置，请填写 GUI 模型地址、名称和密钥。",
+    "gui_not_configured" to "请在电脑端配置支持看图和工具调用的模型。",
     "cancelled" to "任务已停止；已经完成的操作会保留，未自动重试。",
+    "stop_unconfirmed" to "正在等待电脑操作结束，暂时无法确认已停止。请稍后检查任务状态。",
     "timeout" to "任务超时，本次等待已结束。已完成的操作会保留，本次未自动重试。",
     "protocol" to "任务助手返回格式无效，已停止且未自动重试。",
     "backend_failed" to "任务助手未能完成这次操作；请检查当前结果，再发送新的任务消息。",
@@ -37,11 +38,11 @@ internal val AGENT_ERROR_MESSAGES = mapOf(
     "empty_reply" to "任务助手没有返回结果说明；请检查已完成的操作，再发送新的任务消息。",
     "computer_not_used" to "任务助手没有执行电脑操作；请明确要操作的应用和目标后发送新消息。",
     "gui_runtime_missing" to "电脑操作需要 Node.js，当前任务环境找不到它；安装或修复后请重启桌宠。",
-    "gui_start_failed" to "电脑操作后台启动失败；请检查 Node.js 和本地 UI-TARS 安装。",
+    "gui_start_failed" to "电脑操作组件未能启动，请更新或重启电脑端。",
     "gui_exited" to "电脑操作后台意外退出；请检查当前结果，再发送新的任务消息。",
     "gui_protocol" to "电脑操作后台返回格式无效，任务已停止；请检查当前结果。",
     "gui_failed" to "电脑操作未能完成；请检查当前画面，再发送更明确的任务消息。",
-    "gui_sdk_unavailable" to "电脑操作依赖尚未就绪；请修复本地 UI-TARS 和 Windows 操作组件。",
+    "gui_sdk_unavailable" to "电脑操作组件尚未就绪，请更新电脑端。",
     "gui_unsupported_platform" to "当前电脑操作组件只支持 Windows。",
     "gui_step_limit" to "电脑操作已达到本次步数上限，仍未确认完成；请检查画面，再发送更具体的任务。",
     "gui_screenshot_failed" to "无法获取桌面画面，电脑操作已停止；请确认桌面会话可用。",
@@ -64,6 +65,11 @@ internal val AGENT_ERROR_MESSAGES = mapOf(
     "gui_already_used" to "本次电脑操作已经执行，未再次执行；请检查结果后发送新任务。",
     "closed" to "任务助手已关闭。",
     "busy" to "上一项任务仍在运行或结束中，请稍后发送新任务；本次未启动任务助手。",
+    "session_unavailable" to "任务会话暂时无法恢复，请检查电脑本地数据；已完成的操作不会重复执行。",
+    "provider_auth_failed" to "模型服务未接受当前凭据，请检查 API 配置。",
+    "provider_rate_limited" to "模型服务暂时限流，请稍后继续；已完成的操作已保留。",
+    "provider_unavailable" to "模型服务暂时不可用；已完成的操作已保留。",
+    "request_timeout" to "模型或网络请求未及时返回；已完成的操作已保留。",
 )
 
 internal fun validAgentErrorCode(value: String?): String? = value?.takeIf { it in AGENT_ERROR_MESSAGES }
@@ -83,6 +89,8 @@ private val AGENT_ACTIVITY_MESSAGES = setOf(
     "读取界面控件", "验收输出结果", "确认操作结果",
     "切换网页标签", "打开网页", "操作网页控件", "查看网页标签", "读取网页结构",
     "分工阅读资料", "查看文档页面", "计算项目产物", "检查工具请求",
+    "编辑文件", "搜索文件内容", "执行命令", "查看图片", "查看工作目录", "交付文件", "分派任务",
+    "协调子任务", "查看子任务", "等待子任务", "停止子任务", "操作电脑", "使用任务工具", "阅读网页",
 )
 internal fun validAgentActivity(value: String?): String? = value?.takeIf { it in AGENT_ACTIVITY_MESSAGES }
 

@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import Mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from agent_backend.nanobot.redaction import redact_text
+from desktop_pet.redaction import redact_text
 from desktop_pet.api_client import ApiClient, ApiError, ChatReply
 from desktop_pet.settings_manager import ApiSettings
 
@@ -229,7 +229,7 @@ class ChatStreamTransportTests(unittest.TestCase):
             handler.wfile.flush()
         with SseServer(plan, status=400) as server:
             with self.assertRaises(ApiError) as caught:
-                ApiClient().complete_context(ApiSettings(server.base_url, "local-model", reasoning_effort="high"), KEY,
+                ApiClient().complete_context(ApiSettings(server.base_url, "local-model", reasoning_effort="high", reasoning_profile="openai"), KEY,
                     [{"role": "user", "content": "测试"}], on_delta=lambda _: self.fail("Error response must never become a delta"))
             self.assertEqual(caught.exception.code, "reasoning_unsupported")
             self.assertNotIn(KEY, str(caught.exception))

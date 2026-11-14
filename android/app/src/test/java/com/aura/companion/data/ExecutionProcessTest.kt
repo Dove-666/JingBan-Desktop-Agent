@@ -48,6 +48,20 @@ class ExecutionProcessTest {
         assertEquals(parsed, parseExecutionProcess(parsed.canonicalJson()))
     }
 
+    @Test fun harnessToolEventsSurviveSyncProjectionAndStoredRoundTrip() {
+        val labels = listOf("编辑文件", "搜索文件内容", "执行命令", "查看图片", "查看工作目录", "交付文件",
+            "分派任务", "协调子任务", "查看子任务", "等待子任务", "停止子任务", "操作电脑", "使用任务工具", "阅读网页")
+        val input = trace().put("events", JSONArray(labels.mapIndexed { index, label ->
+            event(index, label).put("arguments", "PRIVATE_ARGUMENTS").put("reasoning", "PRIVATE_THOUGHTS")
+        }))
+        val parsed = parseExecutionProcess(input)!!
+        assertEquals(labels, parsed.events.map { it.label })
+        assertEquals(parsed, parseExecutionProcess(parsed.canonicalJson()))
+        assertFalse(parsed.canonicalJson().contains("PRIVATE"))
+        assertEquals("provider_unavailable", validAgentErrorCode("provider_unavailable"))
+        assertEquals("session_unavailable", validAgentErrorCode("session_unavailable"))
+    }
+
     @Test fun malformedTimesStatesAndOversizedTracesAreRejectedWithoutCoercion() {
         for (value in listOf(-1L, MAX_EXECUTION_MS + 1, "1200", true, 1.5))
             assertNull(parseExecutionProcess(trace().put("duration_ms", value)))

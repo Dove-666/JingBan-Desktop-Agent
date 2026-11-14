@@ -21,7 +21,6 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "artifacts/windows-build"
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT))
 
 
 def app_version():
@@ -187,7 +186,7 @@ def write_guides(payload, version):
 - 桌宠动作、聊天、角色表情、棋局、屏幕/摄像头设置、任务助手及手机连接组件。
 - API 与网络服务由用户自行配置；本地 Embedding 模型由设置中的显式初始化下载，不随包携带。
 - 文档转换依赖外部 Office/LibreOffice 时，会显示实际可用状态；没有内置完整办公套件。
-- 生成项目的任意代码运行仍关闭。
+- Agent 使用 DeepSeek Harness，文件与终端工具、电脑操作遵循当前启用的权限。
 - Windows 安装包尚未使用发行者代码签名证书签名。
 
 数据与卸载
@@ -218,6 +217,11 @@ def audit_payload(payload):
         records.append({"path": relative.as_posix(), "bytes": path.stat().st_size, "sha256": sha256(path)})
     for required in ("鲸伴.exe", "鲸伴网页桥.exe", "_internal/PySide6/QtWebEngineProcess.exe", "_internal/runtime/python/python.exe",
                      "_internal/runtime/node/node.exe", "_internal/assets/whale.png",
+                     "_internal/agent_backend/deepseek_harness/worker.mjs",
+                     "_internal/agent_backend/deepseek_harness/node_modules/@deepseek-ai/dsh/package.json",
+                     "_internal/agent_backend/deepseek_harness/node_modules/@deepseek-ai/dsh-sdk-client/package.json",
+                     "_internal/agent_backend/deepseek_harness/node_modules/@deepseek-ai/dsh-cua-windows/native/bin/win-x64/dsh-cua-windows.exe",
+                     "_internal/agent_backend/deepseek_harness/node_modules/@deepseek-ai/dsh-cua-windows/native/bin/win-x64/dsh-cua-windows.dll",
                      "_internal/assets/engines/rapfi/rapfi.exe", "_internal/assets/engines/pikafish/pikafish.exe"):
         if not (payload/required).is_file():
             raise ValueError("Missing release component: "+required)
@@ -273,10 +277,16 @@ def refresh_workers(payload):
 
 def stage_current_worker_sources():
     """Keep reusable runtime dependencies, but always package the current source."""
-    from tools.packaging.worker_runtime import _copy_source
+    from tools.packaging.worker_runtime import _copy_source, stage_dsh_runtime
     target = WORK / "worker_distribution"
     if not (target / "runtime/manifest.json").is_file():
         raise FileNotFoundError("Prepare the standalone worker runtime before building")
+    # Reused staging trees must never keep a retired Agent alongside DSH.
+    for name in ("nanobot", "ui_tars"):
+        retired = target / "agent_backend" / name
+        if retired.exists():
+            raise RuntimeError("Remove the retired backend from this owned build tree before staging DSH: " + name)
+    stage_dsh_runtime(target)
     _copy_source(ROOT / "agent_backend", target / "agent_backend", {".py", ".mjs", ".js", ".ps1", ".json", ".txt"})
     _copy_source(ROOT / "desktop_pet", target / "desktop_pet", {".py"})
     copy(ROOT / "shared/reasoning/profiles.json", target / "shared/reasoning/profiles.json")

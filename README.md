@@ -2,7 +2,7 @@
 
 软件正式名称为「鲸伴」，默认角色仍为鲸鱼娘。为继续读取已有设置、凭据、聊天与配对记录，配置目录和内部通信标识沿用原有值。
 
-安卓现为 [1.19.1](android/README.md)，Windows 为 **1.0.2**。本轮修复 Agent 续办目标丢失和重复失败循环、聊天停止后的记忆取消、屏幕评论过期、手机草稿恢复与阅读位置。角色卡、API 与对话同步继续保留。详见[验证记录](docs/RELEASE_VALIDATION.md)。
+当前开发版本为 Windows **1.1.0**、Android **1.20.0**。Agent 已改为直接运行官方 DeepSeek Harness SDK：工具选择、执行循环、上下文整理和会话恢复交给 DSH；Windows 电脑操控接入官方 CUA 源码。桌宠、聊天、角色卡、手机连接及文件下载继续使用鲸伴界面。实现和版本边界见 [Agent 说明](docs/ON_DEMAND_AGENT.md)。安装包完成验证前，下面的已发布版本仍为 1.0.2。
 
 Windows **1.0.2** 的「鲸伴安装.exe」和「鲸伴.zip」位于 [下载页](https://github.com/Dove-666/JingBan-Desktop-Agent/releases/tag/v1.0.2)。无需安装 Python、Node 或项目依赖；首次使用自行配置聊天 API。分发包包含角色素材、本地棋类引擎、独立后台运行时和第三方许可，不包含开发者的设置、聊天、配对信息或密钥。详见[Windows 封装与测试说明](docs/WINDOWS_RELEASE.md)。
 

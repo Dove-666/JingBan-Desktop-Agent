@@ -5,11 +5,19 @@ import hashlib
 import importlib.util
 import json
 import marshal
+import os
 from pathlib import Path
 import sys
 from PyInstaller.archive.readers import CArchiveReader
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from tools.packaging.worker_runtime import (BACKEND_SOURCE_SUFFIXES, DSH_SOURCE_SUFFIXES, DSH_VERSION,
+                                             iter_source_inputs, iter_staged_worker_sources)
+from tools.qa_release.source_inventory import (DSH_REQUIRED_METADATA, cua_source_inputs,
+                                               dsh_dependency_metadata, inputs as production_inputs)
+from tools.packaging.node_runtime import pinned_runtime, validate_runtime
 parser = argparse.ArgumentParser()
 parser.add_argument("--payload", type=Path, required=True)
 parser.add_argument("--tag", required=True)
@@ -38,7 +46,12 @@ embedded = []
 source_fence = {}
 staged = []
 changes = []
-for path in sorted((ROOT / "desktop_pet").rglob("*.py")):
+node_pin = pinned_runtime()
+node_runtime_matches = validate_runtime(payload / "_internal/runtime/node", node_pin)
+if not node_runtime_matches:
+    changes.append({"category": "pinned_node_runtime", "target": "_internal/runtime/node",
+                    "change": "node_license_or_provenance_mismatch"})
+for path in sorted(iter_source_inputs(ROOT / "desktop_pet", {".py"})):
     relative = path.relative_to(ROOT).as_posix()
     if "__pycache__" in path.parts:
         continue
@@ -89,18 +102,40 @@ def add(source, target, category, *, semantic_json=False, expected_json=None):
 
 excluded = {".venv", "node_modules", "__pycache__", "tests", "test", "runtime", "artifacts"}
 worker_targets = set()
-for directory, suffixes in (("agent_backend", {".py", ".mjs", ".js", ".ps1", ".json", ".txt"}), ("desktop_pet", {".py"})):
-    for path in sorted((ROOT / directory).rglob("*")):
-        if path.is_file() and path.suffix in suffixes and not any(p in excluded for p in path.relative_to(ROOT / directory).parts):
-            target = "_internal/" + path.relative_to(ROOT).as_posix()
-            worker_targets.add(target)
-            add(path, target, "worker_source")
+for path in iter_staged_worker_sources(project_root=ROOT):
+    target = "_internal/" + path.relative_to(ROOT).as_posix()
+    worker_targets.add(target)
+    add(path, target, "worker_source")
+for directory, suffixes in (("agent_backend", BACKEND_SOURCE_SUFFIXES | DSH_SOURCE_SUFFIXES), ("desktop_pet", {".py"})):
     old_base = payload / "_internal" / directory
-    for old in old_base.rglob("*"):
-        if old.is_file() and old.suffix in suffixes and not any(p in excluded for p in old.relative_to(old_base).parts):
-            target = old.relative_to(payload).as_posix()
-            if target not in worker_targets and target != "_internal/agent_backend/__init__.py":
-                changes.append({"category": "worker_source", "target": target, "change": "removed_from_current_source"})
+    for current, dirs, names in os.walk(old_base):
+        dirs[:] = [name for name in dirs if name not in excluded]
+        for name in names:
+            old = Path(current) / name
+            if old.suffix in suffixes:
+                target = old.relative_to(payload).as_posix()
+                if target not in worker_targets and target != "_internal/agent_backend/__init__.py":
+                    changes.append({"category": "worker_source", "target": target, "change": "not_in_current_staging_selection"})
+
+# These sources remain in the checkout as history, but must not leak into a
+# fresh DSH payload through a stale staging directory or hidden import.
+for relative in ("agent_backend/nanobot", "agent_backend/ui_tars", "runtime/python/Lib/site-packages/nanobot"):
+    if (payload / "_internal" / relative).exists():
+        changes.append({"category": "retired_runtime", "target": "_internal/" + relative, "change": "must_not_be_shipped"})
+for relative in DSH_REQUIRED_METADATA:
+    if not (ROOT / relative).is_file():
+        changes.append({"category": "dependency_metadata", "source": relative, "change": "required_lock_metadata_missing"})
+for path in dsh_dependency_metadata(ROOT):
+    add(path, "_internal/" + path.relative_to(ROOT).as_posix(), "dependency_metadata")
+for package in ("dsh", "dsh-sdk-client"):
+    relative = f"agent_backend/deepseek_harness/node_modules/@deepseek-ai/{package}/package.json"
+    try:
+        installed = json.loads((payload / "_internal" / relative).read_text(encoding="utf-8"))
+        valid = installed.get("name") == "@deepseek-ai/" + package and installed.get("version") == DSH_VERSION
+    except (OSError, ValueError):
+        valid = False
+    if not valid:
+        changes.append({"category": "dependency_metadata", "target": "_internal/" + relative, "change": "pinned_dsh_version_mismatch"})
 for path in sorted((ROOT / "browser-extension/whale-ask").rglob("*")):
     if path.is_file() and "__pycache__" not in path.parts:
         add(path, path.relative_to(ROOT).as_posix(), "browser_extension")
@@ -144,12 +179,20 @@ for relative in ("requirements.txt", "requirements-build.txt", "requirements-rem
         build_inputs.append(ROOT / relative)
 for path in build_inputs:
     source_fence[path.relative_to(ROOT).as_posix()] = digest(path)
+# Include source-only build manifests and npm registry configuration, without
+# treating them as runtime payload files or reading any user profile files.
+for path in cua_source_inputs(ROOT):
+    source_fence[path.relative_to(ROOT).as_posix()] = digest(path)
+for relative, source_hash in production_inputs().items():
+    source_fence.setdefault(relative, source_hash)
 source_fence[Path(__file__).relative_to(ROOT).as_posix()] = digest(Path(__file__))
 source_stable = all((ROOT / p).is_file() and digest(ROOT / p) == value for p, value in source_fence.items())
 report = {"passed": not changes and source_stable, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+    "pinned_node_runtime": {"version": node_pin["version"], "matches": node_runtime_matches,
+                            "sha256": node_pin["node_sha256"]},
     "payload": str(payload), "embedded_inventory": embedded, "staged_inventory": staged, "changes": changes,
     "source_stable": source_stable, "source_sha256": source_fence,
-    "scope": "Every current desktop_pet Python module plus main; all project worker sources selected by staging; browser extension/setup; built web UI; regular assets including normalized animation JSON. Runtime third-party binaries and pinned engine staging are outside this source comparison.",
+    "scope": "Active desktop_pet modules plus main; the exact shared DSH worker staging selection including mjs/yaml; no retired Agent runtime/modules; locked dependency metadata and pinned DSH package versions; CUA source/build manifests; pinned Node executable/license/provenance; browser extension/setup; built web UI and regular assets. Other third-party runtime binaries and pinned engine binaries require their separate runtime inventory.",
     "real_provider_calls": 0, "production_configuration_accessed": False}
 (OUT / "comparison.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps({"passed": report["passed"], "embedded_count": len(embedded), "staged_count": len(staged),

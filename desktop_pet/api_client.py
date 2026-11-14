@@ -22,7 +22,7 @@ from .model_context import context_window_rejected
 from .reasoning import reasoning_body, resolve_reasoning
 from .model_reasoning_metadata import ModelChoices, normalized_reasoning_metadata
 from .chat_stream import MAX_STREAM_CHARACTERS, ReplyStream, StreamFormatError
-from agent_backend.nanobot.redaction import redact_text
+from desktop_pet.redaction import redact_text
 
 
 MAX_REPLY_CHARACTERS = 24_000

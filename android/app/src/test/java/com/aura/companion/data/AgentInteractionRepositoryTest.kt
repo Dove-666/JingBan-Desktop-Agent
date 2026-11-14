@@ -73,6 +73,20 @@ class AgentInteractionRepositoryTest {
         .put("kind", "file_access").put("resource", JSONObject().put("path", path)
             .put("access", "read").put("directory", false))
 
+    @Test fun harnessPlanQuestionsAreNotSilentlyDroppedOrTruncated() {
+        val cid = UUID.randomUUID().toString()
+        val body = "读取目录后汇总，不删除文件。\n".repeat(400)
+        assertEquals(body, parseAgentInteraction(question(cid).put("question", body), "desktop")!!.question)
+        assertNull(parseAgentInteraction(question(cid).put("question", "字".repeat(16001)), "desktop"))
+        val emoji = "🐋"
+        val parsed = parseAgentInteraction(question(cid).put("question", emoji.repeat(16000))
+            .put("options", JSONArray(listOf(emoji.repeat(240)))), "desktop")!!
+        assertEquals(emoji.repeat(16000), parsed.question)
+        assertEquals(emoji.repeat(8000), validatedAgentAnswer(parsed,
+            JSONObject().put("text", emoji.repeat(8000)))!!.getString("text"))
+        assertNull(validatedAgentAnswer(parsed, JSONObject().put("text", emoji.repeat(8001))))
+    }
+
     @Test fun parserRejectsMalformedGrantsAndAnswersInsteadOfCoercingBooleans() {
         val cid = UUID.randomUUID().toString()
         val value = permission(cid)

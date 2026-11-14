@@ -59,6 +59,8 @@ class _Run:
     tree: object = None
     dispatched: bool = False
     receipt: WorkerClosureReceipt | None = None
+    external_cleanup_required: bool = False
+    external_cleanup_confirmed: bool = False
     lock: object = field(default_factory=threading.Lock)
 
 
@@ -112,6 +114,27 @@ class WorkerLifecycle:
             # be mistaken for proof that the worker never saw a run command.
             record.dispatched = True
 
+    def require_external_cleanup(self, handle):
+        """Bind a host-owned cleanup gate before authorizing out-of-Job tools."""
+        record = self._get(handle)
+        with record.lock:
+            if record.dispatched or record.receipt is not None:
+                raise ValueError("HOST_WORKER_ALREADY_DISPATCHED")
+            record.external_cleanup_required = True
+
+    def confirm_external_cleanup(self, handle):
+        """Called only after this worker's private native shutdown ACK."""
+        record = self._get(handle)
+        with record.lock:
+            if not record.dispatched or record.receipt is not None:
+                raise ValueError("HOST_WORKER_NOT_ACTIVE")
+            record.external_cleanup_confirmed = True
+
+    def external_cleanup_pending(self, handle):
+        record = self._get(handle)
+        with record.lock:
+            return record.dispatched and record.external_cleanup_required and not record.external_cleanup_confirmed
+
     def request_stop(self, handle):
         record = self._get(handle)
         # A concurrent settle has already requested Stop. Never block a UI
@@ -157,7 +180,8 @@ class WorkerLifecycle:
                     tree_closed = record.tree.confirm_closed(timeout_seconds=max(0, deadline - time.monotonic())) is True
                 except Exception:
                     tree_closed = False
-            if not tree_closed: return None
+            if (not tree_closed or record.dispatched and record.external_cleanup_required
+                    and not record.external_cleanup_confirmed): return None
             receipt = object.__new__(WorkerClosureReceipt)
             for name, value in (("_issuer", self._issuer), ("_handle", handle), ("_process", record.process)):
                 object.__setattr__(receipt, name, value)

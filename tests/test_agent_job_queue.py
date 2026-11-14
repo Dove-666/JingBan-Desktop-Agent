@@ -4,9 +4,10 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 import hashlib
-import importlib
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -16,7 +17,7 @@ from uuid import uuid4
 from desktop_pet.agents import job_queue as queue
 
 
-PRIVATE = "Authorization Bearer sk-SYNTHETIC_SECRET C:\\Users\\PrivateName\\RealDocumentTitle.docx"
+PRIVATE = "Authorization Bearer sk-SYNTHETIC_SECRET C:\\Users\\test\\RealDocumentTitle.docx"
 
 
 class Clock:
@@ -61,13 +62,28 @@ class AgentJobQueueTests(unittest.TestCase):
         return queue.WorkerStoppedProof(job.job_id, job.conversation_id, job.generation, job.user_message_id, True)
 
     def test_import_and_construction_do_not_open_database_or_start_threads(self):
-        with patch("sqlite3.connect", side_effect=AssertionError("No IO on import/construction")), \
-             patch("threading.Thread.start", side_effect=AssertionError("No scheduler thread")):
-            importlib.reload(queue)
-            unopened = queue.JobQueue(Path(self.directory.name) / "not-created.sqlite3")
+        # Reloading this module in the shared test process replaces its public
+        # dataclass identities while the coordinator retains the original
+        # imports. Check import purity in an actual fresh interpreter instead.
+        script = """
+from pathlib import Path
+import sys
+from unittest.mock import patch
+with patch('sqlite3.connect', side_effect=AssertionError('No IO on import/construction')), \\
+     patch('threading.Thread.start', side_effect=AssertionError('No scheduler thread')):
+    from desktop_pet.agents import job_queue
+    unopened = job_queue.JobQueue(Path(sys.argv[1]) / 'not-created.sqlite3')
+try:
+    unopened.list_jobs()
+except job_queue.JobQueueError as exc:
+    assert str(exc) == 'QUEUE_NOT_INITIALIZED'
+else:
+    raise AssertionError('Uninitialized queue was usable')
+"""
+        result = subprocess.run([sys.executable, "-c", script, self.directory.name],
+                                capture_output=True, timeout=20)
+        self.assertEqual(result.returncode, 0, "Isolated queue import or construction failed")
         self.assertFalse((Path(self.directory.name) / "not-created.sqlite3").exists())
-        with self.assertRaisesRegex(queue.JobQueueError, "QUEUE_NOT_INITIALIZED"):
-            unopened.list_jobs()
 
     def test_enqueue_is_idempotent_even_after_terminal_and_does_not_replace_settings_snapshot(self):
         reference = self.reference(); first = self.queue.enqueue(reference)

@@ -1,0 +1,14 @@
+{
+  "name": "jingban-deepseek-harness",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "^24.20.0 || >=26.7.0" },
+  "scripts": { "test": "node --test test/*.test.mjs", "check": "node --check worker.mjs" },
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-sdk-client": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-computer-use": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-cua-windows": "file:../../third_party/deepseek_harness/cua-windows"
+  }
+}

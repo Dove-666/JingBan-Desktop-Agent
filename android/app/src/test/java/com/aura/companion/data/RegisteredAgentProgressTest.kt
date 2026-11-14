@@ -67,7 +67,7 @@ class RegisteredAgentProgressTest {
     }
 
     @Test fun runtimeErrorsUseOnlyFixedHostCodesAndNeverRawExceptionText() {
-        for (code in listOf("execution_runtime_invalid", "execution_runtime_changed")) {
+        for (code in listOf("execution_runtime_invalid", "execution_runtime_changed", "stop_unconfirmed")) {
             assertEquals(code, validAgentErrorCode(code))
             val message = AGENT_ERROR_MESSAGES.getValue(code)
             assertTrue(message.contains("电脑") || message.contains("环境"))

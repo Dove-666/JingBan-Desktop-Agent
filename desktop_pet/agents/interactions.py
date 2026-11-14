@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import threading
 import time
-from agent_backend.nanobot.redaction import redact_text
+from desktop_pet.redaction import redact_text
 
 _IDENTITY = re.compile(r"interaction-[a-f0-9]{32}\Z")
 
@@ -52,7 +52,7 @@ def checked_interaction(frame, *, secrets=(), resolve_resource=True):
         value = _text(value, limit)
         return redact_text(value, secrets, "[已隐藏密钥]")
     result = {"id": frame["interaction_id"], "kind": frame["kind"],
-              "question": clean(frame.get("question"), 2000)}
+              "question": clean(frame.get("question"), 16000)}
     if result["kind"] == "question":
         options = frame.get("options", [])
         if not isinstance(options, list) or len(options) > 6:
