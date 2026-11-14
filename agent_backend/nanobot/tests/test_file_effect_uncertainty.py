@@ -41,10 +41,10 @@ class FileEffectUncertaintyTests(unittest.TestCase):
         client, model = self.start([
             fixtures.tool("render_document", path="owned.docx"),
             fixtures.tool("write_file", path="later.txt", content="MUST NOT WRITE AFTER UNKNOWN"),
-            after_write], worker_path=wrapper)
+            after_write], worker_path=wrapper, allow_outcome_feedback=True)
         result = client.terminal()
         self.assertEqual("needs_user", result.get("status"), result)
-        self.assertEqual(3, len(model.calls))
+        self.assertEqual(3 + model.repair_calls, len(model.calls))
         return observations[0]
 
     @unittest.skipUnless(sys.platform == "win32", "Windows render tool registry")

@@ -1013,8 +1013,7 @@ class AppRepository internal constructor(
         val catalog = currentCharacterCatalog()
         val persona = currentPersona()
         val secrets = boundarySecrets()
-        val sameRole = catalog != null && persona != null && catalog.active.persona.revision == persona.revision &&
-            catalog.active.persona.systemPrompt == persona.systemPrompt && catalog.active.persona.name == persona.name
+        val sameRole = catalogMatchesPersona(catalog, persona)
         val summaries = catalog?.items.orEmpty().map { card ->
             card.copy(label = redactKnownText(card.label, secrets), name = redactKnownText(card.name, secrets))
         }
@@ -1025,6 +1024,10 @@ class AppRepository internal constructor(
                 CHARACTER_CAPABILITIES.all { capability -> capability in cachedCapabilities.orEmpty() }
                 else catalog != null) }
     }
+
+    private fun catalogMatchesPersona(catalog: CharacterCatalogCache?, persona: SyncedPersona?): Boolean =
+        catalog != null && persona != null && catalog.active.persona.revision == persona.revision &&
+            catalog.active.persona.systemPrompt == persona.systemPrompt && catalog.active.persona.name == persona.name
 
     /** Catalogs are read-only while offline; an unconfirmed switch never changes the local role. */
     suspend fun refreshCharacters() = perform {
@@ -1043,7 +1046,9 @@ class AppRepository internal constructor(
             require(validCharacterId(id)) { "请选择有效的角色卡" }
             if (cachedCapabilities == null) status()
             require(CHARACTER_CAPABILITIES.all { it in cachedCapabilities.orEmpty() }) { "请更新并重启电脑端后同步角色卡" }
-            if (currentCharacterCatalog() == null) refreshCharactersInternal(force = true)
+            // chat.config can update the persona even when the optional catalog refresh
+            // fails. Never mistake the previously cached active card for the current role.
+            if (!catalogMatchesPersona(currentCharacterCatalog(), currentPersona())) refreshCharactersInternal(force = true)
             val catalog = currentCharacterCatalog() ?: throw IllegalArgumentException("角色库尚未同步，请刷新后重试")
             val digest: String? = if (id == "default") null else (catalog.items.firstOrNull { it.id == id }?.digest
                 ?: throw IllegalArgumentException("这张角色卡已不在角色库中，请刷新后重试"))

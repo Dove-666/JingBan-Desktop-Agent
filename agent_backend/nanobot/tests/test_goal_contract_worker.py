@@ -19,7 +19,7 @@ REPO = BACKEND.parents[1]
 sys.path.insert(0, str(BACKEND))
 sys.path.insert(0, str(BACKEND / "tests"))
 from test_worker import Client, PYTHON
-from test_harness_worker import tool
+from test_harness_worker import tool, repeat_after_outcome_feedback
 
 KEY = "synthetic-goal-verification-secret"
 FILE_TASK = "Create report.txt in the delegated workspace, containing exactly HELLO. Read it back before confirming success."
@@ -28,8 +28,12 @@ DONE = "Created report.txt with content HELLO."
 
 class SeparateGoalModel:
     """A protocol fixture whose judge cannot consume planner script steps."""
-    def __init__(self, steps, *, judge_mode="file", workspace=None):
+    def __init__(self, steps, *, judge_mode="file", workspace=None, allow_outcome_feedback=False,
+                 outcome_feedback_limit=2):
         self.steps, self.judge_mode = list(steps), judge_mode
+        self.allow_outcome_feedback = allow_outcome_feedback
+        self.outcome_feedback_limit = outcome_feedback_limit
+        self.repair_calls, self.last_answer = 0, None
         self.workspace = workspace
         self.planner_calls, self.judge_calls, self.revision_calls, self.errors = [], [], [], []
         owner = self
@@ -79,8 +83,9 @@ class SeparateGoalModel:
                         index = len(owner.planner_calls)
                         owner.planner_calls.append(body)
                         if index >= len(owner.steps):
-                            raise AssertionError("Unexpected extra planner iteration")
-                        step = owner.steps[index]
+                            step = repeat_after_outcome_feedback(owner, body)
+                        else:
+                            step = owner.steps[index]
                         step = step(body) if callable(step) else step
                         call = None
                         if isinstance(step, tuple):
@@ -88,6 +93,8 @@ class SeparateGoalModel:
                             call = {"id": f"goal-planner-{index}", "type": "function", "function": {
                                 "name": name, "arguments": json.dumps(arguments)}}
                         content = None if call else str(step)
+                        if not call:
+                            owner.last_answer = content
                     message = {"role": "assistant", "content": content}
                     if call:
                         message["tool_calls"] = [call]
@@ -190,7 +197,8 @@ class SeparateGoalModel:
 
 @unittest.skipUnless(PYTHON.is_file(), "isolated nanobot SDK environment missing")
 class GoalContractWorkerTests(unittest.TestCase):
-    def run_case(self, steps, *, task=FILE_TASK, judge_mode="file", fixtures=None):
+    def run_case(self, steps, *, task=FILE_TASK, judge_mode="file", fixtures=None,
+                 outcome_feedback_limit=2):
         root = (REPO / "agent_workspace").resolve()
         root.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix="goal-contract-worker-", dir=root) as owned:
@@ -200,7 +208,8 @@ class GoalContractWorkerTests(unittest.TestCase):
                 target = (workspace / name).resolve()
                 self.assertTrue(target.is_relative_to(workspace))
                 target.write_text(text, encoding="utf-8")
-            model = SeparateGoalModel(steps, judge_mode=judge_mode, workspace=workspace)
+            model = SeparateGoalModel(steps, judge_mode=judge_mode, workspace=workspace,
+                                      allow_outcome_feedback=True, outcome_feedback_limit=outcome_feedback_limit)
             client = Client()
             try:
                 client.send({"type": "run", "id": "goal-contract-regression", "kind": "agent",
@@ -210,9 +219,9 @@ class GoalContractWorkerTests(unittest.TestCase):
                         "tools_enabled": True, "computer_enabled": False, "checkpoint_required": False,
                         "include_activity": True}})
                 result = client.terminal(timeout=40)
-                self.assertEqual(result["type"], "final", result)
+                self.assertEqual(result["type"], "final", (result, model.errors, model.repair_calls))
                 self.assertTrue(model.judge_calls, "No independent goal verification request occurred")
-                self.assertEqual(len(model.planner_calls), len(steps), model.errors)
+                self.assertEqual(len(model.planner_calls), len(steps) + model.repair_calls, model.errors)
                 self.assertEqual(model.errors, [])
                 self.assertNotIn(KEY, json.dumps(client.all_frames))
                 materialized = {}
@@ -271,9 +280,10 @@ class GoalContractWorkerTests(unittest.TestCase):
                 self.assertEqual(files, {"report.txt": "HELLO"})
 
     def test_external_edit_during_judge_does_not_accept_old_readback(self):
+        # The edit introduces distinct stale-receipt and changed-file failures.
         result, files, _ = self.run_case([
             tool("write_file", path="report.txt", content="HELLO"),
-            tool("read_file", path="report.txt"), DONE], judge_mode="mutate_file")
+            tool("read_file", path="report.txt"), DONE], judge_mode="mutate_file", outcome_feedback_limit=4)
         self.assertEqual(result["status"], "needs_user", result)
         self.assertEqual(files, {"report.txt": "CHANGED AFTER SNAPSHOT"})
 

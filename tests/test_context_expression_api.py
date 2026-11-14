@@ -90,7 +90,7 @@ class ContextExpressionPolicyTests(unittest.TestCase):
     def test_express_requires_a_json_boolean_not_truthy_coercion(self):
         for invalid in (None, 0, 1, "true", "false", [], {}):
             with self.subTest(express=invalid):
-                self.assertEqual(parse_context(response(express=invalid)), ContextEvent())
+                self.assertEqual(parse_context(response(express=invalid)), ContextEvent(valid=False))
         self.assertFalse(parse_context(response(express=False)).express)
 
     def test_expression_flag_does_not_relax_kind_score_or_text_validation(self):
@@ -98,7 +98,7 @@ class ContextExpressionPolicyTests(unittest.TestCase):
                         {"confidence": -1}, {"importance": float("nan")},
                         {"importance": 2}, {"summary": {}}, {"reply": []}):
             with self.subTest(changes=changes):
-                self.assertEqual(parse_context(response(express=True, **changes)), ContextEvent())
+                self.assertEqual(parse_context(response(express=True, **changes)), ContextEvent(valid=False))
 
     def test_visual_prompts_describe_no_speech_and_unreliable_scene_behavior(self):
         for prompt in (CONTEXT_PROMPT, CAMERA_CONTEXT_PROMPT):

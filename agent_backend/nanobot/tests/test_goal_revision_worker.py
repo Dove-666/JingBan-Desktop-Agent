@@ -31,7 +31,7 @@ class RevisionModel(SeparateGoalModel):
         self.revision_mode = revision_mode
         self.user_checkpoint_acknowledged = threading.Event()
         self.revision_snapshots = []
-        super().__init__(steps, judge_mode="optimistic")
+        super().__init__(steps, judge_mode="optimistic", allow_outcome_feedback=True)
 
     def revise(self, snapshot):
         if not self.user_checkpoint_acknowledged.is_set():

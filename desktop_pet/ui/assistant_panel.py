@@ -98,6 +98,11 @@ class ChatBridge(QObject):
             self.panel._publish_web_state()
         elif action != "draft" or not result:
             self.panel._queue_web_state()
+        if action == "steerAgent" and not result:
+            text = data.get("text")
+            code = ("STEERING_TOO_LONG" if isinstance(text, str) and len(text.strip()) > 8000
+                    else "STEERING_REJECTED")
+            return json.dumps({"ok": False, "error": code})
         return json.dumps({"ok": bool(result)})
 
 

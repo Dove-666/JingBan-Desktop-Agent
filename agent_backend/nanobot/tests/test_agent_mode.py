@@ -135,7 +135,7 @@ class NativeAgentTests(unittest.TestCase):
                                     kwargs.pop("context", self.context), **kwargs)
 
     def test_plain_reply_is_valid_even_without_enabled_tools(self):
-        result = self.execute(settings=replace(self.settings, tools_enabled=False))
+        result = self.execute(settings=replace(self.settings, tools_enabled=False, computer_enabled=False))
         self.assertEqual(result.status, "completed")
         self.assertIn("normal native Agent answer", result.reply)
         self.assertNotIn(KEY, result.reply)
@@ -284,8 +284,11 @@ class NativeAgentTests(unittest.TestCase):
         self.assertEqual(json.loads(counter.read_text()), ["launcher.exe"])
         replay = NativeModel.calls[0]["messages"]
         self.assertTrue(any(item.get("name") == "discover_applications" and "Delta Force launcher" in item["content"] for item in replay))
-        final_messages = NativeModel.calls[-1]["messages"]
-        latest = max(index for index, item in enumerate(final_messages) if item["role"] == "user")
+        # Main and visual-verifier requests share the single API now. Inspect
+        # the planner transcript, not the verifier's independent last request.
+        final_messages = next(body["messages"] for body in reversed(NativeModel.calls) if body.get("tools"))
+        latest = next(index for index, item in enumerate(final_messages)
+                     if item["role"] == "user" and "就叫 launcher.exe 好像" in str(item.get("content", "")))
         self.assertEqual([item.get("name") for item in final_messages[latest + 1:] if item["role"] == "tool"],
                          ["discover_applications", "open_application"])
 

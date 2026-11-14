@@ -136,7 +136,8 @@ class MemoryReadinessSnapshotTests(unittest.TestCase):
         self.assertIn("独立记忆提炼密钥：无法读取", result[1])
         self.assertIn("Embedding 密钥：无法读取", result[1])
         self.assertEqual(result[2], {"chat_configured": False, "extraction_configured": False,
-            "embedding_configured": False, "embedding_provider": "openai", "uses_chat_model": False})
+            "embedding_configured": False, "embedding_provider": "openai", "uses_chat_model": False,
+            "vector_space_bound": False})
         self.assertNotIn("chat-api-key", self.vault.reads)
 
     def test_independent_model_samples_three_distinct_credentials_once(self):

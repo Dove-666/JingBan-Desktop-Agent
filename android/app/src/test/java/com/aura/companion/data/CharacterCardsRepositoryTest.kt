@@ -220,6 +220,31 @@ class CharacterCardsRepositoryTest {
         } finally { repo.close() }
     }
 
+    @Test fun staleCatalogCannotSilentlyIgnoreSelectingItsPreviouslyActiveRole() = runBlocking {
+        val rpc = Rpc(); val vault = Vault(); val repo = AppRepository(context, rpc, db(), vault, Model())
+        try {
+            repo.reconnect()
+            rpc.active = beta; rpc.malformedCatalog = true
+            repo.refreshApiConfig()
+            assertEquals("Beta", repo.state.value.activeCharacterName)
+            assertNull(repo.state.value.activeCharacterId)
+            assertEquals(alpha, vault.characters!!.active.id)
+
+            repo.selectCharacter(alpha)
+            assertEquals(beta, rpc.active)
+            assertNotNull(repo.state.value.characterSyncError)
+            assertEquals(0, rpc.calls.count { it.first == "character.select" })
+
+            rpc.malformedCatalog = false
+            repo.selectCharacter(alpha)
+            assertEquals(alpha, rpc.active)
+            assertEquals(alpha, repo.state.value.activeCharacterId)
+            assertEquals("role Alpha", vault.persona!!.systemPrompt)
+            assertNull(repo.state.value.characterSyncError)
+            assertEquals(1, rpc.calls.count { it.first == "character.select" })
+        } finally { repo.close() }
+    }
+
     @Test fun aLateCatalogFromThePreviousComputerCannotApplyOrEnterTheUi() = runBlocking {
         val database = db(); val rpc = Rpc(); val vault = Vault()
         val repo = AppRepository(context, rpc, database, vault, Model())

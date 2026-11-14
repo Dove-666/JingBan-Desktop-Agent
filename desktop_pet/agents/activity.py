@@ -9,6 +9,7 @@ ACTION_LABELS = {
     "hotkey": "使用快捷键", "scroll": "滚动界面", "wait": "等待界面响应",
     "finished": "电脑操作返回结果", "call_user": "需要手动接手",
     "verify": "确认操作结果",
+    "tool_request": "检查工具请求",
     "error_env": "检查操作环境", "user_stop": "停止电脑操作",
 }
 

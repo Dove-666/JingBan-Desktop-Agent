@@ -253,6 +253,7 @@ class MemoryPanel(QWidget):
         self.automatic_checkbox.setChecked(checked)
         self.automatic_checkbox.blockSignals(False)
         self.automatic_checkbox.setEnabled(not getattr(self.controller, "busy", False) or checked)
+        self._update_delete_button()
 
     def _set_automatic(self, enabled):
         setter = getattr(self.controller, "set_automatic_enabled", None)
@@ -319,7 +320,6 @@ class MemoryPanel(QWidget):
             summary += " · 待刷新"
         self.memory_count_label.setText(summary)
         self.memory_count_label.setVisible(bool(total or query or stale))
-        self.clear_button.setVisible(bool(total))
         self.previous_button.setVisible(offset > 0)
         self.next_button.setVisible(bool(getattr(self.controller, "memory_has_more", False)))
         self._update_delete_button()
@@ -379,7 +379,11 @@ class MemoryPanel(QWidget):
             self.edit_button.setEnabled(self.delete_button.isEnabled())
             self.history_button.setEnabled(self.delete_button.isEnabled())
             idle = not getattr(self.controller, "busy", False)
-            self.clear_button.setEnabled(idle and bool(getattr(self.controller, "memory_total", len(getattr(self.controller, "memories", [])))))
+            total = getattr(self.controller, "memory_total", len(getattr(self.controller, "memories", [])))
+            reset_available = bool(total or getattr(self.controller, "can_reset_memories", False))
+            self.clear_button.setVisible(reset_available)
+            self.clear_button.setEnabled(idle and reset_available)
+            self.clear_button.setText("清空长期记忆" if total else "重置记忆库")
             self.previous_button.setEnabled(idle and getattr(self.controller, "memory_offset", 0) > 0)
             self.next_button.setEnabled(idle and getattr(self.controller, "memory_has_more", False))
 
@@ -465,8 +469,11 @@ class MemoryPanel(QWidget):
     def _clear_memories(self):
         if getattr(self.controller, "busy", False):
             return
+        empty = not getattr(self.controller, "memory_total", len(getattr(self.controller, "memories", [])))
         answer = QMessageBox.question(
-            self, "清空长期记忆", "确定清空所有长期记忆？聊天记录仍然保留，此操作无法撤销。",
+            self, "重置记忆库" if empty else "清空长期记忆",
+            ("重置长期记忆的模型绑定？聊天记录保留，其他用户的记忆不会删除。" if empty
+             else "确定清空所有长期记忆？聊天记录仍然保留，此操作无法撤销。"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

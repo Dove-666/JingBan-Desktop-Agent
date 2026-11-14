@@ -12,6 +12,7 @@ BACKEND = Path(__file__).resolve().parents[1] / "agent_backend" / "nanobot"
 sys.path.insert(0, str(BACKEND))
 from safe_files import WorkspaceFiles
 from task_harness import TaskHarness
+from goal_contract import GoalContract
 from gui_verification import report
 
 
@@ -144,6 +145,47 @@ class TaskHarnessFailureRecoveryTests(unittest.TestCase):
         for _ in range(150):
             self.harness.record_success("read_file", {"path": "actual-input.txt"}, self.files.read("actual-input.txt"))
         self.assertFalse(self.harness.stalled)
+
+    def test_alternating_failed_candidates_stop_after_repeated_cycle(self):
+        for index in range(6):
+            self.harness.record_failure("read_file", {"path": f"missing-{index % 2}.txt"})
+        self.assertFalse(self.harness.stalled)
+        self.harness.record_failure("read_file", {"path": "missing-0.txt"})
+        self.assertTrue(self.harness.stalled)
+        self.read_owned("actual-input.txt")
+        self.assertFalse(self.harness.stalled)
+
+    def test_distinct_exploration_does_not_create_a_global_failure_limit(self):
+        for index in range(150):
+            self.harness.record_failure("read_file", {"path": f"candidate-{index}.txt"})
+            self.assertFalse(self.harness.stalled)
+        self.assertLessEqual(len(self.harness.failure_counts), 16)
+        self.assertLessEqual(len(self.harness.failure_operations), 16)
+
+    def test_unchanged_read_keeps_retry_progress_stable_but_invalidates_judge_receipt(self):
+        self.harness = TaskHarness(self.root, goal_contract=GoalContract.from_task(
+            'Create report.txt containing exactly "HELLO".'))
+        self.read_owned("report.txt", "WRONG")
+        progress = self.harness.completion_progress_id()
+        evidence = self.harness.goal_snapshot()["evidence_id"]
+        for _ in range(4):
+            self.harness.record_failure("finish_task", {"progress": self.harness.completion_progress_id()},
+                                        classification="exploratory")
+            self.read_owned("report.txt", "WRONG")
+            self.assertEqual(self.harness.completion_progress_id(), progress)
+        self.assertTrue(self.harness.stalled)
+        self.assertNotEqual(self.harness.goal_snapshot()["evidence_id"], evidence)
+
+    def test_changed_file_and_revised_goal_are_actual_progress(self):
+        self.harness = TaskHarness(self.root, goal_contract=GoalContract.from_task(
+            'Create report.txt containing exactly "HELLO".'))
+        self.read_owned("report.txt", "WRONG")
+        before = self.harness.completion_progress_id()
+        (self.root / "report.txt").write_text("HELLO", encoding="utf-8")
+        after = self.harness.completion_progress_id()
+        self.assertNotEqual(before, after, "Fresh file content must allow a new completion attempt")
+        self.harness.goal_contract = GoalContract.from_task('Read report.txt.')
+        self.assertNotEqual(after, self.harness.completion_progress_id())
 
 
 if __name__ == "__main__":

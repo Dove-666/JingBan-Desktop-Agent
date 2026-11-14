@@ -25,7 +25,7 @@ class AgentCompletionEvidenceTests(unittest.TestCase):
     def run_case(self, steps):
         workspace_root = (REPO / 'agent_workspace').resolve()
         workspace_root.mkdir(exist_ok=True)
-        model = ScriptedModel(steps)
+        model = ScriptedModel(steps, allow_outcome_feedback=True)
         client = Client()
         try:
             with tempfile.TemporaryDirectory(prefix='agent-completion-evidence-', dir=workspace_root) as owned:
@@ -42,19 +42,21 @@ class AgentCompletionEvidenceTests(unittest.TestCase):
                 result = client.terminal()
                 self.assertEqual(result['type'], 'final', result)
                 self.assertEqual(result['status'], 'needs_user', result)
-                self.assertIn('Created report.txt with content HELLO.', result['reply'])
+                self.assertIn('未完成', result['reply'])
+                self.assertNotIn('Created report.txt with content HELLO.', result['reply'])
                 self.assertFalse((workspace / 'report.txt').exists())
                 effects = [frame for frame in client.all_frames if frame['type'] == 'activity'
                            and frame.get('name') not in {'update_plan', 'finish_task'}]
                 self.assertEqual(effects, [], 'This model used no actual effect or observation tool.')
                 self.assertEqual(list(workspace.iterdir()), [], 'Planner metadata cannot write a user artifact.')
                 self.assertEqual(model.errors, [])
-                return result, len(model.calls)
+                self.assertEqual(len(model.calls), len(steps) + model.repair_calls)
+                return result, len(model.calls) - model.repair_calls
         finally:
             self.assertEqual(client.close(), '')
             model.close()
 
-    def test_plain_agent_claim_without_tools_preserves_reply_but_is_not_completed(self):
+    def test_plain_agent_claim_without_tools_is_replaced_by_verified_failure(self):
         result, calls = self.run_case(['Created report.txt with content HELLO.'])
         self.assertEqual(result['tools_used'], [])
         self.assertEqual(calls, 1)

@@ -49,6 +49,22 @@ class ToolArgumentRecoveryTests(unittest.TestCase):
 
     def observed_run(self, workspace, steps, *, batch=None, history=(), task=support.FILE_TASK, judge_mode="file"):
         model = support.SeparateGoalModel(steps, judge_mode=judge_mode, workspace=workspace)
+        if history:
+            # This archive fixture explicitly asks to inspect the same output;
+            # goal replacement/uncertain resolution have separate SDK tests.
+            self.assertEqual(task, "Read report.txt and tell me its contents.")
+            def resolve_followup_read(snapshot):
+                correction = snapshot["host_corrections"][-1]
+                self.assertEqual(correction["text"], task)
+                anchor = {"correction_id": correction["correction_id"], "quote": task}
+                return json.dumps({"schema": "aura.goal_revision_patch.v1",
+                    **{key: snapshot[key] for key in ("timeline_id", "revision_id", "base_requirements_id")},
+                    "status": "resolved", "operations": [
+                        *[{"op": "supersede", "requirement_id": item["id"], "correction": anchor}
+                          for item in snapshot["active_requirements"]],
+                        {"op": "add", "requirement": {"id": "read-current-output", "kind": "read_file",
+                            "path": "report.txt"}, "correction": anchor}]})
+            model.revise = resolve_followup_read
         if batch is not None:
             parent = model.server.RequestHandlerClass
             class BatchHandler(parent):
@@ -151,6 +167,7 @@ class ToolArgumentRecoveryTests(unittest.TestCase):
                 [tool("read_file", path="report.txt"), "The file contains HELLO."], history=saved,
                 task="Read report.txt and tell me its contents.", judge_mode="read_answer")
             self.assertEqual(replay["tools_used"], ["read_file"])
+            self.assertEqual([item["kind"] for item in replay_snapshots[-1]["requirements"]], ["read_file"])
             self.assertEqual((workspace / "report.txt").read_text(), "HELLO")
             self.assertFalse(any(row["tool"] == "write_file" for row in replay_snapshots[-1]["facts"]["observed"]["observations"]))
 

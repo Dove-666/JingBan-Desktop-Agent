@@ -89,9 +89,12 @@ class ContextEvent:
     confidence: float = 0.0
     event_key: str = ""
     express: bool = False
+    valid: bool = True
 
 
 def parse_context(raw: str, api_key: str = "") -> ContextEvent:
+    if not isinstance(raw, str):
+        return ContextEvent(valid=False)
     candidate = raw.strip()
     fenced = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", candidate, re.S | re.I)
     if fenced:
@@ -99,20 +102,20 @@ def parse_context(raw: str, api_key: str = "") -> ContextEvent:
     try:
         value = json.loads(candidate)
         if not isinstance(value, dict):
-            return ContextEvent()
-        kind = value.get("kind", "none")
+            return ContextEvent(valid=False)
+        kind = value.get("kind")
         if not isinstance(kind, str) or kind not in KINDS:
-            return ContextEvent()
+            return ContextEvent(valid=False)
         emotion = normalize_emotion(value.get("emotion"))
         express = value.get("express", False)
         if not isinstance(express, bool):
-            return ContextEvent()
+            return ContextEvent(valid=False)
         scores = [value.get("importance", 0), value.get("confidence", 0)]
         if any(isinstance(n, bool) or not isinstance(n, (int, float)) or not 0 <= n <= 1 or not math.isfinite(n) for n in scores):
-            return ContextEvent()
+            return ContextEvent(valid=False)
         summary, reply = value.get("summary", ""), value.get("reply", "")
         if not isinstance(summary, str) or not isinstance(reply, str):
-            return ContextEvent()
+            return ContextEvent(valid=False)
         summary = redact_secret(summary.strip(), api_key)[:200]
         reply = redact_secret(reply.strip(), api_key)[:160]
         semantic = value.get("event_key", "")
@@ -122,7 +125,7 @@ def parse_context(raw: str, api_key: str = "") -> ContextEvent:
         key = hashlib.sha256((kind + ":" + normalized).encode("utf-8")).hexdigest()
         return ContextEvent(kind, summary, reply, emotion, float(scores[0]), float(scores[1]), key, express)
     except (ValueError, TypeError, RecursionError, OverflowError):
-        return ContextEvent()
+        return ContextEvent(valid=False)
 
 
 class ContextAnalyzer:
@@ -174,7 +177,10 @@ class ContextAnalyzer:
             ]},
         ]
         raw = self.client.request_text(settings, api_key, messages)
-        return parse_context(raw, api_key)
+        event = parse_context(raw, api_key)
+        if not event.valid:
+            raise ApiError("response_format", "未得到有效的结构化情境，请检查模型是否支持图片与结构化输出后重试。")
+        return event
 
     def shutdown(self) -> None:
         self.client.shutdown()

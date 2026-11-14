@@ -117,7 +117,8 @@ class WorkerLifecycleTests(unittest.TestCase):
         self.assertIsNone(service._settle_worker(handle, timeout_seconds=0))
         self.assertIn(process.pid, service._processes)
         with self.assertRaises(AgentError) as raised:
-            service.execute(AgentSettings(), "unused", AgentRequest("Owned task", "agent"), {})
+            service.execute(AgentSettings(), "unused", AgentRequest("Owned task", "agent"),
+                            {"api": {"base_url": "http://127.0.0.1:1/v1", "model": "owned-offline-fixture"}})
         self.assertEqual(raised.exception.code, "busy")
         receipts = service.reconcile_worker_closures(timeout_seconds=0)
         self.assertEqual(len(receipts), 1)
@@ -145,7 +146,8 @@ class WorkerLifecycleTests(unittest.TestCase):
                                      worker_lifecycle_callback=bound.append)
         self.assertEqual(result.status, "needs_user")
         self.assertEqual(result.artifacts, original.artifacts)
-        self.assertIn("后台进程和工具", result.reply)
+        self.assertIn("未完成", result.reply)
+        self.assertTrue(result.reply.startswith(original.reply))
         self.assertFalse(checked_assessment(result.acceptance)["passed"])
         self.assertIn("WORKER_CLEANUP_UNCONFIRMED", result.acceptance["issue_codes"])
         self.assertIsNone(service.worker_closure(bound[0]))

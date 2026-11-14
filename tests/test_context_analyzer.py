@@ -42,15 +42,15 @@ class ContextParsingTests(unittest.TestCase):
                 self.assertEqual(event.confidence, .9)
                 self.assertEqual(len(event.event_key), 64)
 
-    def test_plain_text_malformed_json_and_nonobjects_safely_return_none(self):
-        for raw in ("普通回复，无法验证情境", "{bad JSON}", "[]", "null", "42", ""):
+    def test_plain_text_malformed_json_and_nonobjects_are_explicitly_invalid(self):
+        for raw in ("普通回复，无法验证情境", "{bad JSON}", "[]", "null", "42", "", "{}", None):
             with self.subTest(raw=raw):
-                self.assertEqual(parse_context(raw), ContextEvent())
+                self.assertEqual(parse_context(raw), ContextEvent(valid=False))
 
     def test_kind_whitelist_rejects_untrusted_values(self):
         for changes in ({"kind": "execute"}, {"kind": []}, {"kind": None}):
             with self.subTest(changes=changes):
-                self.assertEqual(parse_context(response(**changes)), ContextEvent())
+                self.assertEqual(parse_context(response(**changes)), ContextEvent(valid=False))
 
     def test_unknown_or_malformed_emotion_preserves_valid_context_with_neutral(self):
         for invalid in ("run_shell", {}, [], None):
@@ -64,16 +64,16 @@ class ContextParsingTests(unittest.TestCase):
         for score in (float("nan"), float("inf"), -float("inf"), -.01, 1.01, True, "high", None):
             for field in ("importance", "confidence"):
                 with self.subTest(field=field, score=score):
-                    self.assertEqual(parse_context(response(**{field: score})), ContextEvent())
+                    self.assertEqual(parse_context(response(**{field: score})), ContextEvent(valid=False))
 
     def test_enormous_json_integer_cannot_raise_overflow(self):
         for field in ("importance", "confidence"):
             with self.subTest(field=field):
-                self.assertEqual(parse_context(response(**{field: 10 ** 1000})), ContextEvent())
+                self.assertEqual(parse_context(response(**{field: 10 ** 1000})), ContextEvent(valid=False))
 
     def test_text_fields_require_strings_and_are_bounded(self):
         for changes in ({"summary": []}, {"reply": 42}):
-            self.assertEqual(parse_context(response(**changes)), ContextEvent())
+            self.assertEqual(parse_context(response(**changes)), ContextEvent(valid=False))
         event = parse_context(response(summary="s" * 1000, reply="r" * 1000))
         self.assertLessEqual(len(event.summary), 200)
         self.assertLessEqual(len(event.reply), 160)
@@ -102,12 +102,26 @@ class ContextParsingTests(unittest.TestCase):
         with patch("os.system") as system, patch("subprocess.run") as run:
             parsed = parse_context(response(reply=malicious, command=malicious))
             self.assertEqual(parsed.reply, malicious)
-            self.assertEqual(parse_context(malicious), ContextEvent())
+            self.assertEqual(parse_context(malicious), ContextEvent(valid=False))
             system.assert_not_called()
             run.assert_not_called()
 
 
 class ContextAnalyzerTests(unittest.TestCase):
+    def test_invalid_output_is_a_safe_error_but_valid_quiet_is_successful(self):
+        client = Mock()
+        analyzer = ContextAnalyzer(client)
+        for raw in ("provider secret " + KEY, "{}", response(importance="high")):
+            client.request_text.return_value = raw
+            with self.subTest(raw=raw), self.assertRaises(ApiError) as caught:
+                analyzer.analyze(observation(), ApiSettings(model="test-model"), KEY)
+            self.assertEqual(caught.exception.code, "response_format")
+            self.assertNotIn(KEY, str(caught.exception))
+        client.request_text.return_value = response(kind="none", reply="", importance=0)
+        event = analyzer.analyze(observation(), ApiSettings(model="test-model"), KEY)
+        self.assertTrue(event.valid)
+        self.assertEqual(event.kind, "none")
+
     def test_invalid_commentary_modes_never_call_transport(self):
         client = Mock()
         analyzer = ContextAnalyzer(client)

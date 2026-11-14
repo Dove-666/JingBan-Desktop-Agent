@@ -123,6 +123,53 @@ class AgentInteractionUiTests(unittest.TestCase):
         self.assertFalse(self.panel.web_state()["canSteerAgent"])
         self.assertEqual(self.chat.answers, []); self.assertEqual(self.chat.steering, [])
 
+    def test_oversized_steering_is_explained_preserves_draft_and_can_be_corrected(self):
+        wait_js(self.panel, "document.querySelector('#message-input')?.placeholder === '补充当前任务…'")
+        set_dom_text(self.panel, "#message-input", "字" * 8001)
+        wait_js(self.panel, "document.querySelector('[data-testid=steering-feedback]')?.textContent.includes('8001')")
+        self.assertTrue(eval_js(self.panel, "document.querySelector('[data-testid=send-button]').disabled"))
+        self.assertEqual(eval_js(self.panel, "document.querySelector('#message-input').value"), "字" * 8001)
+        eval_js(self.panel, "document.querySelector('.composer').requestSubmit()")
+        QTest.qWait(100)
+        self.assertEqual(self.chat.steering, [])
+        self.assertEqual(bridge_action(self.panel, "steerAgent", conversationId="current", text="字" * 8001)["error"],
+                         "STEERING_TOO_LONG")
+        set_dom_text(self.panel, "#message-input", "字" * 8000)
+        wait_js(self.panel, "!document.querySelector('[data-testid=send-button]').disabled")
+        click_dom(self.panel, "[data-testid=send-button]")
+        wait_js(self.panel, "document.querySelector('#message-input').value === ''")
+        self.assertEqual(self.chat.steering, [("字" * 8000, "current")])
+
+    def test_steering_emoji_limit_uses_same_unicode_count_as_host(self):
+        wait_js(self.panel, "document.querySelector('#message-input')?.placeholder === '补充当前任务…'")
+        text = "🐳" * 4000 + "字" * 4000
+        set_dom_text(self.panel, "#message-input", text)
+        wait_js(self.panel, "document.querySelector('[data-testid=steering-feedback]')?.textContent.includes('8000 / 8000')")
+        self.assertFalse(eval_js(self.panel, "document.querySelector('[data-testid=send-button]').disabled"))
+        click_dom(self.panel, "[data-testid=send-button]")
+        wait_js(self.panel, "document.querySelector('#message-input').value === ''")
+        self.assertEqual(self.chat.steering, [(text, "current")])
+
+    def test_rejected_steering_explains_failure_without_clearing_draft(self):
+        wait_js(self.panel, "document.querySelector('#message-input')?.placeholder === '补充当前任务…'")
+        set_dom_text(self.panel, "#message-input", "保留这段补充")
+        wait_js(self.panel, "!document.querySelector('[data-testid=send-button]').disabled")
+        with patch.object(self.chat, "steer_agent", return_value=False):
+            click_dom(self.panel, "[data-testid=send-button]")
+            wait_js(self.panel, "document.querySelector('[data-testid=steering-feedback]')?.textContent.includes('未发送')")
+        self.assertEqual(eval_js(self.panel, "document.querySelector('#message-input').value"), "保留这段补充")
+        set_dom_text(self.panel, "#message-input", "已修改")
+        wait_js(self.panel, "!document.querySelector('[data-testid=steering-feedback]')")
+
+    def test_ordinary_chat_is_not_subject_to_steering_character_limit(self):
+        self.chat.busy = False
+        self.chat.busy_changed.emit(False)
+        self.panel._queue_web_state()
+        wait_js(self.panel, "document.querySelector('#message-input')?.placeholder !== '补充当前任务…'")
+        set_dom_text(self.panel, "#message-input", "字" * 8001)
+        wait_js(self.panel, "!document.querySelector('[data-testid=send-button]').disabled")
+        self.assertFalse(eval_js(self.panel, "Boolean(document.querySelector('[data-testid=steering-feedback]'))"))
+
     def test_native_fallback_shows_the_same_question_and_accepts_explicit_denial(self):
         self.question("file_access")
         self.panel._activate_native()

@@ -95,7 +95,7 @@ class GuiGoalWorkerTests(unittest.TestCase):
         root = REPO / "agent_workspace"
         root.mkdir(exist_ok=True)
         workspace = Path(tempfile.mkdtemp(prefix="gui-goal-offline-", dir=root))
-        model = ScriptedModel(steps)
+        model = ScriptedModel(steps, allow_outcome_feedback=True)
         client = None
         try:
             script = workspace / "fixture_worker.py"
@@ -110,7 +110,7 @@ class GuiGoalWorkerTests(unittest.TestCase):
             result = client.terminal()
             self.assertEqual(result["type"], "final", result)
             self.assertEqual(model.errors, [])
-            self.assertEqual(len(model.calls), len(steps))
+            self.assertEqual(len(model.calls), len(steps) + model.repair_calls)
             self.last_audit = json.loads((workspace / "fixture_audit.json").read_text()) if (workspace / "fixture_audit.json").exists() else []
             return result, list(model.calls)
         finally:

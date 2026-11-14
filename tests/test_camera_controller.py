@@ -38,7 +38,9 @@ def synthetic_frame():
 class CameraStore:
     def __init__(self):
         self.camera = CameraSettings()
-        self.screen = PerceptionSettings()
+        # Start with deliberately denied screen consent to test independence;
+        # this fixture must not depend on the application's release defaults.
+        self.screen = PerceptionSettings(enabled=False, allow_remote=False)
         self.saved_camera = []
         self.saved_screen = []
         self.fail = False

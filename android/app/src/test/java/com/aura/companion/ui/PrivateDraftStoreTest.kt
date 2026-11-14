@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -28,7 +29,8 @@ class PrivateDraftStoreTest {
     private fun model(store: DraftStore = PrivateDraftStore(file())): ConversationDrafts {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = ConversationDrafts(store) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = ConversationDrafts(store,
+                ioDispatcher = Dispatchers.Unconfined, uiDispatcher = Dispatchers.Unconfined) as T
         }
         return ViewModelProvider(owners, factory)[UUID.randomUUID().toString(), ConversationDrafts::class.java]
     }
@@ -53,6 +55,16 @@ class PrivateDraftStoreTest {
         disk.restoreCurrent("foreign", "unowned bundle value")
         assertEquals("", disk.read("a").text); assertEquals("new on disk", disk.read("b").text)
         assertEquals("", disk.read("foreign").text)
+    }
+
+    @Test fun legacyPrivateDraftFilesRemainReadableAndNewIdentitySurvivesDiskReload() {
+        file().writeText("""{"version":1,"revision":4,"drafts":[{"conversation":"a","text":"legacy","revision":4}],"scopes":[]}""")
+        val store = PrivateDraftStore(file())
+        assertEquals(DraftSnapshot("legacy", 4), store.load().entries["a"])
+        val drafts = model(store); drafts.edit("a", "updated")
+        val saved = drafts.read("a")
+        assertTrue(saved.identity.isNotBlank())
+        assertEquals(saved, PrivateDraftStore(file()).load().entries["a"])
     }
 
     @Test fun staleCallbackFromAnOldViewModelCannotClearNewDiskRevisionEvenWhenTextMatches() {
@@ -197,5 +209,17 @@ class PrivateDraftStoreTest {
             assertEquals("first", store.load().entries["a"]!!.text)
             assertEquals(1L, store.changes.value)
         }
+    }
+
+    @Test fun failedDiscardRetriesItsOwnedSnapshotWhenStorageRecovers() {
+        val store = FailingStore(); val drafts = model(store)
+        drafts.edit("a", "discard me"); store.fail = true
+        drafts.discard("a")
+        assertEquals("discard me", drafts.read("a").text)
+        assertNotNull(drafts.persistenceError)
+        store.fail = false; store.changes.value++
+        assertEquals("", drafts.read("a").text)
+        assertEquals("", store.state.entries["a"]!!.text)
+        assertNull(drafts.persistenceError)
     }
 }

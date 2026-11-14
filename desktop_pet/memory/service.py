@@ -36,6 +36,8 @@ class MemoryServiceProtocol(Protocol):
     def set_automatic_paused(self, paused: bool) -> None: ...
     def set_automatic_enabled(self, enabled: bool, *, cancelled: threading.Event | None = None) -> dict: ...
     def search(self, query: str, limit: int = 4) -> list[dict[str, Any]]: ...
+    def search_for_request(self, query: str, limit: int = 4, *, cancelled: threading.Event) -> list[dict[str, Any]]: ...
+    def cancel_request(self, cancelled: threading.Event) -> None: ...
     def extract(self, messages: list[dict], *, conversation_id: str, trigger: str = "explicit") -> list[dict]: ...
     def list_memories(self, query: str = "") -> list[dict]: ...
     def list_memories_page(self, query: str = "", *, offset: int = 0, page_size: int = 100) -> dict: ...
@@ -105,6 +107,7 @@ class MemoryService:
         self._process_lock = threading.Lock()
         self._processes: set[subprocess.Popen] = set()
         self._process_operations: dict[subprocess.Popen, tuple[str, str]] = {}
+        self._process_requests: dict[subprocess.Popen, threading.Event] = {}
         self._cancelled_automatic: set[subprocess.Popen] = set()
         with _PATH_LOCKS_GUARD:
             self._lock = _PATH_LOCKS.setdefault(str(self.data_dir).casefold(), threading.RLock())
@@ -146,6 +149,8 @@ class MemoryService:
             # Never overwrite a populated vector collection with incompatible embeddings.
             stored = self.data_dir / "embedding_identity.json"
             changing_vectors = self._embedding_identity(settings) != self._embedding_identity(current)
+            if changing_vectors and not stored.exists():
+                self._check_unidentified_vectors()
             if stored.exists() and changing_vectors:
                 identity = self._read_identity()
                 if identity != self._embedding_identity(settings):
@@ -216,7 +221,8 @@ class MemoryService:
         )
         return {"chat_configured": chat_configured, "extraction_configured": extraction,
                 "embedding_configured": embedding, "embedding_provider": settings.embedding_provider,
-                "uses_chat_model": settings.use_chat_model}
+                "uses_chat_model": settings.use_chat_model,
+                "vector_space_bound": (self.data_dir / "embedding_identity.json").is_file()}
 
     def load_state_snapshot(self) -> tuple[MemorySettings, str, dict]:
         """Sample readiness once per call, without testing or caching a key."""
@@ -380,6 +386,31 @@ class MemoryService:
         except (OSError, ValueError):
             raise MemoryUnavailable("记忆 Embedding 标识损坏；为避免破坏现有向量库，已暂停操作。") from None
 
+    def _write_identity(self, identity: dict) -> None:
+        """Commit the vector space before a helper can persist any vectors."""
+        pending = self.data_dir / "embedding_identity.pending.json"
+        try:
+            with pending.open("w", encoding="utf-8") as handle:
+                json.dump(identity, handle)
+                handle.flush()
+                os.fsync(handle.fileno())
+            pending.replace(self.data_dir / "embedding_identity.json")
+        except OSError:
+            raise MemoryUnavailable("无法保存记忆模型标识，未启动向量读写；请检查记忆目录权限。") from None
+
+    def _check_unidentified_vectors(self, *, cancelled: threading.Event | None = None,
+                                   deadline: float | None = None) -> None:
+        """An older unmarked store is not proof of the current model identity.
+
+        Only an isolated local inventory proving every collection empty permits
+        a new binding. Management remains available for unverified old data.
+        """
+        vectors = self.data_dir / "qdrant"
+        if vectors.is_dir() and any(vectors.iterdir()):
+            if self._operation("inspect_empty", cancelled=cancelled, _deadline=deadline) != {"empty": True}:
+                self._write_identity({"unverified_existing_store": True})
+                raise MemoryUnavailable("现有记忆缺少可验证的模型标识；原数据已保留，请恢复原标识或清空记忆后重新配置。")
+
     def _configuration(self, settings: MemorySettings, *, needs_llm: bool,
                        needs_embedding: bool) -> tuple[dict, tuple[str, ...]]:
         if settings.use_chat_model:
@@ -458,8 +489,13 @@ class MemoryService:
             config["embedder"]["config"]["api_key"] = "local-operation-no-remote-request"
         return config, tuple(key for key in (llm_key, embedding_key) if key)
 
-    def _operation(self, operation: str, **arguments: Any) -> Any:
+    def _operation(self, operation: str, *, cancelled: threading.Event | None = None,
+                   _deadline: float | None = None, **arguments: Any) -> Any:
         started_at = time.monotonic()
+        def check_cancelled():
+            if cancelled is not None and cancelled.is_set():
+                raise MemoryUnavailable("本次记忆检索已取消。")
+        check_cancelled()
         if self._closed.is_set():
             raise MemoryUnavailable("记忆服务已经关闭。")
         automatic = operation == "extract" and arguments.get("trigger") != "explicit"
@@ -474,10 +510,13 @@ class MemoryService:
         # neither changes nor silently extends chat/memory-request timeouts.
         timeout = 120.0 if operation == "prepare_model" else settings.timeout_seconds
         deadline = started_at + timeout
+        if _deadline is not None:
+            deadline = min(deadline, _deadline)
         # Waiting behind another operation is part of this operation's one
         # deadline. Short blocking waits let shutdown cancel queued work; they
         # do not consume a CPU loop or wait for an unrelated model timeout.
         while True:
+            check_cancelled()
             if self._closed.is_set():
                 raise MemoryUnavailable("记忆服务已经关闭。")
             if automatic and self.automatic_paused:
@@ -488,9 +527,9 @@ class MemoryService:
             if self._lock.acquire(timeout=min(0.1, remaining)):
                 break
         process = None
-        payload_sent = False
         identity_path = self.data_dir / "embedding_identity.json"
         try:
+            check_cancelled()
             if self._closed.is_set():
                 raise MemoryUnavailable("记忆服务已经关闭。")
             if automatic and self.automatic_paused:
@@ -509,6 +548,8 @@ class MemoryService:
                 arguments["limit"] = min(max(1, int(arguments["limit"])), settings.max_results)
             if operation in ("search", "extract", "update") and identity_path.exists() and self._read_identity() != self._embedding_identity(settings):
                 raise MemoryUnavailable("Embedding 配置与现有向量库不一致，请恢复原配置后重试。")
+            if operation in ("search", "extract", "update") and not identity_path.exists():
+                self._check_unidentified_vectors(cancelled=cancelled, deadline=deadline)
             if operation == "prepare_model" and settings.embedding_provider != "fastembed":
                 raise MemoryUnavailable("请先选择并保存本地 FastEmbed 模式，再下载模型。")
             config, secrets = self._configuration(settings, needs_llm=operation == "extract",
@@ -556,6 +597,7 @@ class MemoryService:
                 raise MemoryUnavailable("记忆操作超时，未启动后台请求；聊天仍可继续。")
             if automatic and self.automatic_paused:
                 return []
+            check_cancelled()
             process = subprocess.Popen(
                 command,
                 cwd=str(Path(__file__).resolve().parents[2]), env=environment,
@@ -571,15 +613,31 @@ class MemoryService:
                 if automatic and self.automatic_paused:
                     process.terminate()
                     return []
+                if cancelled is not None and cancelled.is_set():
+                    process.terminate()
+                    check_cancelled()
                 self._processes.add(process)
                 self._process_operations[process] = (operation, arguments.get("trigger", ""))
+                if cancelled is not None:
+                    self._process_requests[process] = cancelled
             try:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise subprocess.TimeoutExpired(process.args, 0)
                 if automatic and self.automatic_paused:
                     return []
-                payload_sent = True
+                check_cancelled()
+                if operation in ("extract", "update") and not identity_path.exists():
+                    # Even timeout, process crash, cancellation and malformed
+                    # output may follow a partial SDK commit. Never wait for a
+                    # successful result to bind the admitted embedding space.
+                    self._write_identity(self._embedding_identity(settings))
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(process.args, 0)
+                check_cancelled()
+                if automatic and self.automatic_paused:
+                    return []
                 output, _ = process.communicate(json.dumps(payload, ensure_ascii=False).encode("utf-8"), timeout=remaining)
             except subprocess.TimeoutExpired:
                 process.kill()
@@ -587,6 +645,7 @@ class MemoryService:
                 if operation == "prepare_model":
                     raise MemoryUnavailable("本地模型下载或验证超过 120 秒，已停止；已下载缓存保留，可稍后重试。") from None
                 raise MemoryUnavailable("记忆操作超时，已停止后台请求；聊天仍可继续。") from None
+            check_cancelled()
             if process.returncode != 0:
                 if automatic and self._automatic_was_cancelled(process):
                     return []
@@ -619,15 +678,13 @@ class MemoryService:
                     return {str(key): scrub(item) for key, item in value.items()}
                 return value
             result = scrub(result)
-            if operation in ("extract", "update") and result:
-                identity_path.write_text(json.dumps(self._embedding_identity(settings)), encoding="utf-8")
             if operation == "clear":
                 if isinstance(result, dict) and result.get("remaining_other_users"):
                     if not identity_path.exists():
                         # There is no verified model identity to reconstruct.
                         # Protect remaining vectors rather than guessing a
                         # provider/model and admitting a mixed vector space.
-                        identity_path.write_text(json.dumps({"unverified_existing_store": True}), encoding="utf-8")
+                        self._write_identity({"unverified_existing_store": True})
                 elif identity_path.exists():
                     identity_path.unlink()
             return [] if automatic and self._automatic_was_cancelled(process) else result
@@ -641,21 +698,15 @@ class MemoryService:
             try:
                 if process is not None:
                     with self._process_lock:
-                        cancelled = process in self._cancelled_automatic
                         self._processes.discard(process)
                         self._process_operations.pop(process, None)
+                        self._process_requests.pop(process, None)
                         self._cancelled_automatic.discard(process)
                     if process.poll() is None:
                         process.kill()
-                        process.communicate()
-                    if cancelled and payload_sent and not identity_path.exists():
-                        # Cancellation can race with an already committed SDK
-                        # write. Preserve its admitted vector space even if the
-                        # helper was stopped before returning its result.
-                        try:
-                            identity_path.write_text(json.dumps(self._embedding_identity(settings)), encoding="utf-8")
-                        except OSError:
-                            raise MemoryUnavailable("自动提炼已停止，但向量身份保护未能保存，请检查记忆目录权限。") from None
+                    # Reap and close pipes even when cancellation won before
+                    # the initial communicate() call registered stdin readers.
+                    process.communicate()
             finally:
                 self._lock.release()
 
@@ -699,6 +750,23 @@ class MemoryService:
         if not isinstance(query, str) or not query.strip():
             return []
         return self._operation("search", query=query.strip()[:4000], limit=max(1, int(limit)))
+
+    def search_for_request(self, query: str, limit: int = 4, *, cancelled: threading.Event) -> list[dict]:
+        if not isinstance(query, str) or not query.strip():
+            return []
+        return self._operation("search", query=query.strip()[:4000], limit=max(1, int(limit)), cancelled=cancelled)
+
+    def cancel_request(self, cancelled: threading.Event) -> None:
+        """Cancel only helpers owned by this chat request, without disk waits."""
+        cancelled.set()
+        with self._process_lock:
+            processes = [process for process, token in self._process_requests.items() if token is cancelled]
+        for process in processes:
+            try:
+                if process.poll() is None:
+                    process.terminate()
+            except OSError:
+                pass  # The owning worker reaps it and releases its storage lock.
 
     def prepare_local_model(self) -> dict:
         """Explicit public-artifact download and CPU inference check (120 s)."""

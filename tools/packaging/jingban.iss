@@ -8,7 +8,7 @@
   #error ChineseLanguage must point at the verified Chinese translation
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.2"
 #endif
 
 [Setup]
@@ -34,9 +34,9 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=1.0.1.0
+VersionInfoVersion={#AppVersion}.0
 VersionInfoProductName=鲸伴
-VersionInfoProductVersion=1.0.1.0
+VersionInfoProductVersion={#AppVersion}.0
 VersionInfoProductTextVersion={#AppVersion}
 
 [Languages]

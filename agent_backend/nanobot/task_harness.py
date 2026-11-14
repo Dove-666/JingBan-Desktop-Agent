@@ -105,6 +105,9 @@ class TaskHarness:
         self._explicit_required = set()
         self._consecutive_failure = None
         self._consecutive_failure_count = 0
+        # Bounded recent identities retain alternating retry cycles. Counts
+        # are cleared only by the corresponding observed recovery below.
+        self._recent_failures = []
         self.verification_requests = {}
         self.analyses = {}
         self.csv_reads = set()
@@ -145,6 +148,7 @@ class TaskHarness:
         for streak in recovered:
             self.failure_counts.pop(streak, None)
             self.failure_operations.pop(streak, None)
+        self._recent_failures = [item for item in self._recent_failures if item not in recovered]
         if self._consecutive_failure in recovered:
             self._consecutive_failure, self._consecutive_failure_count = None, 0
 
@@ -321,15 +325,19 @@ class TaskHarness:
         streak = (name, digest)
         self._consecutive_failure_count = self._consecutive_failure_count + 1 if streak == self._consecutive_failure else 1
         self._consecutive_failure = streak
-        self.failure_counts = {streak: self._consecutive_failure_count}
-        self.failure_operations = {streak: key}
+        self._recent_failures.append(streak)
+        self._recent_failures = self._recent_failures[-16:]
+        self.failure_counts = {item: self._recent_failures.count(item) for item in self._recent_failures}
+        self.failure_operations = {item: operation for item, operation in self.failure_operations.items()
+                                   if item in self.failure_counts}
+        self.failure_operations[streak] = key
         self.failure_events.append({"tool": name, "category": category, "code": str(code)[:64],
                                     "operation": digest, "consecutive": self._consecutive_failure_count})
         self.failure_events = self.failure_events[-128:]
 
     @property
     def stalled(self):
-        return self._consecutive_failure_count >= 4
+        return any(count >= 4 for count in self.failure_counts.values())
 
     def verify_artifact(self, path, kind="auto", source_path="", value_column="", group_by="", delimiter=",", expect_empty=False):
         if not all(isinstance(value, str) for value in (path, kind, source_path, value_column, group_by, delimiter)):
@@ -406,6 +414,24 @@ class TaskHarness:
         # provider exception, free-form justification or hidden reasoning.
         self._goal_verdict = deepcopy(value)
         return self.goal_contract.assess(self.goal_snapshot(), self._goal_verdict)
+
+    def completion_progress_id(self):
+        """Stable actual progress for retry policy, not a verification receipt.
+
+        Full evidence IDs deliberately change for every observation. Repeating
+        an unchanged read must not buy a fresh completion-retry budget.
+        """
+        snapshot = self.goal_snapshot()
+        facts = snapshot["facts"]
+        observed = sorted({(item["tool"], item["source_sha256"])
+                           for item in facts["observed"]["observations"]})
+        value = {"goal": snapshot["goal_id"], "observations": observed,
+                 "files": facts["files"], "requirements": facts["requirement_checks"],
+                 "artifacts": [{key: row[key] for key in ("path", "sha256", "passed", "issues") if key in row}
+                               for row in facts["artifact_checks"]],
+                 "gui": facts["gui_goal_verified"], "pending": facts["pending_effects"],
+                 "readback": facts["readback_issues"]}
+        return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
     def assess(self, *, answer=None):
         reports = self._checks()
