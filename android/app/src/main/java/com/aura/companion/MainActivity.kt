@@ -26,6 +26,9 @@ class MainActivity : ComponentActivity() {
     private val picker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         model.attachImage(uri)
     }
+    private val filePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        model.attachFile(uri)
+    }
     private val artifactDestination = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         model.finishArtifactSave(if (result.resultCode == RESULT_OK) result.data?.data else null)
     }
@@ -36,6 +39,7 @@ class MainActivity : ComponentActivity() {
             else model.setTaskNotifications(enabled)
         }
         override fun pickImage() { model.beginImageSelection { picker.launch("image/*") } }
+        override fun pickFile() { model.beginFileSelection { filePicker.launch(arrayOf("*/*")) } }
         override fun saveArtifact(reference: String) {
             model.prepareArtifact(reference) { name, mime ->
                 try {

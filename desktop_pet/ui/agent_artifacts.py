@@ -20,6 +20,12 @@ def public_artifacts(value):
                 or not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest)
                 or not isinstance(scope, str) or len(scope) > 160 or any(ord(c) < 32 for c in scope)):
             continue
-        result.append({key: item[key] for key in ("reference", "name", "mime", "bytes", "sha256", "verification_scope")})
+        public = {key: item[key] for key in ("reference", "name", "mime", "bytes", "sha256", "verification_scope")}
+        # Keep the owning reply across the desktop bridge. The UI resolves this
+        # opaque id against the current conversation, never as a local path.
+        owner = item.get("message_id")
+        if isinstance(owner, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,200}", owner):
+            public["message_id"] = owner
+        result.append(public)
         seen.add(reference)
     return result

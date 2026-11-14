@@ -1,0 +1,28 @@
+.agent-approval-control { position: relative; margin-left: auto; min-width: 0; }
+.agent-approval-trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 9px;
+  border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--muted); font-size: 12px;
+  white-space: nowrap; transition: background 150ms, color 150ms; }
+.agent-approval-trigger:hover:not(:disabled), .agent-approval-trigger[aria-expanded="true"] { background: var(--control-surface); color: var(--text); }
+.agent-approval-trigger[data-mode="full"] { color: var(--warning); }
+.agent-approval-menu { position: fixed; z-index: 65; width: min(350px, calc(100vw - 24px)); max-height: calc(100vh - 24px);
+  overflow-y: auto; padding: 8px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface);
+  color: var(--text); box-shadow: 0 10px 35px #10182826, 0 2px 6px #1018280d; }
+.agent-approval-title { padding: 6px 10px 7px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.agent-approval-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 64px; padding: 10px;
+  border: 0; border-radius: 11px; background: transparent; color: var(--text); text-align: left; }
+.agent-approval-option:hover, .agent-approval-option:focus-visible { background: var(--control-surface); }
+.agent-approval-option:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.agent-approval-option[data-mode="full"] { color: var(--warning); }
+.agent-approval-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.agent-approval-copy strong { font-size: 13px; line-height: 1.4; font-weight: 600; }
+.agent-approval-copy > span { color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-approval-option[data-mode="full"] .agent-approval-copy > span { color: var(--warning); }
+.agent-approval-check { visibility: hidden; }
+.agent-approval-option[aria-checked="true"] .agent-approval-check { visibility: visible; }
+.agent-approval-error { display: block; max-width: 220px; color: var(--warning); font-size: 12px; line-height: 1.5; }
+@media (max-width: 390px) {
+  .agent-approval-control { margin-left: 0; }
+  .agent-approval-trigger { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .agent-approval-trigger { transition: none; } }
+@media (pointer: coarse) { .agent-approval-trigger { min-height: 44px; } }

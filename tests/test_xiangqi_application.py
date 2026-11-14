@@ -55,7 +55,7 @@ class XiangqiApplicationTests(unittest.TestCase):
         self.assertEqual(len(game.snapshot()["legal_moves"]), 44)
         window.close()
         self.assertFalse(window.isVisible())
-        self.session.tray.xiangqi_action.trigger()
+        self.session.open_xiangqi_window()
         self.assertIs(self.session.xiangqi_window, window)
         self.assertTrue(window.isVisible())
         chat = self.session._ensure_chat_window().chat_panel

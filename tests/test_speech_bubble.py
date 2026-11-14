@@ -289,10 +289,11 @@ class SpeechBubbleTests(unittest.TestCase):
 
     def test_linked_paginated_reply_pauses_on_hover_and_footer_can_move_both_directions(self):
         text = "一行。\n" * 5
-        area = patch("desktop_pet.bubble.work_area", return_value=QRect(0, 0, 320, 190))
+        area = patch("desktop_pet.bubble.work_area", return_value=QRect(0, 0, 320, 160))
         area.start()
         self.addCleanup(area.stop)
-        self.bubble.say(text.rstrip(), 1000, conversation_link={"conversation_id": "local", "message_id": "message"})
+        self.bubble.say(text.rstrip(), 1000, conversation_link={
+            "conversation_id": "local", "message_id": "message", "source_kind": "screen"})
         text = text.rstrip()
         self.assertEqual(len(self.bubble._pages), 2)
         opening = QSignalSpy(self.bubble.conversation_requested)
@@ -321,42 +322,52 @@ class SpeechBubbleTests(unittest.TestCase):
         self.assertTrue(self.bubble._page_timer.isActive())
         self.assertEqual("".join(self.bubble._pages), text)
 
-    def test_long_linked_reply_is_a_compact_entry_to_the_original_message(self):
+    def test_long_chat_reply_clears_old_speech_instead_of_showing_a_notice(self):
         text = COMMENT_160 * 8
         link = {"conversation_id": "local", "message_id": "complete-reply"}
         opening = QSignalSpy(self.bubble.conversation_requested)
+        self.bubble.say("上一条短回复。", 10000, conversation_link=link)
+        self.assertTrue(self.bubble.isVisible())
+        QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
         self.bubble.say(text, 10000, conversation_link=link)
-        self.assertEqual(self.bubble._source_text, text)
-        self.assertEqual(self.bubble._text, LONG_REPLY_NOTICE)
-        self.assertEqual(self.bubble._pages, [LONG_REPLY_NOTICE])
-        self.assertEqual(self.bubble.accessibleDescription(), LONG_REPLY_NOTICE)
-        self.assertFalse(self.bubble._page_timer.isActive())
-        self.assertTrue(self.bubble._deadline_timer.isActive())
-        self.assertEqual(self.bubble._deadline_timer.interval(), MAX_VISIBLE_MS)
-        QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton,
-                         pos=self.bubble._text_rect.center().toPoint())
-        self.assertEqual(opening.count(), 1)
-        self.assertEqual(opening.at(0), ["local", "complete-reply"])
         self.assertFalse(self.bubble.isVisible())
+        self.assertEqual(self.bubble._source_text, "")
+        self.assertEqual(self.bubble._text, "")
+        self.assertEqual(self.bubble.accessibleDescription(), "")
+        self.assertIsNone(self.bubble._conversation_link)
+        self.assertFalse(self.bubble._hover_paused)
+        self.assertEqual(opening.count(), 0)
+        for timer in (self.bubble.hide_timer, self.bubble._page_timer, self.bubble._deadline_timer):
+            self.assertFalse(timer.isActive())
 
-    def test_short_multiline_linked_reply_with_more_than_two_pages_is_compact(self):
+        # Screen commentary retains its existing compact entry and source link.
+        self.bubble.say(text, 10000, conversation_link={**link, "source_kind": "screen"})
+        self.assertTrue(self.bubble.isVisible())
+        self.assertEqual(self.bubble._text, LONG_REPLY_NOTICE)
+        self.assertEqual(self.bubble._conversation_link["message_id"], link["message_id"])
+
+    def test_short_multiline_chat_reply_that_needs_pages_does_not_show(self):
         text = "简短段落。\n" * 20
         self.assertLessEqual(len(text), 220)
         self.bubble.say(text, 10000, conversation_link={"conversation_id": "local", "message_id": "m"})
-        self.assertEqual(self.bubble._source_text, text)
-        self.assertEqual(self.bubble._pages, [LONG_REPLY_NOTICE])
+        self.assertFalse(self.bubble.isVisible())
+        self.assertEqual(self.bubble._text, "")
+        self.assertIsNone(self.bubble._conversation_link)
+        self.assertFalse(self.bubble._deadline_timer.isActive())
 
-    def test_close_button_dismisses_hovered_reply_without_opening_the_chat(self):
+    def test_short_comment_has_no_close_hint_or_header_gap_and_body_opens_chat(self):
         opening = QSignalSpy(self.bubble.conversation_requested)
         self.bubble.say("这是一条简短的屏幕评论。", 10000,
-                        conversation_link={"conversation_id": "local", "message_id": "m"})
+                        conversation_link={"conversation_id": "local", "message_id": "m", "source_kind": "screen"})
         QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
         self.assertTrue(self.bubble._hover_paused)
-        self.assertFalse(self.bubble._close_rect.isEmpty())
-        self.assertFalse(self.bubble._close_rect.intersects(self.bubble._text_rect))
+        self.assertNotIn("×", self.bubble.toolTip())
+        self.assertNotIn("关闭", self.bubble.toolTip())
+        self.assertAlmostEqual(self.bubble._text_rect.top() - self.bubble._body_rect.top(), self.bubble._padding)
         QTest.mouseClick(self.bubble, Qt.MouseButton.LeftButton,
-                         pos=self.bubble._close_rect.center().toPoint())
-        self.assertEqual(opening.count(), 0)
+                         pos=self.bubble._text_rect.center().toPoint())
+        self.assertEqual(opening.count(), 1)
+        self.assertEqual(opening.at(0), ["local", "m"])
         self.assertFalse(self.bubble.isVisible())
         for timer in (self.bubble.hide_timer, self.bubble._page_timer, self.bubble._deadline_timer):
             self.assertFalse(timer.isActive())
@@ -379,7 +390,7 @@ class SpeechBubbleTests(unittest.TestCase):
 
     def test_replacement_linked_reply_resets_hover_and_its_deadline(self):
         link = {"conversation_id": "local", "message_id": "m"}
-        self.bubble.say(COMMENT_160 * 8, 10000, conversation_link=link)
+        self.bubble.say("上一条短回复。", 10000, conversation_link=link)
         QApplication.sendEvent(self.bubble, QEvent(QEvent.Type.Enter))
         self.bubble.say("新的短回复。", 10000, conversation_link=link)
         self.assertEqual(self.bubble._text, "新的短回复。")
@@ -434,10 +445,14 @@ class SpeechBubbleTests(unittest.TestCase):
         controller = PetController(self.pet, LocalScaleSettings())
         controller.respond("短句", "neutral")
         short_duration = self.bubble.hide_timer.interval()
-        controller.respond(COMMENT_160, "happy")
+        controller.respond(COMMENT_160, "happy", conversation_link={
+            "conversation_id": "local", "message_id": "screen-comment", "source_kind": "screen"})
         self.assert_complete_comment(COMMENT_160)
         self.assertGreater(self.bubble.hide_timer.interval(), short_duration)
         self.assertGreaterEqual(self.bubble.hide_timer.interval(), 15000)
+        controller.respond(COMMENT_160 * 8, "neutral")
+        self.assertFalse(self.bubble.isVisible(), "Unlinked ordinary chat must also suppress long speech")
+        self.assertEqual(self.bubble._text, "")
 
 
 if __name__ == "__main__":

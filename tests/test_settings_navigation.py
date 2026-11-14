@@ -45,7 +45,7 @@ class EmbeddedSettingsNavigationTests(unittest.TestCase):
         self.settings.save_api_settings(ApiSettings("https://example.invalid/v1", "synthetic-model", 5))
         self.settings.save_api_key("synthetic-saved-settings-token")
         self.memory = FakeMemoryService()
-        self.tray = SimpleNamespace(available=False, refresh=Mock(), shutdown=Mock())
+        self.tray = SimpleNamespace(menu=None, available=False, refresh=Mock(), shutdown=Mock())
         self.camera_start = Mock(return_value=False)
         patches = (
             patch("desktop_pet.application_controller.DesktopTray", return_value=self.tray),

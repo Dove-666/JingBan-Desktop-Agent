@@ -20,11 +20,17 @@ internal fun AgentArtifactCard(artifact: UiAgentArtifact, downloading: String?, 
             Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
                 Text(artifact.name, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
-                Text(if (artifact.bytes < 1024) "${artifact.bytes} B" else "${(artifact.bytes + 1023) / 1024} KB",
+                Text(attachmentSizeLabel(artifact.bytes),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (downloading == artifact.reference) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
             else TextButton(onClick = { onSave(artifact.reference) }, enabled = downloading == null) { Text("保存") }
         }
     }
+}
+
+internal fun attachmentSizeLabel(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${(bytes + 1023) / 1024} KB"
+    else -> String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0))
 }

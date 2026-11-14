@@ -55,7 +55,7 @@ class GomokuApplicationTests(unittest.TestCase):
         self.assertEqual(len(game.snapshot()["legal_moves"]), 225)
         window.close()
         self.assertFalse(window.isVisible())
-        self.session.tray.gomoku_action.trigger()
+        self.session.open_gomoku_window()
         self.assertIs(self.session.gomoku_window, window)
         self.assertTrue(window.isVisible())
         chat = self.session._ensure_chat_window().chat_panel

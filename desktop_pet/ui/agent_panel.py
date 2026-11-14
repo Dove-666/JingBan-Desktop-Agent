@@ -2,9 +2,9 @@
 
 from dataclasses import replace
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtWidgets import (
-    QGroupBox, QHBoxLayout, QLabel, QPushButton, QScrollArea,
+    QComboBox, QGroupBox, QHBoxLayout, QLabel, QPushButton, QScrollArea,
     QSizePolicy, QVBoxLayout, QWidget,
 )
 
@@ -13,6 +13,7 @@ from ..settings_manager import SettingsError
 from .settings_widgets import SettingsToggle
 from .theme import style_widget
 from .styles import PANEL_STYLE
+from .agent_approval import approval_description, populate_approval_selector
 
 
 class AgentSettingsPanel(QWidget):
@@ -56,6 +57,18 @@ class AgentSettingsPanel(QWidget):
         for checkbox in (self.enabled_checkbox, self.tools_checkbox, self.computer_checkbox):
             general_layout.addWidget(checkbox)
             checkbox.toggled.connect(self._mark_dirty)
+        approval_label = QLabel("操作批准")
+        self.approval_selector = QComboBox()
+        self.approval_selector.setObjectName("agentApprovalMode")
+        populate_approval_selector(self.approval_selector)
+        approval_label.setBuddy(self.approval_selector)
+        self.approval_hint = QLabel()
+        self.approval_hint.setObjectName("hint")
+        self.approval_hint.setWordWrap(True)
+        self.approval_selector.currentIndexChanged.connect(self._approval_selection_changed)
+        general_layout.addWidget(approval_label)
+        general_layout.addWidget(self.approval_selector)
+        general_layout.addWidget(self.approval_hint)
         layout.addWidget(general)
         layout.addStretch()
 
@@ -78,6 +91,9 @@ class AgentSettingsPanel(QWidget):
         signal = getattr(chat_controller, "agent_settings_changed", None)
         if signal is not None and callable(getattr(signal, "connect", None)):
             signal.connect(self._external_settings_changed)
+        busy_signal = getattr(chat_controller, "busy_changed", None)
+        if busy_signal is not None and callable(getattr(busy_signal, "connect", None)):
+            busy_signal.connect(self._approval_availability_changed)
         self.reload_settings()
 
     @staticmethod
@@ -101,6 +117,9 @@ class AgentSettingsPanel(QWidget):
         self.enabled_checkbox.setChecked(self._settings.enabled)
         self.tools_checkbox.setChecked(self._settings.tools_enabled)
         self.computer_checkbox.setChecked(self._settings.computer_enabled)
+        self.approval_selector.setCurrentIndex(max(0, self.approval_selector.findData(self._settings.approval_mode)))
+        self._approval_availability_changed()
+        self.approval_hint.setText(approval_description(self._settings.approval_mode))
         self._dirty = False
         self._loading = False
         self.status_label.setText("已保存")
@@ -110,10 +129,23 @@ class AgentSettingsPanel(QWidget):
             self._dirty = True
             self.status_label.setText("尚未保存")
 
+    def _approval_selection_changed(self, *_args):
+        self.approval_hint.setText(approval_description(self.approval_selector.currentData()))
+        self._mark_dirty()
+
+    def _approval_availability_changed(self, *_args):
+        busy = bool(getattr(self.chat_controller, "busy", False))
+        self.approval_selector.setEnabled(not busy)
+        self.approval_selector.setToolTip("任务结束后可修改操作权限" if busy else "")
+
     def _current_settings(self):
+        approval_mode = self.approval_selector.currentData()
+        if bool(getattr(self.chat_controller, "busy", False)) and approval_mode != self._settings.approval_mode:
+            raise AgentValidationError("任务结束后再修改操作权限。")
         settings = replace(self._settings,
             enabled=self.enabled_checkbox.isChecked(), tools_enabled=self.tools_checkbox.isChecked(),
-            computer_enabled=self.computer_checkbox.isChecked(), timeout_seconds=0.0, max_steps=0)
+            computer_enabled=self.computer_checkbox.isChecked(), approval_mode=approval_mode,
+            timeout_seconds=0.0, max_steps=0)
         settings.validate()
         return settings
 
@@ -143,6 +175,18 @@ class AgentSettingsPanel(QWidget):
     def _external_settings_changed(self, *_args):
         if not self._dirty:
             self.reload_settings()
+        elif self.approval_selector.currentData() == self._settings.approval_mode:
+            # Preserve other unsaved controls, but do not silently restore a stale
+            # permission mode after the chat selector changes the shared setting.
+            try:
+                current = self.settings_manager.load_agent_settings()
+                current.validate()
+            except Exception:
+                return
+            self._settings = replace(self._settings, approval_mode=current.approval_mode)
+            with QSignalBlocker(self.approval_selector):
+                self.approval_selector.setCurrentIndex(self.approval_selector.findData(current.approval_mode))
+            self.approval_hint.setText(approval_description(current.approval_mode))
 
     def _show_error(self, message):
         self.error_label.setText(message)

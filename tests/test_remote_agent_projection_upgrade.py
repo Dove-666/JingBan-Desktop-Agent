@@ -56,7 +56,7 @@ class AgentProjectionUpgradeTests(unittest.TestCase):
                 self.assertEqual([tuple(row) for row in connection.execute("SELECT * FROM messages")], before_messages)
                 self.assertEqual([tuple(row) for row in connection.execute(
                     "SELECT * FROM remote_sync_changes WHERE seq<=? ORDER BY seq", (cursor,))], before_journal)
-                self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], 12)
+                self.assertEqual(connection.execute("SELECT version FROM remote_sync_schema").fetchone()[0], REMOTE_SYNC_SCHEMA_VERSION)
                 self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 3)
             trace.event("new-present", "tool", "交付文件", "running")
             upgraded.update_execution(cid, message["id"], trace.snapshot())

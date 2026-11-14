@@ -52,12 +52,14 @@ class ExecutionProcessUpgradeTest {
                 execSQL("DROP TABLE direct_turns")
                 execSQL("ALTER TABLE direct_turns_v4 RENAME TO direct_turns")
                 execSQL("CREATE INDEX direct_turns_conversation ON direct_turns(conversation_id,user_at)")
+                // This table was introduced in v6 and must not exist in a genuine v4 fixture.
+                execSQL("DROP TABLE pending_files")
             }
             old.writableDatabase.version = 4
         }
         try {
             CompanionDatabase(context, name).use { upgraded ->
-                assertEquals(5, upgraded.writableDatabase.version)
+                assertEquals(6, upgraded.writableDatabase.version)
                 assertEquals("old-desktop", upgraded.device()!!.endpointId)
                 assertEquals("old-ticket", upgraded.device()!!.ticket)
                 assertEquals("queued", upgraded.operation(queued)!!.item.status)
@@ -67,6 +69,7 @@ class ExecutionProcessUpgradeTest {
                 assertEquals("", upgraded.snapshotCursor())
                 assertEquals(41L, upgraded.cursor())
                 assertTrue(upgraded.messages(cid).all { it.execution == null })
+                assertTrue(upgraded.pendingFiles().isEmpty())
                 val turn = upgraded.beginDirectTurn(cid, "New actual request", null)
                 assertEquals("running", upgraded.messages(cid).first { it.id == turn.userId }.execution!!.state)
             }

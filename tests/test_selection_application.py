@@ -55,7 +55,7 @@ class SelectionApplicationTests(unittest.TestCase):
         self.settings.save_api_key(LOCAL_TEST_KEY)
         self.client = RecordingClient()
         self.remote = SimpleNamespace(shutdown=Mock())
-        self.tray = SimpleNamespace(available=False, refresh=Mock(), shutdown=Mock())
+        self.tray = SimpleNamespace(menu=None, available=False, refresh=Mock(), shutdown=Mock())
         self.memory = FakeMemoryService()
         patches = (
             patch("desktop_pet.application_controller.RemoteController", return_value=self.remote),

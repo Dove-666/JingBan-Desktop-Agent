@@ -55,6 +55,7 @@ createInterface({input:process.stdin}).on('line', line => {
      final('文件已生成',{artifacts:[{path,sha256,size_bytes:bytes.length}]}); return;
    }
    if(frame.task==='context') {final(JSON.stringify(frame.context));return;}
+   if(frame.task==='approval-options') {final(JSON.stringify(frame.options));return;}
    if(frame.task==='long') {final('长回复。'.repeat(30000));return;}
    final(frame.storage.session_id?'native session restored':'DSH original answer',
          {acceptance:{passed:false},gui_used:true,gui_goal_verified:false});
@@ -136,6 +137,15 @@ class DshHostTests(unittest.TestCase):
         self.assertEqual(value["messages"], [{"role": "user", "content": "earlier"}])
         self.assertEqual(value["personality"], "温柔简洁")
         self.assertNotIn("current_image_url", value)
+
+    def test_approval_mode_reaches_worker_and_cannot_reuse_other_modes_session(self):
+        for mode in ("full", "ask", "auto"):
+            with self.subTest(mode=mode):
+                self.settings = replace(self.settings, approval_mode=mode)
+                self.assertEqual(self.run_task("fresh mode").reply, "DSH original answer")
+                options = json.loads(self.run_task("approval-options").reply)
+                self.assertEqual(options["approval_mode"], mode)
+                self.assertEqual(self.run_task("continue mode").reply, "native session restored")
 
     def test_cancellation_closes_real_owned_child_and_preserves_receipt(self):
         cancelled = threading.Event()

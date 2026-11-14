@@ -23,6 +23,7 @@ from ..chat_images import IMAGE_ID
 from ..expression_manager import EXPRESSIONS
 from . import PROTOCOL_VERSION
 from .attachments import ImageInbox
+from .files import FileInbox
 from .chat_transfer import direct_chat_configuration, normalize_import
 from .character_transfer import (character_library_summary, get_character, list_characters,
                                  select_character, validate_character_selection)
@@ -36,7 +37,7 @@ from ..image_storage import ImageStorageGate, ImageStorageGateError
 
 CAPABILITIES = ["pet.command", "chat.send", "chat.image", "chat.config", "chat.import", "chat.desktop_context", "agent.send", "agent.queue.v1", "agent.cancel", "agent.answer", "agent.steer", "desktop.snapshot", "sync.snapshot", "sync.pull", "operation.get",
                 "image.upload", "image.list", "image.get", "image.delete", "artifact.list", "artifact.get", "context.get",
-                "character.list", "character.get", "character.select"]
+                "character.list", "character.get", "character.select", "file.upload"]
 
 RETRY_DELAYS_SECONDS = (2, 5, 10, 30, 60)
 _TRANSPORT_ERRORS = {
@@ -67,6 +68,10 @@ class RemoteController(QObject):
         self.sync = RemoteSyncStore(session.chat.store)
         self.images = ImageInbox(self.preferences.directory / "inbox")
         self.session.chat.set_image_inbox(self.images)
+        self.files = FileInbox(self.preferences.directory / "file-inbox")
+        file_binder = getattr(self.session.chat, "set_file_inbox", None)
+        if callable(file_binder):
+            file_binder(self.files)
         self._clock = clock
         self._transport_factory = transport_factory
         self._transport = None
@@ -326,12 +331,12 @@ class RemoteController(QObject):
 
     def _check_rate(self, peer_id, method):
         now = time.monotonic()
-        key = (peer_id, "image" if method == "image.upload" else "requests")
+        key = (peer_id, "file" if method == "file.upload" else "image" if method == "image.upload" else "requests")
         with self._rate_lock:
             events = self._rates.pop(key, deque())
             while events and events[0] <= now - 60:
                 events.popleft()
-            if len(events) >= (8 if method == "image.upload" else 120):
+            if len(events) >= (600 if method == "file.upload" else 8 if method == "image.upload" else 120):
                 self._rates[key] = events
                 raise RemoteError("rate_limited", "请求过于频繁，请稍后重试。")
             events.append(now)
@@ -493,6 +498,12 @@ class RemoteController(QObject):
 
     def _dispatch_operation(self, peer_id, request_id, method, params, generation, *, ui_call=None):
         ui_call = self._call_ui if ui_call is None else ui_call
+        if method == "file.upload":
+            self._require_image_storage_host_open()
+            self._require_authorized(peer_id, generation)
+            # File chunks are idempotent storage, not executable jobs. The inbox
+            # compares replayed bytes so interrupted transfers can safely resume.
+            return self.files.upload(peer_id, params)
         if method in _IMAGE_STORAGE_WRITES:
             self._require_image_storage_host_open()
             self._require_authorized(peer_id, generation)
@@ -638,8 +649,12 @@ class RemoteController(QObject):
             elif method == "agent.steer":
                 result = ui_call(lambda: self._steer_agent(params), peer_id, generation=generation)
             elif method == "agent.send":
-                if not {"conversation_id", "text"} <= set(params) or set(params) - {"conversation_id", "text", "image_id"}:
-                    raise RemoteError("invalid_request", "电脑 Agent 请求只接受会话、文字和本次图片。")
+                if (not {"conversation_id", "text"} <= set(params)
+                        or set(params) - {"conversation_id", "text", "image_id", "file_id"}
+                        or "image_id" in params and "file_id" in params):
+                    raise RemoteError("invalid_request", "电脑 Agent 请求只接受会话、文字和本次附件。")
+                if "file_id" in params:
+                    self.files.metadata(peer_id, params["conversation_id"], params["file_id"])
                 if "image_id" in params:
                     image_id = params["image_id"]
                     if not isinstance(image_id, str) or not IMAGE_ID.fullmatch(image_id):
@@ -833,9 +848,16 @@ class RemoteController(QObject):
             raise RemoteError("agent_unavailable", readiness["reason"])
         admission=getattr(self.session.chat,"admit_remote_agent",None)
         if callable(admission):
-            try: return admission(peer_id,request_id,conversation_id,text,image_id=params.get("image_id"))
+            options = {"image_id": params.get("image_id")}
+            if "file_id" in params:
+                info = self.files.metadata(peer_id, conversation_id, params["file_id"])
+                options["file_metadata"] = {"file_id": info["id"], "file_name": info["filename"],
+                                            "file_size": info["size"], "file_mime": info["mime_type"]}
+            try: return admission(peer_id,request_id,conversation_id,text,**options)
             except CoordinatorError as exc:
                 raise RemoteError("agent_queue_unavailable","任务暂未加入队列，请保持原请求编号查询状态；本次不会自动重复执行。") from None
+        if "file_id" in params:
+            raise RemoteError("agent_unavailable", "电脑任务队列尚未就绪，未发送附件任务。")
         message_id = str(uuid5(NAMESPACE_URL, "aura-remote:" + peer_id + ":" + request_id))
         options = {"agent_mode": True}
         if "image_id" in params:

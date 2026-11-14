@@ -78,7 +78,7 @@ private val AGENT_ACTIVITY_MESSAGES = setOf(
     "正在保存消息…", "正在检索相关记忆…", "正在生成回复…", "正在保存回复…",
     "正在启动任务助手…", "正在规划任务…", "正在使用任务工具…", "正在操作电脑…",
     "正在整理任务结果…", "正在核验任务结果…", "任务已完成。",
-    "查看系统信息", "读取文件", "写入文件", "查找文件", "读取网页", "执行电脑操作", "打开应用", "查找已安装应用",
+    "查看系统信息", "读取文件", "写入文件", "查找文件", "读取网页", "执行电脑操作", "打开应用", "选择应用", "查找已安装应用",
     "检查电脑状态", "检查磁盘占用", "查看目录信息",
     "查看当前画面", "查看电脑画面", "点击界面", "双击界面", "右键点击", "中键点击", "拖动界面元素", "选择界面元素",
     "移动指针", "输入文字", "使用快捷键", "滚动界面", "等待界面响应", "电脑操作返回结果",
@@ -91,6 +91,9 @@ private val AGENT_ACTIVITY_MESSAGES = setOf(
     "分工阅读资料", "查看文档页面", "计算项目产物", "检查工具请求",
     "编辑文件", "搜索文件内容", "执行命令", "查看图片", "查看工作目录", "交付文件", "分派任务",
     "协调子任务", "查看子任务", "等待子任务", "停止子任务", "操作电脑", "使用任务工具", "阅读网页",
+    "检查电脑操作能力", "查看运行中的应用", "查找应用", "切换应用", "查看应用窗口", "查看窗口状态",
+    "查看界面控件", "选择文字", "粘贴内容", "向上滚动", "向下滚动", "向左滚动", "向右滚动",
+    "子任务开始工作", "子任务已返回", "子任务已停止", "子任务未完成",
 )
 internal fun validAgentActivity(value: String?): String? = value?.takeIf { it in AGENT_ACTIVITY_MESSAGES }
 
@@ -110,7 +113,7 @@ internal data class DirectTurn(val id: String, val conversationId: String, val a
 
 /** A record cache, never a synchronized copy of the desktop's SQLite file. */
 class CompanionDatabase(context: Context, name: String? = "companion.db") :
-    SQLiteOpenHelper(context.applicationContext, name, null, 5) {
+    SQLiteOpenHelper(context.applicationContext, name, null, 6) {
 
     override fun onConfigure(db: SQLiteDatabase) { db.setForeignKeyConstraintsEnabled(true) }
 
@@ -121,7 +124,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             local_only INTEGER NOT NULL DEFAULT 0)""")
         db.execSQL("""CREATE TABLE messages(id TEXT PRIMARY KEY,conversation_id TEXT NOT NULL,role TEXT NOT NULL,
             content TEXT NOT NULL,created_at TEXT NOT NULL,source TEXT NOT NULL,request_status TEXT,reply_to TEXT,image_id TEXT,image_error TEXT,
-            agent_error_code TEXT,agent_activity TEXT,execution_mode TEXT,agent_trace TEXT)""")
+            agent_error_code TEXT,agent_activity TEXT,execution_mode TEXT,agent_trace TEXT,file_name TEXT,file_size INTEGER)""")
         db.execSQL("CREATE INDEX messages_conversation ON messages(conversation_id,created_at,id)")
         db.execSQL("CREATE TABLE tombstones(entity TEXT NOT NULL,id TEXT NOT NULL,PRIMARY KEY(entity,id))")
         db.execSQL("""CREATE TABLE snapshot_items(entity TEXT NOT NULL,id TEXT NOT NULL,
@@ -135,6 +138,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             size INTEGER NOT NULL,width INTEGER NOT NULL,height INTEGER NOT NULL,created_at TEXT NOT NULL,
             local_path TEXT,upload_state TEXT NOT NULL DEFAULT 'received')""")
         createPendingImages(db)
+        createPendingFiles(db)
         createDirectTurns(db)
     }
 
@@ -160,6 +164,13 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             putSetting(db, "sync_ready", null)
             resetSnapshot(db)
         }
+        if (oldVersion < 6) {
+            createPendingFiles(db)
+            db.execSQL("ALTER TABLE messages ADD COLUMN file_name TEXT")
+            db.execSQL("ALTER TABLE messages ADD COLUMN file_size INTEGER")
+            putSetting(db, "sync_ready", null)
+            resetSnapshot(db)
+        }
     }
 
     private fun createDirectTurns(db: SQLiteDatabase) {
@@ -174,6 +185,12 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     private fun createPendingImages(db: SQLiteDatabase) {
         db.execSQL("""CREATE TABLE pending_images(conversation_id TEXT PRIMARY KEY,image_id TEXT NOT NULL,filename TEXT NOT NULL,
             authority_id TEXT NOT NULL DEFAULT '')""")
+    }
+
+    private fun createPendingFiles(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE pending_files(conversation_id TEXT PRIMARY KEY,file_id TEXT NOT NULL,
+            filename TEXT NOT NULL,mime_type TEXT NOT NULL,size INTEGER NOT NULL,local_path TEXT NOT NULL,
+            authority_id TEXT NOT NULL)""")
     }
 
     private fun <T> transaction(block: (SQLiteDatabase) -> T): T {
@@ -241,6 +258,9 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
             db.delete("messages", null, null)
             db.execSQL("DELETE FROM conversations WHERE id NOT IN (SELECT conversation_id FROM direct_turns WHERE authority_id=?)", arrayOf(LOCAL_PHONE_AUTHORITY))
             db.execSQL("UPDATE conversations SET local_only=1 WHERE id IN (SELECT conversation_id FROM direct_turns WHERE authority_id=?)", arrayOf(LOCAL_PHONE_AUTHORITY))
+            // Unreachable composer rows must not pin the bounded private cache forever.
+            // Their source documents are untouched; cached copies become reclaimable.
+            db.execSQL("DELETE FROM pending_files WHERE conversation_id NOT IN (SELECT id FROM conversations)")
             db.delete("tombstones", null, null); resetSnapshot(db)
             db.execSQL("UPDATE direct_turns SET state='needs_attention',error='已更换电脑，原记录不会自动发送到新电脑' WHERE state!='imported' AND authority_id!=?", arrayOf(LOCAL_PHONE_AUTHORITY))
             putSetting(db, "sync_ready", null); putSetting(db, "sync_cursor", null)
@@ -300,6 +320,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     }
 
     private fun blockDeletedQueue(db: SQLiteDatabase, id: String) {
+        db.delete("pending_files", "conversation_id=?", arrayOf(id))
         db.delete("settings", "key LIKE ?", arrayOf("context_envelope:%:$id"))
         putSetting(db, "agent_mode:$id", null)
         putSetting(db, "phone_title:$id", null)
@@ -322,6 +343,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
                     putSetting(db, "agent_mode:$id", null)
                     db.delete("conversations", "id=?", arrayOf(id))
                     db.delete("messages", "conversation_id=?", arrayOf(id))
+                    db.delete("pending_files", "conversation_id=?", arrayOf(id))
                     blockDeletedQueue(db, id)
                 }
                 "message" -> {
@@ -357,6 +379,8 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
                     put("request_status", data.optionalString("request_status")); put("reply_to", data.optionalString("reply_to"))
                     put("image_id", validImageId(data.optionalString("image_id")))
                     put("image_error", validImageError(data.optionalString("image_error")))
+                    put("file_name", validFileName(data.optionalString("file_name")))
+                    put("file_size", validFileSize(data.opt("file_size")))
                     put("agent_error_code", validAgentErrorCode(data.optionalString("agent_error_code")))
                     put("agent_activity", validAgentActivity(data.optionalString("agent_activity")))
                     put("execution_mode", data.optionalString("execution_mode")?.takeIf { it == "agent" })
@@ -442,7 +466,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         val entity = item.getString("entity")
         val fields = when (entity) {
             "conversation" -> listOf("id", "title", "title_manual", "created_at", "updated_at", "message_count")
-            "message" -> listOf("id", "conversation_id", "role", "content", "created_at", "source", "request_status", "reply_to", "image_id", "image_error", "agent_error_code", "agent_activity", "execution_mode")
+            "message" -> listOf("id", "conversation_id", "role", "content", "created_at", "source", "request_status", "reply_to", "image_id", "image_error", "agent_error_code", "agent_activity", "execution_mode", "file_name", "file_size")
             "screen_event" -> listOf("id", "conversation_id", "observed_at", "source_kind")
             else -> throw IllegalArgumentException("不支持的同步实体")
         }
@@ -452,6 +476,8 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         if (entity == "message") {
             data.put("image_id", validImageId(source.optionalString("image_id")))
             data.put("image_error", validImageError(source.optionalString("image_error")))
+            data.put("file_name", validFileName(source.optionalString("file_name")))
+            data.put("file_size", validFileSize(source.opt("file_size")))
             data.put("agent_error_code", validAgentErrorCode(source.optionalString("agent_error_code")))
             data.put("agent_activity", validAgentActivity(source.optionalString("agent_activity")))
             data.put("execution_mode", source.optionalString("execution_mode")?.takeIf { it == "agent" })
@@ -513,13 +539,21 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
     fun queueMessage(conversationId: String, text: String, desktopContext: Boolean = false): String =
         queueChatMessage(conversationId, text, "chat.send", desktopContext)
 
-    fun queueAgentMessage(conversationId: String, text: String): String =
-        queueChatMessage(conversationId, text, "agent.send")
+    fun queueAgentMessage(conversationId: String, text: String, file: PendingFile? = null): String =
+        queueChatMessage(conversationId, text, "agent.send", file = file)
 
-    private fun queueChatMessage(conversationId: String, text: String, method: String, desktopContext: Boolean = false): String = transaction { db ->
+    private fun queueChatMessage(conversationId: String, text: String, method: String, desktopContext: Boolean = false,
+        file: PendingFile? = null): String = transaction { db ->
         require(!isDeleted(db, "conversation", conversationId)) { "该会话已在电脑删除，请新建会话" }
         val pending = pendingImage(conversationId)
         val params = JSONObject().put("conversation_id", conversationId).put("text", text)
+        if (file != null) {
+            require(method == "agent.send" && pending == null && pendingFile(conversationId) == file &&
+                file.authorityId == setting(db, "device_id")) { "待发文件或目标电脑已变更，请重新选择" }
+            params.put("file_id", file.id)
+            // File labels stay local to the queue. Only file_id crosses agent.send.
+            params.put("local_file_name", file.filename).put("local_file_size", file.sizeBytes)
+        }
         require(!desktopContext || pending == null) { "电脑协助会读取电脑当前画面，请先移除输入框图片后再发送" }
         if (desktopContext) params.put("desktop_context", true)
         var dependency: String? = null
@@ -536,6 +570,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         val requestId = addOutbox(db, method, params, conversationId, text, pending?.attachmentId, dependency)
         invalidateContext(db, conversationId)
         db.delete("pending_images", "conversation_id=?", arrayOf(conversationId))
+        if (file != null) db.delete("pending_files", "conversation_id=?", arrayOf(conversationId))
         requestId
     }
 
@@ -543,6 +578,7 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         require(!isDeleted(db, "conversation", conversationId)) { "该会话已在电脑删除，请新建会话" }
         require(validImageId(image.id) != null) { "图片标识无效" }
         putImage(image)
+        db.delete("pending_files", "conversation_id=?", arrayOf(conversationId))
         db.insertWithOnConflict("pending_images", null, ContentValues().apply {
             put("conversation_id", conversationId); put("image_id", image.id)
             put("filename", image.filename)
@@ -550,7 +586,37 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
         }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
-    fun removePendingImage(conversationId: String) { writableDatabase.delete("pending_images", "conversation_id=?", arrayOf(conversationId)) }
+    fun removePendingImage(conversationId: String) = transaction { db ->
+        db.delete("pending_images", "conversation_id=?", arrayOf(conversationId))
+        db.delete("pending_files", "conversation_id=?", arrayOf(conversationId))
+    }
+
+    fun stageFile(file: PendingFile, onlyIfEmpty: Boolean = false) = transaction { db ->
+        require(!isDeleted(db, "conversation", file.conversationId)) { "该会话已删除，请新建会话" }
+        if (onlyIfEmpty && (pendingFile(file.conversationId) != null || pendingImage(file.conversationId) != null)) return@transaction
+        db.delete("pending_images", "conversation_id=?", arrayOf(file.conversationId))
+        db.insertWithOnConflict("pending_files", null, ContentValues().apply {
+            put("conversation_id", file.conversationId); put("file_id", file.id); put("filename", file.filename)
+            put("mime_type", file.mimeType); put("size", file.sizeBytes); put("local_path", file.localPath)
+            put("authority_id", file.authorityId)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+        Unit
+    }
+
+    fun pendingFiles(): Map<String, PendingFile> = readableDatabase.rawQuery("SELECT * FROM pending_files", null).use { cursor ->
+        buildMap { while (cursor.moveToNext()) {
+            val cid = cursor.getString(0)
+            put(cid, PendingFile(cid, cursor.getString(1), cursor.getString(2), cursor.getString(3),
+                cursor.getLong(4), cursor.getString(5), cursor.getString(6)))
+        } }
+    }
+    fun pendingFile(conversationId: String): PendingFile? = pendingFiles()[conversationId]
+    fun protectedFileIds(): Set<String> = pendingFiles().values.map { it.id }.toSet() +
+        outbox().filter { it.status !in setOf("sent", "discarded") }.mapNotNull { item ->
+            operation(item.requestId)?.takeIf { it.authorityId == device()?.endpointId &&
+                it.item.conversationId?.let(::isConversationDeleted) != true }
+                ?.params?.optionalString("file_id")
+        }
 
     fun pendingImages(): Map<String, PendingImage> = readableDatabase.rawQuery("""SELECT p.conversation_id,
         i.id,p.filename,i.mime_type,i.size,i.local_path FROM pending_images p JOIN images i ON p.image_id=i.id""", null).use {
@@ -566,6 +632,10 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
 
     private fun validImageId(value: String?): String? = value?.takeIf { it.matches(Regex("[0-9a-f]{64}")) }
     private fun validImageError(value: String?): String? = value?.takeIf { it in setOf("image_missing", "vision_rejected", "image_unavailable") }
+    private fun validFileName(value: String?): String? = value?.takeIf { it.length in 1..160 && it !in setOf(".", "..") &&
+        it.none { c -> c.code < 32 || c == '/' || c == '\\' } }
+    private fun validFileSize(value: Any?): Long? = if (value is Int || value is Long)
+        (value as Number).toLong().takeIf { it in 0..MAX_UPLOAD_FILE_BYTES } else null
 
     private fun Cursor.outboxItem(): OutboxItem = OutboxItem(
         getString(getColumnIndexOrThrow("id")), getString(getColumnIndexOrThrow("method")),
@@ -649,7 +719,8 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
                 attachmentId = it.nullable("image_id"), imageError = it.nullable("image_error"),
                 agentErrorCode = it.nullable("agent_error_code"), agentError = it.nullable("agent_error_code")?.let(AGENT_ERROR_MESSAGES::get),
                 agentActivity = it.nullable("agent_activity"), executionMode = it.nullable("execution_mode"),
-                execution = parseExecutionProcess(it.nullable("agent_trace")))) }
+                execution = parseExecutionProcess(it.nullable("agent_trace")), fileName = it.nullable("file_name"),
+                fileSize = it.getColumnIndexOrThrow("file_size").let { index -> if (it.isNull(index)) null else it.getLong(index) })) }
         }
         val ids = mirrored.map { it.id }.toSet()
         val pending = outbox().filter { it.conversationId == conversationId && it.method in setOf("chat.send", "agent.send", "image.upload") && it.status != "discarded" }
@@ -659,7 +730,9 @@ class CompanionDatabase(context: Context, name: String? = "companion.db") :
                 if (it.method == "image.upload") it.text + "\n仅传入电脑图片收件箱，不会自动识图或回复" else it.text,
                 it.createdAt, source = if (it.method == "image.upload") "image_inbox" else "user",
                 localState = it.status, attachmentId = it.attachmentId, localError = it.error,
-                executionMode = if (it.method == "agent.send") "agent" else null) }
+                executionMode = if (it.method == "agent.send") "agent" else null,
+                fileName = operation(it.requestId)?.params?.optionalString("local_file_name"),
+                fileSize = operation(it.requestId)?.params?.let { value -> validFileSize(value.opt("local_file_size")) }) }
         val localTurns = directTurns().filter { it.conversationId == conversationId &&
             (it.authorityId == device()?.endpointId || it.authorityId == LOCAL_PHONE_AUTHORITY) }
         val direct = localTurns.filter { it.state != "imported" }

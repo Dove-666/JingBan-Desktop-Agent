@@ -209,7 +209,8 @@ class UserJourneyEdgeUiTest {
         }
         compose.setContent { AuraApp(state.value, actions) }
         compose.onNodeWithContentDescription("消息内容").performTextInput("选图前的问题")
-        compose.onNodeWithContentDescription("添加图片").performClick()
+        compose.onNodeWithContentDescription("添加附件").performClick()
+        compose.onNodeWithText("图片").performClick()
         assertEquals("选图前的问题", draftText())
         assertEquals(0, actions.networkOperations)
     }

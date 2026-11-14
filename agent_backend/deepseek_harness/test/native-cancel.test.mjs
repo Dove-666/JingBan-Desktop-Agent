@@ -135,7 +135,7 @@ test('SDK cancels an active native input and acknowledges release', {
     const running = runner.run({ type: 'run', id: 'owned-native-stop', task: 'Test only the disposable owned fixture.',
       config: { base_url: `http://127.0.0.1:${server.address().port}/v1`, model: 'fixture',
         api_key: 'owned-native-test', supports_vision: true },
-      options: { workspace: join(directory, 'workspace'), tools_enabled: false, computer_enabled: true },
+      options: { workspace: join(directory, 'workspace'), tools_enabled: false, computer_enabled: true, approval_mode: 'full' },
       storage: { home: join(directory, 'home'), session_id: null }, context: {},
     }).then(() => ({ completed: true }), error => ({ error }));
     const held = await pressed;

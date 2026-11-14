@@ -133,16 +133,16 @@ class ExecutionUiTests(unittest.TestCase):
         self.assertNotIn("接手", eval_js(panel, "document.body.innerText"))
         self.assertIn("未完成", eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').textContent"))
 
-    def test_event_offsets_are_relative_to_start_with_accessible_status(self):
+    def test_event_rows_are_compact_with_accessible_status_and_optional_timing(self):
         chat, panel = self.panel("running")
         self.assertIn("进行中", eval_js(panel, "document.querySelector('[data-testid=execution-toggle]').getAttribute('aria-label')"))
-        self.assertEqual(eval_js(panel, "Array.from(document.querySelectorAll('.execution-event time'),node=>node.textContent)"),
-                         ["+00:07", "+00:15"])
-        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-event time')[0].getAttribute('aria-label')"), "任务开始后 7秒")
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-event time').length"), 0)
+        self.assertIn("任务开始后 7秒", eval_js(panel, "document.querySelector('.execution-event').getAttribute('title')"))
         self.assertEqual(eval_js(panel, "Array.from(document.querySelectorAll('.execution-marker'),node=>node.getAttribute('aria-label'))"),
                          ["已完成", "进行中"])
         self.assertTrue(eval_js(panel, "Boolean(document.querySelector('.execution-toggle .spin'))"))
-        self.assertEqual("执行过程", eval_js(panel, "document.querySelector('.execution-heading').textContent"))
+        self.assertEqual("执行过程", eval_js(panel, "document.querySelector('[data-testid=execution-content]').getAttribute('aria-label')"))
+        self.assertEqual(eval_js(panel, "document.querySelectorAll('.execution-heading,.execution-timeline').length"), 0)
 
     def test_process_replaces_duplicate_composer_status_but_errors_and_stop_remain(self):
         chat, panel = self.panel("running")

@@ -4,6 +4,7 @@ Owned temporary data and synthetic localhost model replies only. These test the
 host control chain; they are not added to real-model capability success rates.
 """
 from dataclasses import replace
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import threading
@@ -16,9 +17,8 @@ from uuid import uuid4
 from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QApplication
 
-from agent_backend.nanobot.tests.test_goal_contract_worker import SeparateGoalModel
-from agent_backend.nanobot.tests.test_worker import PYTHON, REPO
 from desktop_pet.agents.coordinator import operation_identity
+from desktop_pet.agents.service import dsh_installation, node_executable, _DSH_VERSION
 from desktop_pet.settings_manager import ApiSettings
 from tests import test_chat_images as fixture
 from tests.test_remote_controller import PEER, spin_until
@@ -27,9 +27,78 @@ A='Create a.txt containing exactly "A".'
 B='Create b.txt containing exactly "B". QUEUED_FUTURE_B_SENTINEL_3291.'
 AREPLY='Created a.txt with actual content A.'
 BREPLY='Created b.txt after the earlier task completed.'
+REPO=Path(__file__).resolve().parents[1]
 
 
-@unittest.skipUnless(PYTHON.is_file(),"isolated SDK unavailable")
+class DshQueueModel:
+    """Script only the advertised DSH tool protocol over a local HTTP stream."""
+    def __init__(self,steps):
+        self.steps=list(steps)
+        self.planner_calls,self.errors=[],[]
+        owner=self
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self,*_):pass
+            def do_POST(self):
+                try:
+                    if self.path!='/v1/chat/completions':raise AssertionError('Unexpected fixture route')
+                    if self.headers.get('Authorization')!='Bearer synthetic-owned-queue-key':
+                        raise AssertionError('Unexpected fixture credential')
+                    body=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                    index=len(owner.planner_calls)
+                    owner.planner_calls.append(body)
+                    if index>=len(owner.steps):raise AssertionError('Unplanned model request')
+                    step=owner.steps[index]
+                    step=step(body) if callable(step) else step
+                    message={'role':'assistant','content':None if isinstance(step,tuple) else str(step)}
+                    if isinstance(step,tuple):
+                        name,arguments=step
+                        names={tool['function']['name'] for tool in body.get('tools',[])}
+                        if name not in names:raise AssertionError(f'Tool not advertised by DSH: {name}')
+                        message['tool_calls']=[{'id':f'queue-{index}','type':'function','function':{
+                            'name':name,'arguments':json.dumps(arguments)}}]
+                    reason='tool_calls' if isinstance(step,tuple) else 'stop'
+                    if body.get('stream'):
+                        delta=dict(message)
+                        if 'tool_calls' in delta:delta['tool_calls']=[{'index':0,**delta['tool_calls'][0]}]
+                        chunks=[{'id':'queue-fixture','object':'chat.completion.chunk','created':1,
+                            'model':'offline-owned-queue','choices':[{'index':0,'delta':delta,'finish_reason':None}]},
+                            {'id':'queue-fixture','object':'chat.completion.chunk','created':1,
+                            'model':'offline-owned-queue','choices':[{'index':0,'delta':{},'finish_reason':reason}]}]
+                        payload=(''.join('data: '+json.dumps(chunk)+'\n\n' for chunk in chunks)+'data: [DONE]\n\n').encode()
+                        content_type='text/event-stream'
+                    else:
+                        payload=json.dumps({'id':'queue-fixture','object':'chat.completion','created':1,
+                            'model':'offline-owned-queue','choices':[{'index':0,'message':message,'finish_reason':reason}]}).encode()
+                        content_type='application/json'
+                    self.send_response(200)
+                except Exception as exc:
+                    owner.errors.append(type(exc).__name__+': '+str(exc))
+                    self.send_response(500)
+                    payload=b'{"error":{"message":"Queue fixture assertion failed"}}'
+                    content_type='application/json'
+                self.send_header('Content-Type',content_type)
+                self.send_header('Content-Length',str(len(payload)))
+                self.send_header('Connection','close')
+                try:
+                    self.end_headers()
+                    self.wfile.write(payload)
+                except ConnectionError:pass
+                self.close_connection=True
+        self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        self.server.daemon_threads=True
+        self.server.block_on_close=False
+        self.thread=threading.Thread(target=self.server.serve_forever,kwargs={'poll_interval':.02},daemon=True)
+        self.thread.start()
+        self.base_url=f'http://127.0.0.1:{self.server.server_port}/v1'
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=2)
+
+
+@unittest.skipUnless(node_executable() is not None and all(value==_DSH_VERSION for value in dsh_installation().values()),
+                     'Pinned official DSH runtime is not installed')
 class RemoteAgentQueueTests(unittest.TestCase):
     setUpClass=classmethod(fixture.ChatImageTests.setUpClass.__func__)
     rpc=fixture.ChatImageTests.rpc
@@ -42,6 +111,9 @@ class RemoteAgentQueueTests(unittest.TestCase):
         self.workspace=Path(self.owned.name)
         self.models=[]
         self.chat._metadata_factory=None
+        workspace_scope=patch('desktop_pet.agents.settings.agent_workspace_root',lambda:self.workspace)
+        workspace_scope.start()
+        self.addCleanup(workspace_scope.stop)
 
     def tearDown(self):
         fixture.ChatImageTests.tearDown(self)
@@ -51,12 +123,12 @@ class RemoteAgentQueueTests(unittest.TestCase):
         self.owned.cleanup()
 
     def configure(self,steps):
-        model=SeparateGoalModel(steps,judge_mode='optimistic')
+        model=DshQueueModel(steps)
         self.models.append(model)
         self.settings.save_api_settings(ApiSettings(model.base_url,'offline-owned-queue',10))
         self.settings.save_api_key('synthetic-owned-queue-key')
         self.settings.save_agent_settings(replace(self.settings.load_agent_settings(),enabled=True,
-            computer_enabled=False,python_executable=str(PYTHON),workspace=str(self.workspace),timeout_seconds=25,max_steps=0))
+            computer_enabled=False,approval_mode='full',workspace=str(self.workspace),timeout_seconds=25,max_steps=0))
         self.chat.refresh_agent_settings()
         return model
 
@@ -74,15 +146,13 @@ class RemoteAgentQueueTests(unittest.TestCase):
     def test_busy_ack_is_durable_and_a_b_run_serially_without_future_task_context(self):
         def first_a(body):
             self.assertNotIn('QUEUED_FUTURE_B_SENTINEL_3291',json.dumps(body))
-            return ('write_file',{'path':'a.txt','content':'A'})
+            return ('write',{'file_path':'a.txt','content':'A'})
         def first_b(body):
             self.assertIn(AREPLY,json.dumps(body))
             self.assertTrue((self.workspace/'a.txt').is_file())
-            return ('write_file',{'path':'b.txt','content':'B'})
-        model=self.configure([first_a,('read_file',{'path':'a.txt'}),
-            ('finish_task',{'status':'completed','summary':AREPLY}),'Unchecked rewrite A',
-            first_b,('read_file',{'path':'b.txt'}),
-            ('finish_task',{'status':'completed','summary':BREPLY}),'Unchecked rewrite B'])
+            return ('write',{'file_path':'b.txt','content':'B'})
+        model=self.configure([first_a,('read',{'file_path':'a.txt'}),AREPLY,
+            first_b,('read',{'file_path':'b.txt'}),BREPLY])
         self.chat._set_busy(True)
         first,second=self.send(A),self.send(B)
         self.assertEqual((self.job(first).state,self.job(second).state),('queued','queued'))
@@ -95,7 +165,7 @@ class RemoteAgentQueueTests(unittest.TestCase):
         self.chat._set_busy(False)
         spin_until(lambda:self.job(first).state=='completed' and self.job(second).state=='completed',timeout=25)
         self.idle()
-        self.assertEqual(len(model.planner_calls),8)
+        self.assertEqual(len(model.planner_calls),6)
         self.assertEqual((self.workspace/'a.txt').read_text(),'A')
         self.assertEqual((self.workspace/'b.txt').read_text(),'B')
         replies=[row['content'] for row in self.chat.store.load_messages(self.cid) if row['role']=='assistant']
@@ -136,7 +206,7 @@ class RemoteAgentQueueTests(unittest.TestCase):
         def pending(_):
             entered.set()
             if not release.wait(10): raise AssertionError('owned planner was never released')
-            return ('write_file',{'path':'a.txt','content':'A'})
+            return ('write',{'file_path':'a.txt','content':'A'})
         model=self.configure([pending])
         first=self.send(A)
         try:
@@ -158,8 +228,7 @@ class RemoteAgentQueueTests(unittest.TestCase):
 
     def test_too_late_stop_does_not_claim_active_commit_stopped_but_cancels_queue(self):
         entered,release=threading.Event(),threading.Event()
-        model=self.configure([('write_file',{'path':'a.txt','content':'A'}),('read_file',{'path':'a.txt'}),
-            ('finish_task',{'status':'completed','summary':AREPLY}),'Unchecked final'])
+        model=self.configure([('write',{'file_path':'a.txt','content':'A'}),('read',{'file_path':'a.txt'}),AREPLY])
         original=self.chat.store.complete_request
         def committing(*args,**kwargs):
             entered.set()
@@ -177,37 +246,42 @@ class RemoteAgentQueueTests(unittest.TestCase):
                 spin_until(lambda:self.job(first).state=='completed',timeout=10)
                 self.idle()
                 self.assertEqual(self.job(second).state,'cancelled')
-                self.assertEqual(len(model.planner_calls),4)
+                self.assertEqual(len(model.planner_calls),3)
                 self.assertEqual(self.chat.store.load_messages(self.cid)[-1]['content'],AREPLY)
             finally:release.set()
 
-    def test_partial_goal_is_saved_but_queue_never_marks_it_completed(self):
-        partial='未完成：仅创建并回读了 a.txt，missing.txt 尚未创建。'
-        def report_incomplete(body):
-            reports=[json.loads(message['content']) for message in body['messages']
-                     if message.get('role')=='tool' and '"accepted"' in message.get('content','')]
-            self.assertTrue(reports)
-            self.assertIs(reports[-1]['accepted'],False)
-            self.assertIn('GOAL_REQUIREMENT_FAILED',reports[-1]['issues'])
-            self.assertIn('HOST OUTCOME CHECK',json.dumps(body))
-            return ('finish_task',{'status':'needs_user','summary':partial})
-        # A rejected completion and a terminal draft may legitimately trigger
-        # repair planning. Script the truthful incomplete exit as well, while
-        # retaining the fixture's assertion against any unplanned request.
-        model=self.configure([('write_file',{'path':'a.txt','content':'A'}),('read_file',{'path':'a.txt'}),
-            ('finish_task',{'status':'completed','summary':'I claim every file exists.'}),
-            'Only a.txt was created.',report_incomplete,partial])
-        ack=self.send(A+' Also create missing.txt containing exactly "M".')
-        spin_until(lambda:self.job(ack).state=='interrupted',timeout=15)
-        self.idle()
-        job=self.job(ack)
-        self.assertIsNotNone(job.worker_closed_at)
-        self.assertIsNone(job.reply_id)
-        self.assertFalse(self.chat._agent_queue.queue.has_unclosed_worker())
-        self.assertEqual((self.workspace/'a.txt').read_text(),'A')
-        self.assertFalse((self.workspace/'missing.txt').exists())
-        self.assertIn('未',self.chat.store.load_messages(self.cid)[-1]['content'])
-        self.assertEqual(len(model.planner_calls),6)
+    def test_cancel_after_partial_work_preserves_files_without_completed_queue_or_reply(self):
+        # DSH owns completion; the former nanobot finish_task receipt is retired.
+        # Exercise a real partial execution followed by explicit cancellation.
+        entered,release=threading.Event(),threading.Event()
+        def pending_after_read(body):
+            self.assertEqual((self.workspace/'a.txt').read_text(),'A')
+            self.assertEqual(body['messages'][-1]['role'],'tool')
+            self.assertIn('A',body['messages'][-1]['content'])
+            entered.set()
+            if not release.wait(10):raise AssertionError('owned partial planner was never released')
+            return ('write',{'file_path':'missing.txt','content':'M'})
+        model=self.configure([('write',{'file_path':'a.txt','content':'A'}),
+            ('read',{'file_path':'a.txt'}),pending_after_read])
+        task=A+' Also create missing.txt containing exactly "M".'
+        ack=self.send(task)
+        try:
+            spin_until(entered.is_set,timeout=15)
+            self.assertEqual(self.job(ack).state,'running')
+            result=self.rpc('agent.cancel',{'conversation_id':self.cid})['result']
+            self.assertTrue(result['active_cancelled'])
+            release.set()
+            spin_until(lambda:self.job(ack).state=='cancelled',timeout=10)
+            self.idle()
+            job=self.job(ack)
+            self.assertIsNotNone(job.worker_closed_at)
+            self.assertIsNone(job.reply_id)
+            self.assertFalse(self.chat._agent_queue.queue.has_unclosed_worker())
+            self.assertEqual((self.workspace/'a.txt').read_text(),'A')
+            self.assertFalse((self.workspace/'missing.txt').exists())
+            self.assertEqual([row['content'] for row in self.chat.store.load_messages(self.cid)],[task])
+            self.assertEqual(len(model.planner_calls),3)
+        finally:release.set()
 
     def test_clear_revokes_old_generation_and_new_task_does_not_resurrect_old_ids(self):
         model=self.configure([])
@@ -224,8 +298,7 @@ class RemoteAgentQueueTests(unittest.TestCase):
         self.assertNotEqual(new['message_id'],old['message_id'])
 
     def test_new_phone_cid_can_enroll_and_execute_without_switching_desktop_selection(self):
-        model=self.configure([('write_file',{'path':'a.txt','content':'A'}),('read_file',{'path':'a.txt'}),
-            ('finish_task',{'status':'completed','summary':AREPLY}),'Unchecked final'])
+        model=self.configure([('write',{'file_path':'a.txt','content':'A'}),('read',{'file_path':'a.txt'}),AREPLY])
         selected=self.chat.current_conversation_id
         phone_cid=str(uuid4())
         self.assertNotEqual(phone_cid,selected)
@@ -238,7 +311,7 @@ class RemoteAgentQueueTests(unittest.TestCase):
         self.assertEqual(self.chat.current_conversation_id,selected)
         self.assertEqual(self.chat.store.load_messages(phone_cid)[-1]['content'],AREPLY)
         self.assertEqual((self.workspace/'a.txt').read_text(),'A')
-        self.assertEqual(len(model.planner_calls),4)
+        self.assertEqual(len(model.planner_calls),3)
 
     def test_deleted_phone_cid_cannot_be_recreated_without_in_memory_deleted_set(self):
         model=self.configure([])

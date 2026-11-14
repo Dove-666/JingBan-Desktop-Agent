@@ -13,6 +13,7 @@ from ..bundle_runtime import worker_python_executable, frozen_workspace_root
 
 GUI_CREDENTIAL_ACCOUNT = "agent-gui-api-key"
 GUI_PROVIDERS = ("ui-tars-1.5", "ui-tars-1.0", "doubao-1.5-15b", "doubao-1.5-20b")
+APPROVAL_MODES = ("ask", "auto", "full")
 _SHARED_GUI_FIELDS = frozenset(("gui_provider", "gui_coordinate_profile", "gui_base_url", "gui_model"))
 _PREFIX = "agents/"
 _ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +53,7 @@ class AgentSettings:
     enabled: bool = True
     tools_enabled: bool = True
     computer_enabled: bool = True
+    approval_mode: str = "auto"
     backend: str = "deepseek-harness"
     python_executable: str = DEFAULT_PYTHON
     workspace: str = field(default_factory=lambda: str(agent_workspace_root()))
@@ -68,6 +70,8 @@ class AgentSettings:
             raise AgentValidationError("Agent 开关必须为布尔值。")
         if self.backend != "deepseek-harness":
             raise AgentValidationError("当前 Agent 使用 DeepSeek Harness。")
+        if not isinstance(self.approval_mode, str) or self.approval_mode not in APPROVAL_MODES:
+            raise AgentValidationError("请选择有效的 Agent 操作权限。")
         for value in (self.python_executable, self.workspace):
             if not _valid_text(value) or (value and not Path(value).is_absolute()):
                 raise AgentValidationError("Agent Python 和工作目录必须是绝对路径，或留空。")

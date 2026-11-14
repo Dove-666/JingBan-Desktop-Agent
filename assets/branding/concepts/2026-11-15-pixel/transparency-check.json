@@ -1,0 +1,162 @@
+[
+  {
+    "file": "P01-classic.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.458,
+    "near_opaque_fraction": 0.503,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      254,
+      252
+    ]
+  },
+  {
+    "file": "P02-detailed.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.453,
+    "near_opaque_fraction": 0.518,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      252,
+      254
+    ]
+  },
+  {
+    "file": "P03-wink.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.486,
+    "near_opaque_fraction": 0.48,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      252,
+      254
+    ]
+  },
+  {
+    "file": "P04-three-quarter.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.467,
+    "near_opaque_fraction": 0.499,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      252,
+      254
+    ]
+  },
+  {
+    "file": "P05-chunky.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.452,
+    "near_opaque_fraction": 0.529,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      254,
+      252
+    ]
+  },
+  {
+    "file": "P06-soft-smile.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.466,
+    "near_opaque_fraction": 0.51,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      254,
+      252
+    ]
+  },
+  {
+    "file": "P07-bust.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.542,
+    "near_opaque_fraction": 0.432,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      252,
+      254
+    ]
+  },
+  {
+    "file": "P08-full-body.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "transparent_fraction": 0.61,
+    "near_opaque_fraction": 0.356,
+    "alpha_extrema": [
+      0,
+      255
+    ],
+    "dominant_alpha": [
+      0,
+      253,
+      252,
+      254
+    ]
+  }
+]

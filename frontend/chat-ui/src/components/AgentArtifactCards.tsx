@@ -9,7 +9,7 @@ export function AgentArtifactCards({ artifacts, conversationId, enabled, dispatc
   const [saving, setSaving] = useState('');
   const [lastOutcome, setLastOutcome] = useState<{ reference: string; status: 'saved' | 'failed' }>();
   return <div className="agent-artifacts">{artifacts.map((artifact) =>
-    <div className="agent-artifact" data-testid="agent-artifact" key={artifact.reference}>
+    <div className="agent-artifact" data-testid="agent-artifact" data-artifact-reference={artifact.reference} key={artifact.reference}>
       <FileText size={21} aria-hidden="true" /><div><strong>{artifact.name}</strong>
         <small>{artifact.bytes < 1024 ? `${artifact.bytes} B` : `${Math.ceil(artifact.bytes / 1024)} KB`}</small>
         {lastOutcome?.reference === artifact.reference && <small data-testid="agent-artifact-result"

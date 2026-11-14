@@ -8,6 +8,7 @@
   "dependencies": {
     "@deepseek-ai/dsh": "0.2.2-rc.3",
     "@deepseek-ai/dsh-sdk-client": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-experimental-auto-review": "0.2.2-rc.3",
     "@deepseek-ai/dsh-computer-use": "0.2.2-rc.3",
     "@deepseek-ai/dsh-cua-windows": "file:../../third_party/deepseek_harness/cua-windows"
   }

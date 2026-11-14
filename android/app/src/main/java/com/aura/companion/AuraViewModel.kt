@@ -58,6 +58,7 @@ class AuraViewModel internal constructor(application: Application, private val r
     private var autoConnect = preferences.getBoolean("auto_connect", true)
     private var latestConnectionIntent = Any()
     private var pickerConversationId: String? = null
+    private var filePickerConversationId: String? = null
     private val foregroundSync = if (session == null) ForegroundSyncLoop(viewModelScope, repository.state, { autoConnect },
         reconnect = { repository.reconnect(silent = true) }, poll = { repository.poll() }, disconnect = { repository.disconnect() }) else null
 
@@ -116,6 +117,9 @@ class AuraViewModel internal constructor(application: Application, private val r
             pendingAttachment = data.selectedConversationId?.let { id -> data.pendingImages[id] }?.let {
                 UiPendingAttachment(it.attachmentId, it.filename, it.localPath.orEmpty(), it.conversationId,
                     preparing = ui.preparingImage)
+            } ?: data.selectedConversationId?.let { id -> data.pendingFiles[id] }?.let {
+                UiPendingAttachment(it.id, it.filename, it.localPath, it.conversationId,
+                    preparing = ui.preparingImage, isFile = true, sizeBytes = it.sizeBytes, mimeType = it.mimeType)
             },
             preparingImage = ui.preparingImage,
             images = data.images.map { UiImage(it.id, it.filename,
@@ -151,7 +155,7 @@ class AuraViewModel internal constructor(application: Application, private val r
             agentInteractionBusy = ui.agentInteractionBusy,
             canSteerDesktop = data.desktopSteeringAvailable && data.desktopAgentBusy &&
                 data.desktopAgentConversationId == data.selectedConversationId,
-            agentArtifacts = data.agentArtifacts.map { UiAgentArtifact(it.reference, it.name, it.bytes) },
+            agentArtifacts = data.agentArtifacts.map { UiAgentArtifact(it.reference, it.name, it.bytes, it.messageId) },
             artifactDownloading = ui.artifactDownloading,
             taskNotificationsEnabled = ui.taskNotificationsEnabled,
             characterCards = data.characterCards.map { UiCharacterCard(it.id, it.label, it.name) },
@@ -397,6 +401,42 @@ class AuraViewModel internal constructor(application: Application, private val r
 
     /** MainActivity delegates this action to the system photo picker. */
     override fun pickImage() = Unit
+    override fun pickFile() = Unit
+
+    fun beginFileSelection(launchPicker: () -> Unit) {
+        if (local.value.preparingImage || local.value.desktopTaskBusy) return
+        local.update { it.copy(preparingImage = true) }
+        viewModelScope.launch {
+            try {
+                if (repository.state.value.device == null) {
+                    local.update { it.copy(preparingImage = false, notice = "请先连接电脑，再选择文件") }
+                    return@launch
+                }
+                filePickerConversationId = repository.state.value.selectedConversationId ?: repository.newConversation()
+                launchPicker()
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                filePickerConversationId = null
+                local.update { it.copy(preparingImage = false, notice = "暂时无法打开文件选择器，请稍后重试") }
+            }
+        }
+    }
+
+    fun attachFile(uri: Uri?) {
+        val conversation = filePickerConversationId
+        filePickerConversationId = null
+        if (uri == null) { local.update { it.copy(preparingImage = false) }; return }
+        if (conversation == null) {
+            local.update { it.copy(preparingImage = false, notice = "文件选择已中断，请重新选择") }
+            return
+        }
+        viewModelScope.launch {
+            try { repository.stageFile(conversation, uri) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { local.update { it.copy(notice = "无法读取文件，请重新选择") } }
+            finally { local.update { it.copy(preparingImage = false) } }
+        }
+    }
 
     fun beginImageSelection(launchPicker: () -> Unit) {
         if (local.value.preparingImage) return

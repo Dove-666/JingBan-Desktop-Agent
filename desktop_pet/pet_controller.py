@@ -460,5 +460,6 @@ class PetController(QObject):
         self.apply_context_expression(emotion, source=source)
         if isinstance(text, str) and text.strip():
             self.pet.bubble.say(text, max(6000, self.pet.config.bubble_duration_ms,
-                                         1800 + len(text) * 140), conversation_link=conversation_link)
+                                         1800 + len(text) * 140), conversation_link=conversation_link,
+                                compact=source == "chat")
 

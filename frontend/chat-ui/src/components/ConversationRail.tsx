@@ -57,6 +57,7 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
   const [overflowing, setOverflowing] = useState(false);
   const [railHeight, setRailHeight] = useState(320);
   const [cardPosition, setCardPosition] = useState({ left: 0, top: 0 });
+  const [animatePreview, setAnimatePreview] = useState(false);
   const rail = useRef<HTMLDivElement>(null);
   const card = useRef<HTMLDivElement>(null);
   const geometry = useRef<Geometry>({ positions: [], viewportHeight: 0, maxScroll: 0, top: 0, height: 0, right: 0 });
@@ -69,6 +70,7 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
   const safeActiveIndex = clamp(activeIndex, 0, Math.max(0, entries.length - 1));
   const focusedMessage = entries[safeActiveIndex];
   const previewMessage = previewIndex === null ? undefined : entries[previewIndex];
+  const previewVisible = interactive && Boolean(previewMessage);
   const preview = useMemo(() => previewIndex !== null && previewMessage
     ? previewContent(entries, previewIndex) : null, [entries, previewIndex, previewMessage]);
 
@@ -83,6 +85,16 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
   }, [cancelClose]);
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
+  useLayoutEffect(() => {
+    if (!previewVisible) { setAnimatePreview(false); return; }
+    // Place a new card before enabling movement, so it never slides in from
+    // the screen origin. Subsequent message changes reuse the same card.
+    let nextFrame = 0;
+    const frame = requestAnimationFrame(() => {
+      nextFrame = requestAnimationFrame(() => setAnimatePreview(true));
+    });
+    return () => { cancelAnimationFrame(frame); cancelAnimationFrame(nextFrame); };
+  }, [previewVisible]);
   useLayoutEffect(() => {
     cancelClose();
     setPreviewIndex(null);
@@ -222,7 +234,8 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
     if (onNavigate) onNavigate(entry.id);
     else {
       const target = geometry.current.positions.find((position) => position.index === index)?.node;
-      target?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      target?.scrollIntoView({ block: 'start',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
     }
     keyboardIndex.current = index;
   }, [entries, onNavigate]);
@@ -282,13 +295,15 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
   const lensIndex = previewIndex ?? safeActiveIndex;
   const lensPosition = positionRatio(lensIndex, entries.length);
   return <>
+    <div className="conversation-rail-region" style={{ bottom: Math.max(0, bottomInset) }}>
     <div ref={rail} className="conversation-rail conversation-rail-track" data-testid="conversation-rail" role="slider"
       tabIndex={interactive ? 0 : -1} aria-hidden={!interactive || undefined} data-overflow={overflowing}
       aria-label="对话位置导航" aria-orientation="vertical" aria-valuemin={1}
       aria-valuemax={entries.length} aria-valuenow={safeActiveIndex + 1}
       aria-valuetext={`第 ${safeActiveIndex + 1} 条，${focusedMessage.role === 'user' ? '你的消息' : '鲸鱼娘的回复'}`}
       aria-describedby={previewMessage ? tooltipId : undefined} data-active-message-id={focusedMessage.id}
-      style={{ bottom: Math.max(0, bottomInset) } as CSSProperties} data-previewing={previewIndex !== null}
+      style={{ '--rail-length': `${Math.max(24, (entries.length - 1) * 18)}px` } as CSSProperties}
+      data-previewing={previewIndex !== null}
       onPointerMove={(event) => { keyboardIndex.current = null; reveal(pointerIndex(event)); }}
       onPointerLeave={scheduleClose} onFocus={() => { keyboardIndex.current = null; reveal(active.current); }} onBlur={scheduleClose}
       onPointerDown={(event) => {
@@ -305,20 +320,23 @@ export const ConversationRail = memo(function ConversationRail({ messages, conve
         const influence = previewIndex === null ? 0 : Math.exp(-.5 * (distance / 16) ** 2);
         return <span key={entries[index].id} aria-hidden="true" data-testid="conversation-rail-tick"
           data-rail-message-id={entries[index].id} data-index={index} className="conversation-rail-tick"
-          style={{ top: `${ratio * 100}%`, '--tick-scale': 1 + influence * 2.3 } as CSSProperties} />;
+          style={{ '--rail-y': `${ratio * railHeight}px`, '--tick-scale': 1 + influence * 2.3 } as CSSProperties} />;
       })}
       {previewIndex !== null && previewIndex !== safeActiveIndex && <span aria-hidden="true" className="conversation-rail-hover"
-        style={{ top: `${positionRatio(previewIndex, entries.length) * 100}%` }} />}
+        style={{ '--rail-y': `${positionRatio(previewIndex, entries.length) * railHeight}px` } as CSSProperties} />}
       <span aria-hidden="true" data-testid="conversation-rail-active" className="conversation-rail-active"
-        style={{ top: `${positionRatio(safeActiveIndex, entries.length) * 100}%`,
-          opacity: previewIndex !== null && previewIndex !== safeActiveIndex ? 0 : undefined }} />
+        style={{ '--rail-y': `${positionRatio(safeActiveIndex, entries.length) * railHeight}px`,
+          opacity: previewIndex !== null && previewIndex !== safeActiveIndex ? 0 : undefined } as CSSProperties} />
       <span aria-hidden="true" className="conversation-rail-focus"
-        style={{ top: `${lensPosition * 100}%` }} />
+        style={{ '--rail-y': `${lensPosition * railHeight}px` } as CSSProperties} />
+    </div>
     </div>
     {interactive && previewMessage && createPortal(<div ref={card} id={tooltipId} role="region" aria-label="对话预览"
       className="conversation-rail-preview" data-testid="conversation-rail-preview" data-preview-message-id={previewMessage.id}
+      data-positioned={animatePreview}
       data-rail-message-id={previewMessage.id} data-rail-index={previewIndex}
-      style={cardPosition} onPointerEnter={cancelClose} onPointerLeave={scheduleClose}>
+      style={{ left: cardPosition.left, transform: `translate3d(0, ${cardPosition.top}px, 0)` }}
+      onPointerEnter={cancelClose} onPointerLeave={scheduleClose}>
       <button type="button" className="conversation-rail-preview-jump"
         aria-label={`跳转到第 ${(previewIndex ?? 0) + 1} 条消息`}
         onFocus={cancelClose} onBlur={scheduleClose}

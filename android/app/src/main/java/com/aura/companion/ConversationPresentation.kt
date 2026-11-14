@@ -41,7 +41,7 @@ internal fun conversationPresentation(data: AppState): List<UiMessage> {
             retryable = operation?.method != "chat.import" && operation?.status in setOf("queued", "unknown", "failed"),
             attachmentId = message.attachmentId,
             retryOnPhone = operation?.canSendOnPhone == true && data.directApi.available,
-            desktopAgent = message.executionMode == "agent")
+            desktopAgent = message.executionMode == "agent", fileName = message.fileName, fileSize = message.fileSize)
     }.toMutableMap()
     val synthetic = mutableMapOf<String, UiMessage>()
     for (request in data.messages.filter { it.role == "user" && it.execution != null }) {

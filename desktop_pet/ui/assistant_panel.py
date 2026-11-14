@@ -196,7 +196,7 @@ class AssistantChatPanel(ChatPanel):
                      "history_busy_changed", "busy_changed", "error_changed",
                      "request_status_changed", "context_usage_changed", "export_busy_changed",
                      "export_finished", "retry_availability_changed", "reading_font_changed", "execution_changed",
-                     "agent_interaction_changed"):
+                     "agent_interaction_changed", "agent_settings_changed"):
             signal = getattr(self.controller, name, None)
             if signal is not None:
                 signal.connect(self._queue_web_state)
@@ -456,6 +456,9 @@ class AssistantChatPanel(ChatPanel):
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows, False)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, False)
+        # Honor the chat page's smooth navigation; reduced-motion remains
+        # handled by the page before it requests an animated scroll.
+        settings.setAttribute(QWebEngineSettings.WebAttribute.ScrollAnimatorEnabled, True)
         channel = QWebChannel(page)
         channel.registerObject("bridge", self.bridge)
         page.setWebChannel(channel)
@@ -826,6 +829,8 @@ class AssistantChatPanel(ChatPanel):
             "canStop": bool(getattr(chat, "can_stop", False)),
             "canAgentMode": callable(getattr(chat, "set_agent_mode", None)),
             "agentMode": bool(getattr(chat, "agent_mode", False)),
+            "approvalMode": getattr(chat, "agent_approval_mode", "auto"),
+            "canSetAgentApprovalMode": callable(getattr(chat, "set_agent_approval_mode", None)),
             "agentInteraction": public_interaction(getattr(chat, "pending_agent_interaction", None), cid),
             "agentArtifacts": public_artifacts(getattr(chat, "agent_artifacts", [])),
             "canExportArtifact": callable(getattr(chat, "export_agent_artifact", None)),
@@ -860,6 +865,11 @@ class AssistantChatPanel(ChatPanel):
 
     def _open_artifact_result(self, data):
         """Native selection owns the destination; JS receives only safe status."""
+        # Multiple reply-owned cards share this native dialog authority. Qt's
+        # modal event loop can still deliver a second WebChannel request.
+        if getattr(self, "_artifact_save_active", False):
+            return {"ok": False, "status": "busy"}
+        self._artifact_save_active = True
         failed = {"ok": False, "status": "failed", "error": "ARTIFACT_SAVE_FAILED"}
         cancelled = {"ok": False, "status": "cancelled"}
         chat = self.controller
@@ -881,6 +891,8 @@ class AssistantChatPanel(ChatPanel):
                 return {"ok": True, "status": "saved"}
         except (OSError, ValueError, RuntimeError):
             pass
+        finally:
+            self._artifact_save_active = False
         self.status_label.setText("文件未能保存，请重新选择保存位置。")
         return failed
 
@@ -1030,6 +1042,16 @@ class AssistantChatPanel(ChatPanel):
                 self.web_view.show()
             self.web_ready.emit(True)
             return True
+        if action == "setAgentApprovalMode":
+            setter = getattr(chat, "set_agent_approval_mode", None)
+            if (not callable(setter) or chat.busy or loading
+                    or not getattr(chat, "agent_mode", False)
+                    or set(data) != {"conversationId", "mode"}
+                    or data.get("conversationId") != cid
+                    or not isinstance(data.get("mode"), str)
+                    or data["mode"] not in ("ask", "auto", "full")):
+                return False
+            return bool(setter(data["mode"]))
         if action == "setAgentMode":
             setter = getattr(chat, "set_agent_mode", None)
             if (not callable(setter) or chat.busy or loading

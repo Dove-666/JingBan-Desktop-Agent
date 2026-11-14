@@ -111,10 +111,10 @@ def run_validation():
                     forbidden_observations.append(True)
                     raise AssertionError("disabled_observation_reached_os_boundary")
                 session.perception.observer.observe = forbidden_observation
-                session.tray.pause_action.setChecked(True)
-                check("tray_pause_stops_perception", session.perception.paused and not session.perception._timer.isActive())
+                session.perception.set_paused(True)
+                check("runtime_pause_stops_perception", session.perception.paused and not session.perception._timer.isActive())
                 session.perception.poll()
-                session.tray.pause_action.setChecked(False)
+                session.perception.set_paused(False)
                 session.perception.poll()
                 check("resume_preserves_denied_permissions", not session.perception.paused
                       and not session.perception.settings.enabled and not session.perception.settings.allow_remote
@@ -122,9 +122,9 @@ def run_validation():
                 saved_perception = settings.load_perception_settings()
                 check("runtime_pause_does_not_grant_persisted_consent", not saved_perception.enabled and not saved_perception.allow_remote)
 
-                session.tray.chat_action.trigger()
+                session.open_chat_window()
                 chat_window = session.chat_window
-                check("tray_chat_action_opens_shared_conversation", chat_window is not None and chat_window.isVisible()
+                check("chat_entry_opens_shared_conversation", chat_window is not None and chat_window.isVisible()
                       and chat_window.chat_panel.controller is session.chat)
                 session.tray.settings_action.trigger()
                 check("tray_settings_action_opens_panel", session.debug_panel is not None and session.debug_panel.isVisible())
@@ -164,10 +164,10 @@ def run_validation():
                       and "没有采集真实屏幕" in chat_window.chat_panel.event_details.text())
                 capture(chat_window, "r8_experience_chat.png")
 
-                session.tray.memory_action.trigger()
+                session.open_memory_window()
                 spin_until(lambda: not session.memory.busy, timeout=15)
                 memory_panel = session.memory_panel
-                check("tray_memory_action_opens_single_owned_window", memory_panel is not None and memory_panel.isVisible())
+                check("memory_entry_opens_single_owned_window", memory_panel is not None and memory_panel.isVisible())
                 chat_window.chat_panel.memory_button.click()
                 spin_until(lambda: not session.memory.busy, timeout=15)
                 session.debug_panel.chat_panel.memory_button.click()

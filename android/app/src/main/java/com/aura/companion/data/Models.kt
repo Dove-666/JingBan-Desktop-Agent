@@ -58,6 +58,8 @@ data class Message(
     val agentActivity: String? = null,
     val executionMode: String? = null,
     val execution: ExecutionProcess? = null,
+    val fileName: String? = null,
+    val fileSize: Long? = null,
 )
 
 /** status: queued, sending, unknown, pending, sent, failed, needs_attention, discarded. */
@@ -109,6 +111,7 @@ data class AppState(
     val outbox: List<OutboxItem> = emptyList(),
     val images: List<ImageItem> = emptyList(),
     val pendingImages: Map<String, PendingImage> = emptyMap(),
+    val pendingFiles: Map<String, PendingFile> = emptyMap(),
     val selectedConversationId: String? = null,
     val lastSyncedAt: Long? = null,
     val directApi: ApiConnectionInfo = ApiConnectionInfo(),

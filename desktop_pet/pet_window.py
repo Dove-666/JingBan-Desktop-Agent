@@ -105,6 +105,7 @@ class PetWindow(QWidget):
         self._pressed_part: str | None = None
         self._edge_recovery = None
         self._menu: QMenu | None = None
+        self.context_menu: QMenu | None = None
         self._next_click_happy = True
         self._drawing_area = QRectF()
         self._scale_percent = 100
@@ -866,6 +867,11 @@ class PetWindow(QWidget):
         self.animation.finish_dragging()
         self._begin_edge_recovery()
         self.setCursor(Qt.CursorShape.OpenHandCursor)
+        if self.context_menu is not None:
+            # The full application shares the tray's five actions and state.
+            self.context_menu.popup(event.globalPos())
+            event.accept()
+            return
         if self._menu is not None:
             self._menu.close()
             self._menu.deleteLater()

@@ -228,7 +228,36 @@ class ConversationRailUiTests(GlassInteractions, unittest.TestCase):
     def test_click_jump_keeps_draft_and_reading_position_when_layout_changes(self):
         before = deepcopy(self.chat.messages)
         set_dom_text(self.panel, "#message-input", "还没有发送的草稿")
-        self.click_index(8)
+        eval_js(self.panel, """(() => {
+            const viewport=document.querySelector('.thread-viewport');
+            const target=document.querySelector('.message[data-message-id="rail-008"]');
+            viewport.scrollTop=viewport.scrollHeight;
+            viewport.dispatchEvent(new Event('scroll'));
+            window.qaRailJump={start:viewport.scrollTop,
+                destination:target.getBoundingClientRect().top-viewport.getBoundingClientRect().top+viewport.scrollTop};
+            return true;
+        })()""")
+        wait_js(self.panel, f"document.querySelector('{RAIL}')?.getAttribute('aria-valuenow') === '48'")
+        # Use the real click without click_index's final-position wait so the
+        # reply update reaches the bridge while navigation is still moving.
+        point = self.point_on_track(8)
+        self.panel.web_view.setFocus()
+        target = self.keyboard_target(self.panel)
+        QTest.mouseClick(target, Qt.MouseButton.LeftButton,
+                         pos=target.mapFrom(self.panel.web_view, point))
+        wait_js(self.panel, """(() => {
+            const viewport=document.querySelector('.thread-viewport');
+            const jump=window.qaRailJump;
+            return viewport.scrollTop<jump.start-1 &&
+                viewport.scrollTop>jump.destination+viewport.clientHeight;
+        })()""")
+        grown = deepcopy(before)
+        grown[-1]["content"] += "\n\nReply growth during an owned navigation. " * 120
+        self.chat.messages = grown
+        self.chat.messages_changed.emit()
+        wait_js(self.panel, """document.querySelector('.message[data-message-id="rail-047"]')
+            ?.textContent.includes('Reply growth during an owned navigation.')""")
+        self.wait_target_visible(8)
         wait_js(self.panel, """(() => {
             const viewport=document.querySelector('.thread-viewport');
             return viewport.scrollHeight-viewport.clientHeight-viewport.scrollTop>300;
@@ -242,8 +271,10 @@ class ConversationRailUiTests(GlassInteractions, unittest.TestCase):
             const viewport=document.querySelector('.thread-viewport');
             return viewport.scrollHeight-viewport.clientHeight-viewport.scrollTop>300;
         })()"""), "Resizing after a jump must not snap back to the end")
+        self.wait_target_visible(8)
         self.assertEqual(eval_js(self.panel, "document.querySelector('#message-input').value"), "还没有发送的草稿")
-        self.assertEqual(self.chat.messages, before)
+        self.assertEqual(self.chat.messages, grown)
+        self.assertEqual(self.chat.messages[:-1], before[:-1])
         self.assertEqual(self.chat.sent, [])
         self.assertFalse(any(call[0] in {"send", "open", "new", "clear"} for call in self.chat.calls))
 

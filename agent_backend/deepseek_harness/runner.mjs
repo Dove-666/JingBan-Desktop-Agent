@@ -6,6 +6,7 @@ import { ActivityProjection } from './activity.mjs';
 import { snapshotPresentedFiles } from './artifacts.mjs';
 import { createNativeReceipt, verifyNativeReceipt } from './native-receipt.mjs';
 import { assertRuntimeSupported } from './runtime.mjs';
+import { approvalMode, approvalOutcome, automaticComputerAnswer, toolArgumentsDetail } from './approval.mjs';
 import { launchConfiguration, promptBlocks, runtimeEnvironment, PROVIDER, validateRun, textLength } from './configuration.mjs';
 
 const SAFE_TOOL = /^[A-Za-z0-9_.-]{1,100}$/;
@@ -38,6 +39,7 @@ export class HarnessRunner {
     this.canSteer = false;
     this.shutdownConfirmed = false;
     this.stoppedEmitted = false;
+    this.approvalCalls = new Map();
   }
 
   async control(frame) {
@@ -140,6 +142,9 @@ export class HarnessRunner {
   async userQuestions(request, { signal }) {
     const answers = [];
     for (const question of request.questions) {
+      if (this.cancelled || signal?.aborted) return { cancelled: true };
+      const automatic = automaticComputerAnswer(question, approvalMode(this.request?.options?.approval_mode));
+      if (automatic) { answers.push(automatic); continue; }
       const detail = [question.question, question.detail].filter(value => typeof value === 'string' && value).join('\n\n');
       // Never solicit approval of a plan whose details the host cannot display.
       if (!detail || textLength(detail) > 16000) return { cancelled: true };
@@ -197,14 +202,36 @@ export class HarnessRunner {
     try {
       this.observeRuntimeClient();
       this.harness.client.start();
+      // The synchronous subscription predicate observes tool/call before its later
+      // approval RPC. Keep arguments private until the actual approval UI needs them.
+      // No notification queue is retained and tool results release the snapshot.
+      this.approvalSubscription = this.harness.client.subscribe?.(notification => {
+        if (notification.method !== 'session.event') return false;
+        const { sessionId, event } = notification.params ?? {};
+        const data = event?.data;
+        if (event?.type === 'tool/call' && typeof data?.callId === 'string') {
+          const detail = toolArgumentsDetail(data.arguments);
+          if (this.approvalCalls.size < 512) this.approvalCalls.set(`${sessionId}:${data.callId}`, {
+            name: data.name, detail: typeof detail === 'string' && textLength(detail) <= 12000 ? detail : null,
+          });
+        } else if (event?.type === 'tool/result') {
+          this.approvalCalls.delete(`${sessionId}:${data?.message?.toolCallId ?? data?.message?.callId}`);
+        }
+        return false;
+      });
       this.harness.client.onRequest(async (method, params) => {
         if (method !== 'approval/request') throw failure('DSH_EXECUTION_FAILED');
+        if (this.cancelled) return { outcome: 'cancelled' };
+        if (launch.approvalMode === 'full') return { outcome: 'allowed-once' };
+        const call = this.approvalCalls.get(`${params.sessionId}:${params.callId}`);
+        // Missing/oversized details cannot produce approval of an invisible action.
+        if (!call || call.name !== params.toolName || !call.detail) return { outcome: 'rejected' };
         const tool = SAFE_TOOL.test(params.toolName ?? '') ? params.toolName : '工具';
         const reason = typeof params.reason === 'string' ? params.reason : '';
-        const question = `允许本次 ${tool} 操作？${reason ? `\n${reason}` : ''}`;
+        const question = `允许本次 ${tool} 操作？${reason ? `\n${reason}` : ''}\n实际操作：\n${call.detail}`;
         if (textLength(question) > 16000) return { outcome: 'rejected' };
         const answer = await this.ask({ question, options: ['允许本次', '拒绝'] });
-        return { outcome: answer?.text === '允许本次' ? 'allowed-once' : answer ? 'rejected' : 'cancelled' };
+        return { outcome: approvalOutcome(answer, this.cancelled) };
       });
       this.emit({ type: 'progress', id: frame.id, phase: 'starting' });
       await this.harness.start();
@@ -217,6 +244,11 @@ export class HarnessRunner {
         // Create the identity without a model call before exposing it to the host.
         await this.session.getWorkingDirectory();
       }
+      // Official state-only command: persists both policy knobs before any model work.
+      // Auto cannot be a deployment default; the upstream plugin exposes this preset.
+      const permission = await this.session.run(`/permission ${launch.permissionPreset}`);
+      if (permission.finishReason !== 'completed') throw failure('DSH_EXECUTION_FAILED');
+      if (this.cancelled) throw failure('CANCELLED');
       this.emit({ type: 'session', id: frame.id, dsh_session_id: this.session.id });
       const result = await this.session.run(input, { onNotification: notification => {
         projection.notification(notification);
@@ -241,6 +273,8 @@ export class HarnessRunner {
       this.canSteer = false;
       for (const resolve of this.pending.values()) resolve(null);
       this.pending.clear();
+      this.approvalSubscription?.close();
+      this.approvalCalls.clear();
       await this.close();
     }
   }

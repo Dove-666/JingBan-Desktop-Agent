@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from PySide6.QtCore import QPoint, QPointF, Qt, QTimer
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, QTimer
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -33,7 +33,11 @@ class ChatReadingPositionTests(unittest.TestCase):
         wait_js(self.panel,"document.querySelectorAll('[data-message-id]').length===60")
 
     def tearDown(self):
-        self.panel.hide();self.panel.deleteLater();self.app.processEvents()
+        self.panel.hide();self.panel.deleteLater()
+        # Destroy WebEngine pages while the application/event loop is alive;
+        # processEvents alone does not drain DeferredDelete at interpreter exit.
+        self.app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        self.app.processEvents()
 
     def position(self):
         QTest.qWait(70)

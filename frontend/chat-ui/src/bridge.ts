@@ -21,7 +21,7 @@ export type StagedImage = {
 
 export type ExecutionState = 'running' | 'completed' | 'failed' | 'cancelled' | 'needs_user' | 'interrupted';
 export type ExecutionEvent = {
-  id: string; elapsed_ms: number; kind: 'progress' | 'tool' | 'computer' | 'summary';
+  id: string; elapsed_ms: number; kind: 'progress' | 'tool' | 'computer' | 'summary' | 'commentary';
   label: string; detail?: string; status: 'running' | 'completed' | 'failed';
 };
 export type RequestContext = {
@@ -93,7 +93,7 @@ export function normalizeExecution(value: unknown): ExecutionTrace | undefined {
   if (!raw || raw.version !== 1 || !['running', 'completed', 'failed', 'cancelled', 'needs_user', 'interrupted'].includes(String(raw.state))) return;
   const events: ExecutionEvent[] = (Array.isArray(raw.events) ? raw.events : []).flatMap((entry, index) => {
     const event = objectValue(entry);
-    if (!event || !['progress', 'tool', 'computer', 'summary'].includes(String(event.kind)) || !['running', 'completed', 'failed'].includes(String(event.status))) return [];
+    if (!event || !['progress', 'tool', 'computer', 'summary', 'commentary'].includes(String(event.kind)) || !['running', 'completed', 'failed'].includes(String(event.status))) return [];
     const label = safeTraceText(event.label);
     if (!label || /^\s*(?:thought|analysis|reasoning(?:_content)?)\s*:/i.test(label)) return [];
     const detail = safeTraceText(event.detail);
@@ -208,6 +208,8 @@ export type ChatState = {
   canStop: boolean;
   canAgentMode: boolean;
   agentMode: boolean;
+  approvalMode: AgentApprovalMode;
+  canSetAgentApprovalMode: boolean;
   agentInteraction?: AgentInteraction;
   canSteerAgent?: boolean;
   agentArtifacts?: AgentArtifact[];
@@ -225,11 +227,12 @@ export type ChatState = {
     permissionSaveFailed?: boolean; persistenceWarning?: string } | null;
 };
 
+export type AgentApprovalMode = 'ask' | 'auto' | 'full';
 export type AgentInteraction = {
   id: string; kind: 'question' | 'file_access'; question: string; conversation_id: string;
   options?: string[]; resource?: { path: string; access: 'read' | 'write'; directory: boolean };
 };
-export type AgentArtifact = { reference: string; name: string; mime: string; bytes: number; sha256: string; verification_scope: string };
+export type AgentArtifact = { reference: string; name: string; mime: string; bytes: number; sha256: string; verification_scope: string; message_id?: string | null };
 export function normalizeAgentArtifacts(value: unknown): AgentArtifact[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
@@ -242,7 +245,9 @@ export function normalizeAgentArtifacts(value: unknown): AgentArtifact[] {
         typeof raw.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.sha256) ||
         typeof raw.verification_scope !== 'string' || raw.verification_scope.length > 160 || /[\x00-\x1f]/.test(raw.verification_scope)) return [];
     seen.add(raw.reference);
-    return [{ reference: raw.reference, name: raw.name, mime: raw.mime, bytes: raw.bytes, sha256: raw.sha256, verification_scope: raw.verification_scope }];
+    const message_id = typeof raw.message_id === 'string' && /^[A-Za-z0-9_-]{1,200}$/.test(raw.message_id)
+      ? raw.message_id : undefined;
+    return [{ reference: raw.reference, name: raw.name, mime: raw.mime, bytes: raw.bytes, sha256: raw.sha256, verification_scope: raw.verification_scope, message_id }];
   });
 }
 
@@ -267,7 +272,7 @@ export function normalizeAgentInteraction(value: unknown, conversationId: unknow
   return result;
 }
 
-export type DispatchResult = { ok: boolean; error?: string; status?: 'saved' | 'cancelled' | 'failed' };
+export type DispatchResult = { ok: boolean; error?: string; status?: 'saved' | 'cancelled' | 'failed' | 'busy' };
 export type Dispatch = (action: string, payload?: Record<string, unknown>, callback?: (result: DispatchResult) => void) => boolean;
 
 type Bridge = {
@@ -294,7 +299,7 @@ const INITIAL: ChatState = {
   draftEpochs: {}, draftVersions: {}, draftSequences: {}, draftDocument: '',
   imagePreparing: false, imageImportBusy: false, canStageImageData: false, imageError: '',
   errorAction: '', errorConversationId: '', errorMessageId: '', requestConversationId: '', canStop: false,
-  canAgentMode: false, agentMode: false,
+  canAgentMode: false, agentMode: false, approvalMode: 'auto', canSetAgentApprovalMode: false,
 };
 
 function normalizeChatState(value: Partial<ChatState>): ChatState {
@@ -313,6 +318,8 @@ function normalizeChatState(value: Partial<ChatState>): ChatState {
   return { ...INITIAL, ...value, messages, ready: value.ready === true,
     theme: value.theme === 'dark' ? 'dark' : 'light',
     canAgentMode: value.canAgentMode === true, agentMode: value.agentMode === true,
+    approvalMode: value.approvalMode === 'ask' || value.approvalMode === 'full' ? value.approvalMode : 'auto',
+    canSetAgentApprovalMode: value.canSetAgentApprovalMode === true,
     agentInteraction: normalizeAgentInteraction(value.agentInteraction, value.conversationId),
     streamingReply: normalizeStreamingReply(value.streamingReply, value.conversationId),
     streamCursor: normalizeStreamCursor(value.streamCursor),

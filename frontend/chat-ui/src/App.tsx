@@ -17,13 +17,15 @@ import remarkGfm from 'remark-gfm';
 import whaleAvatar from '../../../assets/expressions/neutral.png';
 import { IMAGE_THUMBNAIL_EVENT, normalizeImageRevision, normalizeImageThumbnail, normalizeThumbnailError, useBridge } from './bridge';
 import { AgentInteractionCard } from './components/AgentInteractionCard';
+import { AgentApprovalMenu } from './components/AgentApprovalMenu';
 import { GlassSurface } from './components/GlassSurface';
 import { displayedReply, ExecutionDetails } from './components/ExecutionDetails';
 import { AgentArtifactCards } from './components/AgentArtifactCards';
+import { conversationArtifacts } from './conversationArtifacts';
 import { ConversationRail } from './components/ConversationRail';
 import { hasFileTransfer, ImageInputController } from './imageInput';
 import type { ImageInputContext, ImageInputSnapshot } from './imageInput';
-import type { ChatMessage, ChatState, Dispatch, ExecutionTrace, ImageErrorCode, ImageThumbnail, ImageThumbnailReady, ScreenEvent, SelectionSource } from './bridge';
+import type { AgentArtifact, ChatMessage, ChatState, Dispatch, ExecutionTrace, ImageErrorCode, ImageThumbnail, ImageThumbnailReady, ScreenEvent, SelectionSource } from './bridge';
 
 const IMAGE_ERROR_TEXT: Record<ImageErrorCode, string> = {
   image_missing: '引用的图片不存在或已删除，请重新发送图片后重试。',
@@ -65,6 +67,7 @@ function restoreReadingPosition(node: HTMLElement, saved: ReadingPosition) {
 type DisplayedErrorBinding = { conversationId: string; messageId: string; error: string; retryStatus: string };
 const HostContext = createContext<{ dispatch: Dispatch; conversationId: string; busy: boolean; canBudget?: boolean;
   focusRequest?: { id: string; serial: number }; findMatches?: Set<string>; findMatchId?: string;
+  artifactsByMessage?: Map<string, AgentArtifact[]>; canExportArtifact?: boolean;
   displayedError?: DisplayedErrorBinding }>({ dispatch: () => false, conversationId: '', busy: false });
 
 function guidanceShownGlobally(text: string | undefined, messageId: string, conversationId: string,
@@ -241,7 +244,8 @@ function MessageImageAttachment({ conversationId, messageId, imageId, imageRevis
 
 function ChatMessageView() {
   const message = useAuiState((value) => value.message);
-  const { dispatch, focusRequest, conversationId, busy, findMatches, findMatchId, displayedError } = useContext(HostContext);
+  const { dispatch, focusRequest, conversationId, busy, findMatches, findMatchId, displayedError,
+    artifactsByMessage, canExportArtifact } = useContext(HostContext);
   const rawText = message.content.filter((part) => part.type === 'text').map((part) => part.text).join('\n');
   const meta = message.metadata.custom as { source?: string; screen_event?: ScreenEvent; selection_context?: SelectionSource; request_status?: string; retryAvailable?: boolean; retryStatus?: string;
     agent_error_code?: string; agent_error?: string;
@@ -249,6 +253,7 @@ function ChatMessageView() {
     image_thumbnail?: ImageThumbnail; image_thumbnail_error?: string; execution?: ExecutionTrace;
     streaming_status?: 'streaming' | 'interrupted' };
   const isUser = message.role === 'user';
+  const artifacts = artifactsByMessage?.get(message.id);
   const text = isUser ? rawText : displayedReply(rawText, meta.execution);
   const isCamera = meta?.source === 'proactive_camera' || meta?.screen_event?.source_kind === 'camera';
   const isPerception = isCamera || meta?.source === 'proactive_screen';
@@ -257,6 +262,12 @@ function ChatMessageView() {
   useEffect(() => { if (focusRequest?.id === message.id) setExpanded(true); }, [focusRequest?.id, focusRequest?.serial, message.id]);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
+  // assistant-ui adds an empty running message before the host has reply text.
+  // The activity feed/composer already provides progress; an empty avatar and
+  // Copy button imply a second response. Preserve any real content or metadata.
+  if (message.role === 'assistant' && message.status.type === 'running' && !rawText.trim()
+      && message.content.every(part => part.type === 'text') && !meta.execution && !meta.image_id
+      && !meta.screen_event && !meta.streaming_status && !meta.agent_error && !meta.request_status && !artifacts?.length) return null;
   const copy = () => {
     dispatch('copy', { text }, (result) => {
       if (result.ok) {
@@ -290,6 +301,8 @@ function ChatMessageView() {
           conversationId={conversationId} messageId={message.id} imageId={meta.image_id} imageRevision={meta.image_revision ?? 0} thumbnail={meta.image_thumbnail}
           error={meta.image_thumbnail_error} unavailable={meta.image_unavailable} />}
       <div className="markdown"><Markdown text={text} /></div>
+      {!isUser && !!artifacts?.length && <AgentArtifactCards key={`${conversationId}:${message.id}`} artifacts={artifacts}
+        conversationId={conversationId} enabled={canExportArtifact === true} dispatch={dispatch} />}
       {!isUser && meta.streaming_status === 'streaming' && <span className="streaming-indicator" role="status" aria-label="正在生成回复"><LoaderCircle size={13} className="spin" aria-hidden="true" /></span>}
       {!isUser && meta.streaming_status === 'interrupted' && <span className="request-message-state" role="status">部分回复 · 未完成</span>}
       {isUser && meta.image_unavailable &&
@@ -495,7 +508,8 @@ export function App() {
         focusHighlightNode.current?.classList.remove('message-highlight');
         focusHighlightNode.current = target;
         appliedFocus.current = key;
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.scrollIntoView({ block: 'center',
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
         target.classList.add('message-highlight');
         focusHighlightTimer.current = setTimeout(() => {
           target.classList.remove('message-highlight');
@@ -552,9 +566,13 @@ export function App() {
       : undefined,
   [state.ready, state.error, state.errorConversationId, state.conversationId, state.errorMessageId,
     state.errorAction, state.errorRetryStatus]);
+  const deliveries = useMemo(() => conversationArtifacts(state.messages, state.agentArtifacts),
+    [state.messages, state.agentArtifacts]);
   const hostContext = useMemo(() => ({ dispatch, conversationId: state.conversationId,
-    busy: state.busy, canBudget: state.canBudget, focusRequest: state.focusRequest, findMatches, findMatchId, displayedError }),
-  [dispatch, state.conversationId, state.busy, state.canBudget, state.focusRequest, findMatches, findMatchId, displayedError]);
+    busy: state.busy, canBudget: state.canBudget, focusRequest: state.focusRequest, findMatches, findMatchId, displayedError,
+    artifactsByMessage: deliveries.byMessage, canExportArtifact: state.canExportArtifact }),
+  [dispatch, state.conversationId, state.busy, state.canBudget, state.focusRequest, findMatches, findMatchId, displayedError,
+    deliveries.byMessage, state.canExportArtifact]);
   const moveFind = useCallback((direction: number) => {
     if (!findIds.length) return;
     setFindPosition((value) => (Math.min(value, findIds.length - 1) + direction + findIds.length) % findIds.length);
@@ -1041,20 +1059,24 @@ export function App() {
   const goLatest = () => {
     cancelPendingMessageFocus();
     pendingReadingRestore.current = null; nearBottom.current = true;
-    viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' }); setShowLatest(false);
+    viewport.current?.scrollTo({ top: viewport.current.scrollHeight,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); setShowLatest(false);
   };
   const navigateMessage = useCallback((id: string) => {
     const node = viewport.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(id)}"]`);
     if (!node) return;
+    cancelPendingMessageFocus();
+    pendingReadingRestore.current = null;
     nearBottom.current = false;
     clearTimeout(focusHighlightTimer.current);
     focusHighlightNode.current?.classList.remove('message-highlight');
     focusHighlightNode.current = null;
-    node.scrollIntoView({ block: 'start', behavior: 'instant' });
-    const scroller = viewport.current!;
-    nearBottom.current = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 72;
-    setShowLatest(!nearBottom.current);
-  }, []);
+    node.scrollIntoView({ block: 'start',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    // Smooth navigation starts at the previous position. Let real scroll events
+    // update following state instead of re-enabling it at the old bottom.
+    setShowLatest(true);
+  }, [cancelPendingMessageFocus]);
 
   const recoveryLabel = ({ settings: '打开 API 设置', history: '重新读取', retry: '重试回复' } as Record<string, string>)[state.errorAction];
   const headerAction = (event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>, action: string) => {
@@ -1167,17 +1189,21 @@ export function App() {
               && previous.height === node.scrollHeight && previous.client === node.clientHeight;
             // Appending a bubble can dispatch a delayed scroll event while the
             // content is growing. Geometry alone must not cancel Send's intent.
-            if (atBottom) nearBottom.current = true;
-            else if (readerScrollIntent.current || sameGeometry && node.scrollTop < previous!.top - 1) nearBottom.current = false;
+            const movingUp = sameGeometry && node.scrollTop < previous!.top;
+            if (movingUp) nearBottom.current = false;
+            else if (atBottom) nearBottom.current = true;
+            else if (readerScrollIntent.current) nearBottom.current = false;
             scrollGeometry.current = { conversationId: current.conversationId, top: node.scrollTop,
               height: node.scrollHeight, client: node.clientHeight };
             setShowLatest(!nearBottom.current);
             rememberReadingPosition();
           }}>
             <div className="reading-column" ref={readingColumn}>
+              {state.ready && !state.historyLoading && !!deliveries.unassigned.length && <div className="earlier-deliveries" aria-label="历史文件">
+                <AgentArtifactCards key={state.conversationId} artifacts={deliveries.unassigned}
+                  conversationId={state.conversationId} enabled={state.canExportArtifact === true} dispatch={dispatch} />
+              </div>}
               {!state.ready ? <div className="empty-state">{connectionError ? <><h1>暂时无法连接</h1><p>{connectionError}</p></> : <><h1>正在连接</h1><p className="loading-text"><LoaderCircle size={16} className="spin" />正在读取对话</p></>}</div> : state.historyLoading ? <div className="history-loading" role="status"><LoaderCircle size={19} className="spin" />正在读取对话…</div> : !state.messages.length ? <div className="empty-state"><h1>今天想聊些什么？</h1></div> : <ThreadPrimitive.Messages components={{ UserMessage: ChatMessageView, AssistantMessage: ChatMessageView }} />}
-              {!!state.agentArtifacts?.length && <AgentArtifactCards key={state.conversationId} artifacts={state.agentArtifacts}
-                conversationId={state.conversationId} enabled={state.canExportArtifact === true} dispatch={dispatch} />}
               {state.agentInteraction && <AgentInteractionCard key={`${state.conversationId}:${state.agentInteraction.id}`}
                 interaction={state.agentInteraction} dispatch={dispatch} />}
             </div>
@@ -1205,6 +1231,9 @@ export function App() {
                     disabled={!state.ready || state.busy || state.historyLoading || Boolean(pending)}
                     onClick={() => dispatch('setAgentMode', { conversationId: state.conversationId, enabled: true })}>电脑 Agent</button>
                 </div>
+                {state.agentMode && state.canSetAgentApprovalMode && <AgentApprovalMenu
+                  mode={state.approvalMode} conversationId={state.conversationId} dispatch={dispatch}
+                  disabled={!state.ready || state.busy || state.historyLoading || Boolean(pending)} />}
               </div>}
               <GlassSurface className="glass-composer" radius={27} intensity={18}>
               <form className={`composer ${state.busy ? 'composer-busy' : ''}`} onSubmit={send}>

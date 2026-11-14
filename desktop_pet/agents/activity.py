@@ -57,6 +57,17 @@ TOOL_LABELS = {'read_file': '读取文件',
  'interrupt_agent': '停止子任务',
  'cua_run_code': '操作电脑',
  'cua': '操作电脑',
+ 'apply_patch': '修改文件',
+ 'ls': '查看文件夹',
+ 'subagent_wait': '等待子任务',
+ 'subagent_send': '协调子任务',
+ 'subagent_stop': '停止子任务',
+ 'subagent_activity': '子任务状态',
+ 'job_list': '查看后台任务',
+ 'job_output': '查看命令结果',
+ 'job_kill': '停止后台任务',
+ 'workflow': '执行工作流',
+ 'skill': '使用技能',
  'dsh_tool': '使用任务工具'}
 
 COMPUTER_TOOLS = frozenset(['computer_use', 'desktop_act', 'open_application', 'desktop_activate', 'cua_run_code', 'cua'])
@@ -79,11 +90,41 @@ ACTION_LABELS = {
     "error_env": "检查操作环境", "user_stop": "停止电脑操作",
 }
 
-def public_activity(frame):
+COMPUTER_ACTION_LABELS = {
+    "capabilities": "检查电脑操作能力", "list_apps": "查看运行中的应用",
+    "find_apps": "查找应用", "open_app": "选择应用", "activate": "切换应用",
+    "windows": "查看应用窗口", "inspect": "查看窗口状态", "inspect_controls": "查看界面控件",
+    "interact": "操作界面控件", "click": "点击界面", "double_click": "双击界面",
+    "right_click": "右键点击", "move": "移动指针", "input": "输入文字",
+    "select_text": "选择文字", "paste": "粘贴内容", "keypress": "使用快捷键",
+    "scroll": "滚动界面", "scroll_up": "向上滚动", "scroll_down": "向下滚动",
+    "scroll_left": "向左滚动", "scroll_right": "向右滚动", "drag": "拖动界面元素",
+    "screenshot": "查看电脑画面",
+}
+AGENT_ACTION_LABELS = {
+    "start": "子任务开始工作", "finish": "子任务已返回",
+    "stop": "子任务已停止", "fail": "子任务未完成",
+}
+
+def public_activity(frame, redact=lambda text: text):
     """Construct the entire callback value; discard all untrusted extra fields."""
+    from .activity_subject import normalize_subject
+    from .activity_text import public_commentary
+    if frame["kind"] == "commentary":
+        text = public_commentary(frame.get("text"), redact)
+        if frame.get("name") != "assistant_commentary" or not text:
+            return None
+        return {"id": frame["event_id"], "kind": "commentary", "label": text, "status": "completed"}
     labels = TOOL_LABELS if frame["kind"] == "tool" or frame.get("name") in TOOL_LABELS else ACTION_LABELS
     value = {"id": frame["event_id"], "kind": frame["kind"], "label": labels.get(frame["name"], TOOL_LABELS["dsh_tool"]),
              "status": frame["status"]}
+    subject = normalize_subject(frame["name"], frame.get("subject"), redact=redact)
+    if subject:
+        value["subject"] = subject
+        if subject["kind"] == "computer":
+            value["label"] = COMPUTER_ACTION_LABELS[subject["action"]]
+        elif frame["name"] == "subagent_activity":
+            value["label"] = AGENT_ACTION_LABELS[subject["action"]]
     if "step" in frame:
         value["step"] = frame["step"]
     return value

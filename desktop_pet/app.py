@@ -10,7 +10,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from .animation_config import AnimationConfig
-from .branding import APP_NAME, LEGACY_APPLICATION_ID
+from .branding import APP_NAME, LEGACY_APPLICATION_ID, application_icon_path
 from . import APP_REVISION
 from .application_controller import ApplicationController
 from .config import DEFAULT_IMAGE, PetConfig
@@ -66,6 +66,7 @@ def _run(config: PetConfig, settings: SettingsManager | None) -> int:
     app.setApplicationDisplayName(APP_NAME)
     from . import APP_VERSION
     app.setApplicationVersion(APP_VERSION)
+    app.setWindowIcon(QIcon(str(application_icon_path())))
     # Panel windows hide on close. Only closing the pet ends this session.
     app.setQuitOnLastWindowClosed(False)
     instance = None
@@ -111,7 +112,6 @@ def _run(config: PetConfig, settings: SettingsManager | None) -> int:
                 session.show_pet()
                 session.open_chat_window()
         instance.activation_requested.connect(activate)
-        app.setWindowIcon(QIcon(str(config.image_path)))
         if diagnostic is not None:
             diagnostic.bind(session.finished, "quit_signal", source="session_finished")
             diagnostic.bind(app.aboutToQuit, "about_to_quit", source="qt_about_to_quit")

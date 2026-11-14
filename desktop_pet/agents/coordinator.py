@@ -16,6 +16,7 @@ import time
 from uuid import UUID, uuid5, NAMESPACE_URL
 
 from .contracts import AgentError
+from ..chat_files import checked_file_metadata
 from .job_queue import (HostDispatchScope, HostJobReference, JobQueueError,
                         SavedReplyProof, WorkerStoppedProof)
 
@@ -173,7 +174,10 @@ class HostAgentCoordinator:
             raise CoordinatorError("QUEUE_ORIGIN_INVALID")
         return value
 
-    def admit(self, peer, request_id, cid, text, *, image_id=None):
+    def admit(self, peer, request_id, cid, text, *, image_id=None, file_metadata=None):
+        file_metadata = checked_file_metadata(file_metadata)
+        if image_id is not None and file_metadata:
+            raise CoordinatorError("QUEUE_REQUEST_INVALID")
         with self.lock:
             if self._closed or self._failed or not self._ready: raise CoordinatorError("QUEUE_UNAVAILABLE")
             identity=operation_identity(peer,request_id)
@@ -192,7 +196,8 @@ class HostAgentCoordinator:
                 origin=self._origin(existing)
                 if (origin["peer_id"]!=peer or origin["request_id"]!=request_id
                         or origin["authorization_scope"]!=authorization or existing["content"]!=text
-                        or existing.get("metadata",{}).get("image_id")!=image_id):
+                        or existing.get("metadata",{}).get("image_id")!=image_id
+                        or existing.get("metadata",{}).get("file_id")!=file_metadata.get("file_id")):
                     raise CoordinatorError("QUEUE_REQUEST_CONFLICT")
                 # A saved enrollment retains its original settings snapshot.
                 # New settings cannot silently re-authorize an old request.
@@ -205,9 +210,11 @@ class HostAgentCoordinator:
                     "version":1,"peer_id":peer,"request_id":request_id,
                     "authorization_scope":authorization,"settings_scope":scope}}
                 if image_id is not None: metadata["image_id"]=image_id
+                metadata.update(file_metadata)
                 self.store.append_message(cid,"user",text,"user",message_id=identity,metadata=metadata)
             message=self.store.save_queued_agent_message(cid,identity,text,origin_peer_id=peer,
-                operation_id=request_id,authorization_scope=authorization,settings_scope=scope,image_id=image_id)
+                operation_id=request_id,authorization_scope=authorization,settings_scope=scope,image_id=image_id,
+                file_metadata=file_metadata or None)
             try:
                 job=self.queue.enqueue(HostJobReference(cid,generation,message["id"],identity,scope,peer))
             except Exception:

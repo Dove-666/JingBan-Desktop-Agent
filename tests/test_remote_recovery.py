@@ -296,7 +296,7 @@ class RemoteRecoveryTests(TestCase):
             self.assertTrue(authorization(PEER))
             return factory(**kwargs)
 
-        tray = SimpleNamespace(available=True, refresh=Mock(), shutdown=Mock())
+        tray = SimpleNamespace(menu=None, available=True, refresh=Mock(), shutdown=Mock())
         startup = FakeStartupManager(enabled=True)
         camera_start = Mock(return_value=False)
         session = None

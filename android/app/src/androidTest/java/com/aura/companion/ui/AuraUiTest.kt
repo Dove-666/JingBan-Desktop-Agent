@@ -213,7 +213,8 @@ class AuraUiTest {
                 "qa-staged", image.name, image.absolutePath, "qa-first"))
         })
         compose.setContent { AuraApp(state.value, actions) }
-        compose.onNodeWithContentDescription("添加图片").performClick()
+        compose.onNodeWithContentDescription("添加附件").performClick()
+        compose.onNodeWithText("图片").performClick()
         compose.onNodeWithContentDescription("移除待发送图片").assertIsDisplayed()
         compose.onNodeWithText("图片和提问由手机发送给模型，记录自动同步。").assertDoesNotExist()
         assertTrue(actions.sent.isEmpty())
@@ -256,7 +257,7 @@ class AuraUiTest {
         compose.runOnIdle { state.value = state.value.copy(selectedConversationId = "qa-first", preparingImage = true) }
         compose.onNodeWithContentDescription("移除待发送图片").assertIsDisplayed()
         compose.onNodeWithText("正在准备，完成后可发送").assertDoesNotExist()
-        compose.onNodeWithContentDescription("添加图片").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("添加附件").assertIsNotEnabled()
         compose.onNodeWithContentDescription("发送消息").assertIsNotEnabled()
         compose.onNodeWithContentDescription("移除待发送图片").assertIsNotEnabled()
     }
@@ -626,7 +627,8 @@ class AuraUiTest {
         })
         compose.setContent { AuraApp(state.value, actions) }
         compose.onNodeWithContentDescription("消息内容").performTextInput("选择照片前输入的问题")
-        compose.onNodeWithContentDescription("添加图片").performClick()
+        compose.onNodeWithContentDescription("添加附件").performClick()
+        compose.onNodeWithText("图片").performClick()
         compose.onNodeWithContentDescription("消息内容").assertTextContains("选择照片前输入的问题")
         compose.onNodeWithText("手机聊天").assertIsSelected()
         compose.onNodeWithContentDescription("移除待发送图片").assertIsDisplayed()
@@ -711,7 +713,7 @@ class AuraUiTest {
         for (node in listOf(compose.onNodeWithText("今天想聊什么？"),
             compose.onNodeWithTag("conversation-title"),
             compose.onNodeWithContentDescription("打开对话历史"),
-            compose.onNodeWithContentDescription("添加图片"))) {
+            compose.onNodeWithContentDescription("添加附件"))) {
             val pixels = node.assertIsDisplayed().captureToImage().toPixelMap()
             var visibleInk = 0
             for (y in 0 until pixels.height) for (x in 0 until pixels.width) {
