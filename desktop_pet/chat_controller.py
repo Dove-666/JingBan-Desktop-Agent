@@ -30,7 +30,7 @@ from .settings_manager import ApiSettings, CredentialsError, SettingsError, Sett
 from .character_cards import CharacterCard, CharacterCardError
 from .character_prompts import (
     DIRECT_AGENT_PROMPT, character_system_prompt, direct_agent_system_prompt,
-    validate_character_prompt,
+    validate_character_prompt, harness_personality,
 )
 from .selection.context import SelectionContext, SelectionContextError
 from .chat_images import IMAGE_ERRORS, IMAGE_ID, references_previous_image, compares_previous_image
@@ -39,14 +39,12 @@ from .agents.settings import shared_api_settings
 from .agents.routing import agent_system_prompt, routing_allowed
 from .agents.service import _ERROR_MESSAGES as AGENT_ERRORS
 from .agents.artifacts import checked_artifact_metadata, MAX_ARTIFACT_BYTES
-from .agents.office_runtime import capture_office_runtime, OfficeRuntimeConfigurationError
-from .agents.execution_runtime import capture_execution_runtime, ExecutionRuntimeConfigurationError
 from .agents.job_queue import JobQueue
 from .agents.coordinator import HostAgentCoordinator, CoordinatorError
 from .execution_trace import ExecutionTrace, ExecutionViewUpdate, merge_execution, text_messages
 from .draft_owner import LocalDraftOwner
 from .image_storage import ImageStorageGate, ImageStorageGateError
-from agent_backend.nanobot.redaction import redact_text
+from desktop_pet.redaction import redact_text
 
 
 def _image_import_failure(exception):
@@ -427,26 +425,17 @@ class ChatController(QObject):
             agent_settings.validate()
             if not isinstance(key,str) or not key: raise ValueError("QUEUE_CONFIGURATION_UNAVAILABLE")
             policy={"api":api,"key":key,"agent":agent_settings,"gui_key":key}
-            policy["office_renderer_identity"]=capture_office_runtime().identity
-            policy["project_execution_identity"]=capture_execution_runtime().identity
         except Exception:
             policy=None
         with self.agent_authority_guard(): self._agent_queue_policy=policy
         return policy is not None
 
     def _current_agent_queue_policy(self):
-        # Settings/vault values remain a GUI-thread snapshot. The optional
-        # local renderer identity is small host-only file data, sampled fresh
-        # inside each existing admission/LF/checkpoint authority guard.
+        # DSH owns its runtime configuration. Queue authority still uses the
+        # GUI-thread API/permission snapshot and never reads the vault here.
         policy = self._agent_queue_policy
         if policy is None: return None
-        try:
-            current = dict(policy)
-            current["office_renderer_identity"] = capture_office_runtime().identity
-            current["project_execution_identity"] = capture_execution_runtime().identity
-            return current
-        except (OfficeRuntimeConfigurationError, ExecutionRuntimeConfigurationError):
-            return None
+        return dict(policy)
 
     def refresh_agent_queue_policy(self):
         """Qt settings publication; failed reads revoke instead of preserving stale authority."""
@@ -1977,7 +1966,10 @@ class ChatController(QObject):
             if request["committed"]:
                 return False
             request["cancel"].set()
-            request["trace"].finish("cancelled")
+            agent_stopping = bool(request.get("agent_kind") or request["metadata"].get("agent_execution_started"))
+            stop_status = "interrupted" if agent_stopping else "cancelled"
+            if agent_stopping: request["metadata"]["agent_error_code"] = "stop_unconfirmed"
+            request["trace"].finish(stop_status)
             self._save_execution(request, persist=False)
         finally:
             request["commit_lock"].release()
@@ -1996,6 +1988,7 @@ class ChatController(QObject):
                 target = (request["conversation_id"], request["message_id"])
                 if self._request_owners.get(target) is not request:
                     return
+                saved_stop_status = "cancelled" if request.get("stop_confirmed") else stop_status
                 messages = self.store.load_messages(request["conversation_id"])
                 if any(item.get("role") == "assistant" and item.get("source") == "assistant"
                        and item.get("metadata", {}).get("reply_to") == request["message_id"] for item in messages):
@@ -2004,11 +1997,13 @@ class ChatController(QObject):
                 if not any(item["id"] == request["message_id"] for item in messages):
                     request["metadata"] = self._pin_image_reference(request["metadata"], messages, request["created_at"], request["content"])
                     self.store.append_message(request["conversation_id"], "user", request["content"], "user",
-                        message_id=request["message_id"], metadata=dict(request["metadata"], request_status="cancelled"),
+                        message_id=request["message_id"], metadata=dict(request["metadata"], request_status=saved_stop_status),
                         created_at=request["created_at"])
                 else:
-                    self.store.set_message_status(request["conversation_id"], request["message_id"], "cancelled",
-                                                  execution=request["trace"].snapshot())
+                    self.store.set_message_status(request["conversation_id"], request["message_id"], saved_stop_status,
+                        execution=request["trace"].snapshot(),
+                        **({"agent_error_code": request["metadata"].get("agent_error_code", "stop_unconfirmed")}
+                           if agent_stopping else {}))
         cid = request["conversation_id"]
         self._pending_cancel_count[cid] = self._pending_cancel_count.get(cid, 0) + 1
         def persisted(_result, error):
@@ -2025,14 +2020,14 @@ class ChatController(QObject):
         self._active_request_conversation = None
         self._set_busy(False)
         self._refresh_work_active()
-        self._mark_message_status(request["conversation_id"], request["message_id"], "cancelled",
+        self._mark_message_status(request["conversation_id"], request["message_id"], stop_status,
                                   metadata=request["metadata"])
         def accepts_feedback():
             return (not self._closed and self._request_id == stopped_token
                     and request["conversation_id"] == self._current_id)
         if accepts_feedback():
-            if request["metadata"].get("agent_execution_started"):
-                self._set_error("任务已停止；请检查已完成的操作，再发新的任务消息。",
+            if agent_stopping:
+                self._set_error("正在等待任务结束…",
                                 "", request["conversation_id"], request["message_id"])
             else:
                 self._set_error("已停止等待回复；服务端可能已收到请求。" +
@@ -2382,15 +2377,7 @@ class ChatController(QObject):
                     # rewritten task or instructions copied from references.
                     route = AgentRequest(user_message["content"], route.kind)
                     try:
-                        try: office_snapshot=capture_office_runtime()
-                        except OfficeRuntimeConfigurationError:
-                            raise AgentError("office_runtime_invalid",AGENT_ERRORS["office_runtime_invalid"]) from None
-                        try: execution_snapshot=capture_execution_runtime()
-                        except ExecutionRuntimeConfigurationError:
-                            raise AgentError("execution_runtime_invalid",AGENT_ERRORS["execution_runtime_invalid"]) from None
                         prepared={"api":settings,"key":key,"agent":agent_settings,"gui_key":configured_gui_key}
-                        prepared["office_renderer_identity"]=office_snapshot.identity
-                        prepared["project_execution_identity"]=execution_snapshot.identity
                         with (self._agent_queue.reserve_guard(request,job_context,prepared=prepared) if self._agent_queue is not None else nullcontext()):
                             with request["write_lock"]:
                                 self.store.reserve_agent_execution(conversation_id, user_message["id"])
@@ -2408,7 +2395,7 @@ class ChatController(QObject):
                     def agent_event(event):
                         if not isinstance(event, dict):
                             return
-                        from agent_backend.nanobot.activity_subject import subject_detail_for_label
+                        from desktop_pet.agents.activity_subject import subject_detail_for_label
                         detail = (subject_detail_for_label(event.get("label"), event.get("subject"))
                                   if event.get("kind") == "tool" else None)
                         if request["trace"].event(event.get("id"), event.get("kind"), event.get("label"),
@@ -2431,9 +2418,7 @@ class ChatController(QObject):
                                 if job_context is not None:
                                     agent_options["guardian_launch"] = self._agent_queue.guardian_launch(request,job_context)
                         agent_context = {"api": settings, "messages": agent_messages, "gui_api_key": gui_key}
-                        if isinstance(self._agent_service, AgentService):
-                            agent_context["office_runtime_snapshot"] = office_snapshot
-                            agent_context["execution_runtime_snapshot"] = execution_snapshot
+                        agent_context["personality"] = harness_personality(request["character_card"])
                         agent_context["conversation_id"] = conversation_id
                         agent_context["conversation_generation"] = all_messages[0]["id"] if all_messages else user_message["id"]
                         window = getattr(self._budget, "model_context_tokens", None)
@@ -2478,7 +2463,7 @@ class ChatController(QObject):
                 if not isinstance(reply, ChatReply) or not isinstance(reply.reply, str) or not reply.reply.strip():
                     raise ApiError("invalid_response", "服务商没有返回可显示的文本回复。")
                 public_reply = self._redact_known_secrets(reply.reply, key)
-                if getattr(context, "policy", "manual") != "model":
+                if not request.get("agent_kind") and getattr(context, "policy", "manual") != "model":
                     public_reply = public_reply[:MAX_REPLY_CHARACTERS]
                 reply = ChatReply(public_reply,
                                   reply.emotion if reply.emotion in EMOTIONS else "neutral")
@@ -2513,7 +2498,9 @@ class ChatController(QObject):
                 # Do not let an API failure erase an already committed user message.
                 if request["committed"]:
                     return {"history_failure": "回复已保存，但重新读取记录失败。请重新读取此会话。"}
-                cancelled = self._stop.is_set() or request["cancel"].is_set()
+                stop_unconfirmed = isinstance(exc, ApiError) and exc.code == "agent_stop_unconfirmed"
+                cancelled = (self._stop.is_set() or request["cancel"].is_set()) and not stop_unconfirmed
+                if cancelled: request["stop_confirmed"] = True
                 if isinstance(exc, ApiError) and exc.partial_reply and not cancelled:
                     try:
                         self._stream_delta.emit(token, conversation_id,
@@ -2602,6 +2589,15 @@ class ChatController(QObject):
                             and self._error_message_id == user_message["id"] and not self._busy):
                         self._set_error("已停止等待回复；现在可以重试这条消息，也可继续聊天。",
                                         "retry", conversation_id, user_message["id"])
+                    elif (not self._closed and request.get("agent_kind") and not self._busy
+                            and self._error_conversation_id == conversation_id
+                            and self._error_message_id == user_message["id"]):
+                        self._set_error(AGENT_ERRORS["cancelled"], "", conversation_id, user_message["id"])
+                elif result and result.get("failure"):
+                    self._mark_message_status(conversation_id, user_message["id"], "failed", metadata=request["metadata"])
+                    if (not self._closed and not self._busy and self._error_conversation_id == conversation_id
+                            and self._error_message_id == user_message["id"]):
+                        self._set_error(result["failure"], "", conversation_id, user_message["id"])
                 self._refresh_conversations()
                 return
             self._active_request = None

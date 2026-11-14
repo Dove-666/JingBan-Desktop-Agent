@@ -5,7 +5,7 @@ import unittest
 from uuid import uuid4
 from unittest.mock import patch
 
-from desktop_pet.agents import AgentError
+from desktop_pet.agents import AgentError, AgentResult
 from desktop_pet.remote.sync import RemoteSyncStore, sanitize_message
 from tests import test_agent_chat_routing as routing_fixtures
 from tests import test_agent_shutdown_completion as completion_fixtures
@@ -59,6 +59,43 @@ class DirectAgentTests(unittest.TestCase):
         self.assertIn("鼠标", public["agent_error"])
         self.assertFalse(self.chat.retry())
         self.assertEqual(len(self.agent.calls), 1)
+
+    def test_long_agent_reply_survives_controller_archive_and_phone_sync(self):
+        reply = "这是本地合成的长篇任务结果。\n" * 3000 + "结束标记"
+        self.assertGreater(len(reply), 24000)
+        self.agent.result = AgentResult(reply, "neutral")
+        self.assertTrue(self.chat.send("返回完整测试报告", agent_mode=True))
+        self.finish()
+        rows = self.chat.store.load_messages(self.chat.current_conversation_id)
+        assistant = next(row for row in rows if row["role"] == "assistant")
+        self.assertEqual(assistant["content"], reply)
+        sync = RemoteSyncStore(self.chat.store)
+        snapshot = next(item["data"] for item in sync.snapshot()["items"] if item["id"] == assistant["id"])
+        delta = next(item["data"] for item in sync.pull()["changes"] if item["id"] == assistant["id"])
+        self.assertEqual(snapshot["content"], reply)
+        self.assertEqual(delta["content"], reply)
+
+    def test_stop_does_not_report_closed_before_native_cleanup_ack(self):
+        self.agent.hold = True
+        self.agent.ignore_cancellation = True
+        self.agent.failure = AgentError("stop_unconfirmed", "电脑操作结束尚未确认。")
+        self.assertTrue(self.chat.send("检查停止流程", agent_mode=True))
+        self.spin(lambda: self.agent.started.is_set())
+        cid = self.chat.current_conversation_id
+        self.assertTrue(self.chat.stop_request(cid))
+        self.spin(lambda: self.chat._pending_cancel_count.get(cid, 0) == 0)
+        message = self.chat.store.load_messages(cid)[0]
+        self.assertEqual(message["metadata"]["request_status"], "interrupted")
+        self.assertEqual(message["metadata"]["agent_error_code"], "stop_unconfirmed")
+        self.assertEqual(message["metadata"]["execution"]["state"], "interrupted")
+        self.agent.release.set()
+        self.finish()
+        message = self.chat.store.load_messages(cid)[0]
+        self.assertEqual(message["metadata"]["request_status"], "failed")
+        self.assertEqual(message["metadata"]["agent_error_code"], "stop_unconfirmed")
+        public = sanitize_message(message)
+        self.assertEqual(public["agent_error_code"], "stop_unconfirmed")
+        self.assertNotIn("任务已停止", public["agent_error"])
 
     def test_private_metadata_and_malformed_activity_never_sync(self):
         cid = self.chat.current_conversation_id

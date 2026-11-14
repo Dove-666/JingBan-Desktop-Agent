@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .contracts import AgentValidationError
-from ..bundle_runtime import bundled_python_executable, frozen_workspace_root
+from ..bundle_runtime import worker_python_executable, frozen_workspace_root
 
 
 GUI_CREDENTIAL_ACCOUNT = "agent-gui-api-key"
@@ -16,7 +16,7 @@ GUI_PROVIDERS = ("ui-tars-1.5", "ui-tars-1.0", "doubao-1.5-15b", "doubao-1.5-20b
 _SHARED_GUI_FIELDS = frozenset(("gui_provider", "gui_coordinate_profile", "gui_base_url", "gui_model"))
 _PREFIX = "agents/"
 _ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_PYTHON = str(bundled_python_executable() or _ROOT / "agent_backend" / "nanobot" / ".venv" / "Scripts" / "python.exe")
+DEFAULT_PYTHON = str(worker_python_executable())
 AGENT_WORKSPACE_ROOT = _ROOT / "agent_workspace"
 
 
@@ -52,7 +52,7 @@ class AgentSettings:
     enabled: bool = True
     tools_enabled: bool = True
     computer_enabled: bool = True
-    backend: str = "nanobot"
+    backend: str = "deepseek-harness"
     python_executable: str = DEFAULT_PYTHON
     workspace: str = field(default_factory=lambda: str(agent_workspace_root()))
     timeout_seconds: float = 0.0  # Zero means no whole-task deadline; Stop still applies.
@@ -66,8 +66,8 @@ class AgentSettings:
         if any(type(value) is not bool for value in
                (self.enabled, self.tools_enabled, self.computer_enabled)):
             raise AgentValidationError("Agent 开关必须为布尔值。")
-        if self.backend != "nanobot":
-            raise AgentValidationError("当前只支持已配置的 nanobot 后端。")
+        if self.backend != "deepseek-harness":
+            raise AgentValidationError("当前 Agent 使用 DeepSeek Harness。")
         for value in (self.python_executable, self.workspace):
             if not _valid_text(value) or (value and not Path(value).is_absolute()):
                 raise AgentValidationError("Agent Python 和工作目录必须是绝对路径，或留空。")
@@ -131,6 +131,11 @@ def load_agent_settings(store, *, api=None) -> AgentSettings:
             elif type(default) is float and isinstance(value, str):
                 value = float(value)
             values[field.name] = value
+        # Retire the old backend selection without losing the user's switches.
+        # This is a settings migration, never an execution fallback.
+        if values.get("backend") == "nanobot":
+            values["backend"] = "deepseek-harness"
+            values["python_executable"] = DEFAULT_PYTHON
         result = AgentSettings(**values)
         if api is not None:
             result = shared_api_settings(result, api)

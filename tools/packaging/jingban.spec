@@ -8,14 +8,18 @@ datas = [(str(root / "desktop_pet/ui/web_chat/index.html"), "desktop_pet/ui/web_
 datas += [(str(root / "shared/reasoning/profiles.json"), "shared/reasoning")]
 for distribution in ("keyring", "openai", "iroh"):
     datas += copy_metadata(distribution, recursive=True)
-hidden = collect_submodules("desktop_pet") + [
+retired = {"desktop_pet.agents.checkpoints", "desktop_pet.agents.execution_runtime",
+           "desktop_pet.agents.office_runtime", "desktop_pet.agents.research_delegation",
+           "desktop_pet.agents.libreoffice_renderer", "desktop_pet.agents.libreoffice_helper"}
+hidden = collect_submodules("desktop_pet", filter=lambda name: name not in retired) + [
     "keyring.backends.Windows", "keyring.backends.chainer", "keyring.backends.fail",
     "win32ctypes.pywin32.pywintypes", "win32ctypes.pywin32.win32cred",
 ]
 a = Analysis([str(root / "main.py")], pathex=[str(root)],
              binaries=collect_dynamic_libs("iroh"), datas=datas,
              hiddenimports=hidden, hookspath=[], runtime_hooks=[],
-             excludes=["PyQt5", "PyQt6", "PySide2", "tkinter", "matplotlib", "torch", "tensorflow"],
+             excludes=["PyQt5", "PyQt6", "PySide2", "tkinter", "matplotlib", "torch", "tensorflow",
+                       "agent_backend.nanobot", "nanobot", *retired],
              noarchive=False, optimize=0)
 # Qt on supported Windows uses the OS's unversioned ICU API. An unrelated
 # Poppler on a developer PATH exports version-suffixed ICU symbols instead.

@@ -1,0 +1,13 @@
+{
+  "patches": [
+    {
+      "path": "native/entry/NativeServer.cs",
+      "original": "patches/upstream/NativeServer.cs",
+      "original_sha256": "cadd3789c44dab106cf72278f112d64a2b958ac35ed3b3b6b713581c3541c0dc",
+      "patched_sha256": "af2e1f54d91e1ba45879219113704d01596d019a6a1313e40c7117138972285d",
+      "diff": "patches/native-response-admission.patch",
+      "diff_sha256": "a8d77082ad7364065170ef6c96fab143d909020faea20590f9acfd4172e6d390",
+      "reason": "Accept sequential request after response becomes visible but before async flush resumes; still await previous dispatch and reject overlapping operations."
+    }
+  ]
+}

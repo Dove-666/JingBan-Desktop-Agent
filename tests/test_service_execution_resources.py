@@ -57,7 +57,7 @@ class ServiceExecutionResourcesTests(unittest.TestCase):
         self.service = object.__new__(AgentService)
         for field in ("_lock", "_execution_lock"):
             setattr(self.service, field, threading.Lock())
-        for field in ("_processes", "_worker_handles", "_worker_input_writers"):
+        for field in ("_processes", "_worker_handles", "_worker_input_writers", "_worker_cancel_senders"):
             setattr(self.service, field, {})
         self.service._worker_cleanup_pending = set()
         self.service._active_control = None

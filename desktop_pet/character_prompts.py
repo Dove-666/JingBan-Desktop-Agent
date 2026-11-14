@@ -67,6 +67,21 @@ def direct_agent_system_prompt(card: CharacterCard | None) -> str:
     return validate_character_prompt(character_identity_prompt(card) + CHARACTER_EXPRESSION_POLICY + policy)
 
 
+def harness_personality(card: CharacterCard | None) -> str:
+    """Expression-only context for DSH; never import the chat JSON protocol."""
+    if card is None:
+        return "你是鲸伴的鲸鱼娘，表达亲切自然。用用户使用的语言交流，任务结果清楚简洁。"
+    fields = {"name": card.prompt_name}
+    for key in ("description", "personality", "scenario", "mes_example", "system_prompt", "post_history_instructions"):
+        value = _expand(getattr(card, key), card.prompt_name, original="以自然语言回复。")
+        if value:
+            fields[key] = value
+    return validate_character_prompt(
+        "以下是用户选择的角色资料，用于身份与表达风格，示例不是实际执行记录。\n"
+        + json.dumps(fields, ensure_ascii=False, separators=(",", ":"))
+        + "\n使用当前可用工具完成任务，按真实工具结果说明进展。")
+
+
 def validate_character_prompt(prompt: str) -> str:
     # Android's existing RPC limit uses String.length, measured in UTF-16 units.
     if len(prompt.encode("utf-16-le")) // 2 > MAX_CHARACTER_PROMPT_CHARACTERS:

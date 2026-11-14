@@ -1,0 +1,10 @@
+{
+  "version": "24.22.3",
+  "platform": "win-x64",
+  "archive_url": "https://nodejs.org/dist/v24.22.3/node-v24.22.3-win-x64.zip",
+  "checksums_url": "https://nodejs.org/dist/v24.22.3/SHASUMS256.txt",
+  "archive_sha256": "e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f",
+  "node_sha256": "86fc4785327db5f5c7558dc6156c543b433c313e813a222e088086222ab4afa6",
+  "license_sha256": "ed34dd8e3f0a78dbaf00d0444ce8e285b015b765379c2e17880455f70370f8e9",
+  "upstream_fix": "https://github.com/nodejs/node/pull/61999"
+}

@@ -81,7 +81,9 @@ class ExecutionAttemptIdentityTests(unittest.TestCase):
 
 class ServiceNoLaunchTests(unittest.TestCase):
     def setUp(self):
-        self.service = AgentService()
+        owned = tempfile.TemporaryDirectory(prefix="dsh-no-launch-")
+        self.addCleanup(owned.cleanup)
+        self.service = AgentService(checkpoint_path=Path(owned.name) / "checkpoint.sqlite3")
         self.addCleanup(self.service.shutdown)
         self.settings = replace(AgentSettings(), enabled=True, python_executable=sys.executable)
         self.cid = str(uuid4())
@@ -93,17 +95,17 @@ class ServiceNoLaunchTests(unittest.TestCase):
     def invoke(self, **kwargs):
         return self.service.execute(self.settings, "synthetic-local-key", self.request, self.context, **kwargs)
 
-    def test_actual_missing_interpreter_validation_issues_only_finished_no_launch_proof(self):
+    def test_actual_missing_node_validation_issues_only_finished_no_launch_proof(self):
         with tempfile.TemporaryDirectory(prefix="no-launch-") as owned:
-            self.settings = replace(self.settings, python_executable=str(Path(owned) / "python-missing.exe"))
             handles = []
             def bound(attempt):
                 handles.append(attempt)
                 self.assertIsNone(self.service.execution_no_launch(attempt))
-            with patch("desktop_pet.agents.service.subprocess.Popen", wraps=subprocess.Popen) as popen:
+            with patch("desktop_pet.agents.service.node_executable", return_value=None), \
+                    patch("desktop_pet.agents.service.subprocess.Popen", wraps=subprocess.Popen) as popen:
                 with self.assertRaises(AgentError) as raised: self.invoke(execution_attempt_callback=bound)
-            self.assertEqual("not_configured", raised.exception.code)
-            popen.assert_not_called()
+            self.assertEqual("gui_runtime_missing", raised.exception.code)
+            self.assertEqual(0, popen.call_count)
             proof = self.service.execution_no_launch(handles[0])
             self.assertTrue(self.service.validate_execution_no_launch(handles[0], proof))
             self.assertFalse(self.service.validate_execution_attempt(handles[0]))
@@ -118,7 +120,7 @@ class ServiceNoLaunchTests(unittest.TestCase):
         with patch("desktop_pet.agents.service.subprocess.Popen", wraps=subprocess.Popen) as popen:
             with self.assertRaises(AgentError) as raised: self.invoke(execution_attempt_callback=bound)
         self.assertIs(original, raised.exception)
-        popen.assert_not_called()
+        self.assertEqual(0, popen.call_count)
         self.assertTrue(self.service.validate_execution_no_launch(handles[0], self.service.execution_no_launch(handles[0])))
 
     def test_already_cancelled_invocation_keeps_cancel_error_and_can_prove_no_launch(self):
@@ -128,7 +130,7 @@ class ServiceNoLaunchTests(unittest.TestCase):
             with self.assertRaises(AgentError) as raised:
                 self.invoke(cancellation_event=event, execution_attempt_callback=handles.append)
         self.assertEqual("cancelled", raised.exception.code)
-        popen.assert_not_called()
+        self.assertEqual(0, popen.call_count)
         self.assertIsNotNone(self.service.execution_no_launch(handles[0]))
 
     def test_paused_inflight_validation_cannot_issue_proof_or_free_execution_slot(self):
@@ -154,7 +156,7 @@ class ServiceNoLaunchTests(unittest.TestCase):
             finally:
                 release.set(); thread.join(5)
             self.assertFalse(thread.is_alive())
-            popen.assert_not_called()
+            self.assertEqual(0, popen.call_count)
         self.assertEqual("cancelled", errors[0].code)
         self.assertIsNotNone(self.service.execution_no_launch(handles[0]))
 
@@ -218,7 +220,7 @@ class CoordinatorNoLaunchTests(unittest.TestCase):
 
     def setUp(self):
         queue_fixture.HostQueueIndependentReviewTests.setUp(self)
-        self.service = AgentService()
+        self.service = AgentService(checkpoint_path=self.root / "checkpoint.sqlite3")
         self.coordinator.service = self.service
         self.addCleanup(self.service.shutdown)
 
@@ -233,9 +235,8 @@ class CoordinatorNoLaunchTests(unittest.TestCase):
         return ack, context, request
 
     def fail_before_launch(self, context, request):
-        settings = replace(self.policy["agent"], python_executable=str(self.root / "python-missing.exe"))
-        with self.assertRaises(AgentError):
-            self.service.execute(settings, self.policy["key"], AgentRequest("Synthetic owned task", "agent"),
+        with patch("desktop_pet.agents.service.node_executable", return_value=None), self.assertRaises(AgentError):
+            self.service.execute(self.policy["agent"], self.policy["key"], AgentRequest("Synthetic owned task", "agent"),
                 {"api": self.policy["api"], "conversation_id": self.cid, "messages": []},
                 execution_attempt_callback=lambda attempt: self.coordinator.execution_attempt_bound(request, context, attempt))
 

@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 from urllib.parse import urlsplit
@@ -106,10 +107,24 @@ def verify_release_target(client, release, record):
 
 
 def main():
+    global OUT
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("preflight", "upload", "publish"))
     parser.add_argument("--commit")
+    parser.add_argument("--version")
+    parser.add_argument("--android-version")
+    parser.add_argument("--report-directory", type=Path, default=OUT)
+    parser.add_argument("--ready-report", type=Path)
+    parser.add_argument("--notes-file", type=Path)
     args = parser.parse_args()
+    OUT = args.report_directory.resolve()
+    if args.action != "preflight":
+        assert args.version and re.fullmatch(r"\d+\.\d+\.\d+", args.version), "A release version is required"
+        assert args.android_version and re.fullmatch(r"\d+\.\d+\.\d+", args.android_version), "An Android version is required"
+        assert args.notes_file and args.ready_report, "Reviewed release notes and acceptance report are required"
+        tag = "v" + args.version
+        body = args.notes_file.read_text(encoding="utf-8").strip()
+        assert body, "Release notes must not be empty"
     OUT.mkdir(parents=True, exist_ok=True)
     client = session()
     repo = request(client, "GET", "/repos/" + REPOSITORY)
@@ -120,13 +135,12 @@ def main():
     record_path = OUT / "github-release.json"
     if args.action == "publish":
         record = json.loads(record_path.read_text(encoding="utf-8"))
-        assert record["assets_complete"] and record["tag"] == "v1.0.2"
+        assert record["assets_complete"] and record["tag"] == tag
         release = request(client, "GET", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]))
         assert release["draft"] and release["tag_name"] == record["tag"]
         verify_release_target(client, release, record)
         actual = request(client, "GET", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]) + "/assets?per_page=100")
         verify_remote_assets(actual, record["assets"])
-        body = "修复任务续办、重复失败循环、记忆取消与手机草稿恢复。安装后在设置中填写自己的 API；升级前请保存草稿并从托盘退出旧程序。\n\nWindows 安装包：Jingban-Setup.exe；免安装包：Jingban.zip。\nAndroid：Jingban.apk；通用架构：Jingban-Universal.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。可使用同页 SHA256SUMS.txt 校验下载文件。"
         release = request(client, "PATCH", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]), json={"draft": False, "body": body})
         verify_release_target(client, release, record)
         record.update(published=True, url=release["html_url"])
@@ -134,19 +148,19 @@ def main():
         print(json.dumps({"published": True, "url": release["html_url"]}), flush=True)
         return
     assert args.commit and len(args.commit) == 40
-    tag_check = client.get(API + "/repos/" + REPOSITORY + "/git/ref/tags/v1.0.2", timeout=30, allow_redirects=False)
+    tag_check = client.get(API + "/repos/" + REPOSITORY + "/git/ref/tags/" + tag, timeout=30, allow_redirects=False)
     assert tag_check.status_code in (200, 404), "Tag lookup failed"
     if tag_check.status_code == 200:
         tag_object = tag_check.json()["object"]
         assert tag_object["type"] == "commit" and tag_object["sha"] == args.commit, "Existing tag must not be replaced"
-    files = [ROOT / "deliverables/windows/1.0.2/鲸伴安装.exe", ROOT / "deliverables/windows/1.0.2/鲸伴.zip",
-        ROOT / "android/deliverables/1.19.1/鲸伴.apk", ROOT / "android/deliverables/1.19.1/鲸伴通用.apk"]
+    files = [ROOT / "deliverables/windows" / args.version / "鲸伴安装.exe", ROOT / "deliverables/windows" / args.version / "鲸伴.zip",
+        ROOT / "android/deliverables" / args.android_version / "鲸伴.apk", ROOT / "android/deliverables" / args.android_version / "鲸伴通用.apk"]
     remote_names = {"鲸伴安装.exe": "Jingban-Setup.exe", "鲸伴.zip": "Jingban.zip",
         "鲸伴.apk": "Jingban.apk", "鲸伴通用.apk": "Jingban-Universal.apk", "SHA256SUMS.txt": "SHA256SUMS.txt"}
     assert all(path.is_file() for path in files)
     assert all(path.stat().st_size < 2 * 1024 ** 3 for path in files)
-    ready = json.loads((ROOT / "artifacts/release-validation/release-ready.json").read_text(encoding="utf-8"))
-    assert ready["passed"] and ready["desktop"] == "1.0.2" and ready["android"] == "1.19.1"
+    ready = json.loads(args.ready_report.read_text(encoding="utf-8"))
+    assert ready["passed"] and ready["desktop"] == args.version and ready["android"] == args.android_version
     approved = {row["path"]: row for row in ready["packages"]}
     for path in files:
         row = approved[path.relative_to(ROOT).as_posix()]
@@ -159,14 +173,14 @@ def main():
         record = json.loads(record_path.read_text(encoding="utf-8"))
         assert record["commit"] == args.commit and not record.get("published")
         release = request(client, "GET", "/repos/" + REPOSITORY + "/releases/" + str(record["id"]))
-        assert release["draft"] and release["tag_name"] == "v1.0.2"
+        assert release["draft"] and release["tag_name"] == tag
     else:
         releases = request(client, "GET", "/repos/" + REPOSITORY + "/releases?per_page=100")
-        assert not any(x["tag_name"] == "v1.0.2" for x in releases), "An existing release must not be replaced"
+        assert not any(x["tag_name"] == tag for x in releases), "An existing release must not be replaced"
         release = request(client, "POST", "/repos/" + REPOSITORY + "/releases", json={
-            "tag_name": "v1.0.2", "target_commitish": args.commit, "name": "鲸伴", "draft": True,
-            "prerelease": False, "body": "修复任务续办、重复失败循环、记忆取消与手机草稿恢复。安装后在设置中填写自己的 API；升级前请保存草稿并从托盘退出旧程序。\n\nWindows：鲸伴安装.exe；免安装：鲸伴.zip。Android：鲸伴.apk；通用架构：鲸伴通用.apk。\n\n新配置默认浅色、角色大小 100%、电脑 Agent 功能开启；保留角色卡和对话同步。"})
-        record = {"id": release["id"], "tag": "v1.0.2", "commit": args.commit, "assets": [], "assets_complete": False, "published": False}
+            "tag_name": tag, "target_commitish": args.commit, "name": "鲸伴", "draft": True,
+            "prerelease": False, "body": body})
+        record = {"id": release["id"], "tag": tag, "commit": args.commit, "assets": [], "assets_complete": False, "published": False}
         record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     upload_url = release["upload_url"].split("{", 1)[0]
     location = urlsplit(upload_url)

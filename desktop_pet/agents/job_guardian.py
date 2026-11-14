@@ -218,7 +218,8 @@ class PrivateRunStore:
 
     def _file(self, name, *, create=False):
         self._assert_directory()
-        if name not in {"manifest.json", "key.dpapi", "receipt.json", "receipt.tmp", "consumed.json"}:
+        if name not in {"manifest.json", "key.dpapi", "receipt.json", "receipt.tmp", "consumed.json",
+                        "external-required.json", "external-closed.json"}:
             raise GuardianError("GUARDIAN_RECORD_NAME_INVALID")
         descriptor = self.native.descriptor() if create else None
         try:
@@ -298,10 +299,54 @@ class PrivateRunStore:
             str(self.path / "receipt.json"), 0x8), "GUARDIAN_RECEIPT_PUBLISH_FAILED")
         self._assert_directory()
 
+    def _external_record(self, name, state):
+        """Authenticate an immutable, run-bound external-worker lifecycle record."""
+        self._assert_directory()
+        try:
+            (self.path / name).lstat()
+        except FileNotFoundError:
+            return None
+        manifest, digest, key = self.identity()
+        value = decode(self._read(name))
+        expected = {"schema": "aura.external_cleanup.v1", "manifest_sha256": digest,
+                    "run_nonce": manifest["run_nonce"], "state": state}
+        expected["hmac_sha256"] = _mac(key, expected)
+        if not hmac.compare_digest(canonical(value), canonical(expected)):
+            raise GuardianError("GUARDIAN_EXTERNAL_CLEANUP_INVALID")
+        return value
+
+    def _write_external_record(self, name, state):
+        if self._external_record(name, state) is not None:
+            return
+        manifest, digest, key = self.identity()
+        value = {"schema": "aura.external_cleanup.v1", "manifest_sha256": digest,
+                 "run_nonce": manifest["run_nonce"], "state": state}
+        value["hmac_sha256"] = _mac(key, value)
+        self._write_new(name, canonical(value))
+        if self._external_record(name, state) != value:
+            raise GuardianError("GUARDIAN_EXTERNAL_CLEANUP_INVALID")
+
+    def mark_external_cleanup_required(self):
+        """Host must commit this before dispatching any out-of-Job computer work."""
+        self._write_external_record("external-required.json", "required")
+
+    def mark_external_cleanup_confirmed(self):
+        """Trusted host calls only after the SDK/native channel closed ACK."""
+        if self._external_record("external-required.json", "required") is None:
+            raise GuardianError("GUARDIAN_EXTERNAL_CLEANUP_NOT_REQUIRED")
+        self._write_external_record("external-closed.json", "closed")
+
+    def external_cleanup_confirmed(self):
+        if self._external_record("external-required.json", "required") is None:
+            return True  # Historical/in-Job-only run; never dispatched external work.
+        return self._external_record("external-closed.json", "closed") is not None
+
     def read_closure(self, *, expected_manifest):
         try:
             manifest, digest, key = self.identity()
             if manifest != validate_manifest(expected_manifest):
+                return None
+            if not self.external_cleanup_confirmed():
                 return None
             value = decode(self._read("receipt.json"))
             if (set(value) != _RECEIPT_KEYS or value.get("schema") != "aura.host_job_closure.v1"

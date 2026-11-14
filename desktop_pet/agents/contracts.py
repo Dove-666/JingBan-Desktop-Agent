@@ -55,7 +55,7 @@ class AgentResult:
     reply: str
     emotion: str = "neutral"
     kind: Literal["tools", "computer", "agent"] = "tools"
-    backend: str = "nanobot"
+    backend: str = "deepseek-harness"
     status: str = "completed"
     artifacts: tuple[dict, ...] = ()
     acceptance: dict | None = None

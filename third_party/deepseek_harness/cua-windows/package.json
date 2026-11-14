@@ -1,0 +1,70 @@
+{
+  "name": "@deepseek-ai/dsh-cua-windows",
+  "description": "Windows C# computer use through shared application and window objects",
+  "version": "0.2.2-rc.3-jingban.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepseek-ai/deepseek-harness.git",
+    "directory": "packages/experimental/cua-windows"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-computer-use": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-subprocess": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-user-questions": "0.2.2-rc.3"
+  },
+  "dependencies": {
+    "zod": "4.6.6",
+    "@deepseek-ai/dsh-cua": "0.2.2-rc.3",
+    "@deepseek-ai/schemastery": "3.19.0",
+    "@deepseek-ai/dsh-native-command": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-atomic-write": "0.2.2-rc.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  },
+  "files": [
+    "locale/*.json",
+    "lib/index.js",
+    "native/bin",
+    "lib/types/**/*.d.ts",
+    "lib/types/**/*.d.ts.map",
+    "lib/**/*.js.map",
+    "src",
+    "patch-compiled.mjs",
+    "compat-channel.mjs",
+    "patches",
+    "tsconfig.build.json",
+    "UPSTREAM.json",
+    "INTEGRATION.md"
+  ],
+  "scripts": {
+    "build:native": "dotnet publish native/entry/CuaWindows.csproj --configuration Release --self-contained false --output native/bin/local -p:EnableWindowsTargeting=true",
+    "build:native:x64": "dotnet publish native/entry/CuaWindows.csproj --configuration Release --runtime win-x64 --self-contained true --output native/bin/win-x64 -p:EnableWindowsTargeting=true",
+    "build:native:arm64": "dotnet publish native/entry/CuaWindows.csproj --configuration Release --runtime win-arm64 --self-contained true --output native/bin/win-arm64 -p:EnableWindowsTargeting=true",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --packages=external --tsconfig=tsconfig.build.json --outfile=lib/index.js && node patch-compiled.mjs"
+  },
+  "os": [
+    "win32",
+    "linux"
+  ]
+}
