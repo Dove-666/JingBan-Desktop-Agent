@@ -2,9 +2,13 @@
 
 软件正式名称为「鲸伴」，默认角色仍为鲸鱼娘。为继续读取已有设置、凭据、聊天与配对记录，配置目录和内部通信标识沿用原有值。
 
-安卓现为 [1.19.0](android/README.md)：精简界面，并在「设置 → 角色卡」中查看、切换电脑保存的角色或恢复默认鲸鱼娘。两端同步角色设定，保留手机自选 API；离线沿用上次同步的当前角色。角色库同步需要本次更新后的电脑源码，旧独立 Windows 包不含这次改动；见[验证记录](docs/RELEASE_VALIDATION.md)。
+安卓现为 [1.19.1](android/README.md)，Windows 为 **1.0.2**。本轮修复 Agent 续办目标丢失和重复失败循环、聊天停止后的记忆取消、屏幕评论过期、手机草稿恢复与阅读位置。角色卡、API 与对话同步继续保留。详见[验证记录](docs/RELEASE_VALIDATION.md)。
 
-Windows **1.0.1** 的「鲸伴安装.exe」和「鲸伴.zip」位于 [v1.0.1 发布页](https://github.com/Dove-666/JingBan-Desktop-Agent/releases/tag/v1.0.1)。无需安装 Python、Node 或项目依赖；首次使用自行配置聊天 API。分发包包含角色素材、本地棋类引擎、独立后台运行时和第三方许可，不包含开发者的设置、聊天、配对信息或密钥。详见[Windows 封装与测试说明](docs/WINDOWS_RELEASE.md)。
+Windows **1.0.2** 的「鲸伴安装.exe」和「鲸伴.zip」位于 [下载页](https://github.com/Dove-666/JingBan-Desktop-Agent/releases/tag/v1.0.2)。无需安装 Python、Node 或项目依赖；首次使用自行配置聊天 API。分发包包含角色素材、本地棋类引擎、独立后台运行时和第三方许可，不包含开发者的设置、聊天、配对信息或密钥。详见[Windows 封装与测试说明](docs/WINDOWS_RELEASE.md)。
+
+## 历史更新
+
+以下记录描述各版本当时的实现和验证。旧安装包与临时原始报告已按用户要求清理，当前证据以[验证记录](docs/RELEASE_VALIDATION.md)为准。
 
 R29 / Windows Beta.4 与安卓 1.16.0 将思考参数改为按接口、模型和明确能力声明适配：分别提供档位、开关或 Token 预算；不再给每个模型展示同一组八档。未知网关和模型别名默认不发送参数，可以在高级设置选择兼容方式或自定义供应商原值。桌面按接口和模型保存选择，切换后恢复；手机表单保留各模型的本次编辑草稿。电脑聊天、Agent 与手机直连使用同一份能力目录和对应实际参数，默认省略字段，不因不支持而自动重试。旧参数保留原语义，编辑表单展示当前模型的选项，保存后应用。现有传输仍是 OpenAI 兼容 Chat Completions，Claude 高级模式是明确的兼容网关转发配置，不代表新增原生 Messages 接口。实现参考 [CC Switch 的能力声明](https://github.com/farion1231/cc-switch/blob/e1f8acf6479068b05e7e9df7c764aff3f76c08b4/src-tauri/src/proxy/providers/codex.rs)，原始规则与官方文档链接保存在 `shared/reasoning/profiles.json`。本轮[验证记录](artifacts/user-testing-20261107-model-reasoning/verification.json)保留各次失败与最终通过的范围。
 
@@ -16,7 +20,7 @@ R26 增加本地角色库。打开“设置 → 角色 → 角色卡”，导入
 
 R25 补充独立的只读画面观察：Agent 可通过 `desktop_view` 获取当前可见画面的事实描述，调用使用主模型的图片能力，不启动鼠标键盘操作循环，也不以描述代替任务完成验收。成功观察或更新计划不再清除其它操作的失败链，未完成的视觉子任务按失败反馈给父 Agent。实际抖音任务仍需重新验收，当前不能据此承诺点赞任务已修复。
 
-当前版本为桌面 `1.0.0`、安卓 `1.19.0`。Agent 支持原生工具、窗口控件和视觉操作在同一任务中接力，失败后可根据新观察修正方案；每个动作独立识别，结果未知时禁止盲目重放。手机新任务可由电脑确认排队后串行执行，重复请求保持同一任务，启动前失败和真实进程收束分别核验。长任务保留可回读的事实与来源，并在模型超窗后压缩请求继续；默认仍不限步数与总时长，保留停止操作。实现借鉴并移植了 [DeepSeek Harness 的计划机制](third_party/deepseek_harness/README.md)，沿用 Python/PySide6、nanobot 和 UI-TARS。详细范围与边界见 [Agent 说明](docs/ON_DEMAND_AGENT.md)和[可靠性验收](docs/AGENT_RELIABILITY.md)。源码启动的版本更新后须保存草稿、从系统托盘完整退出桌宠再启动；独立安装版须更新 Windows 安装包。
+当时版本为桌面 `1.0.0`、安卓 `1.19.0`。Agent 支持原生工具、窗口控件和视觉操作在同一任务中接力，失败后可根据新观察修正方案；每个动作独立识别，结果未知时禁止盲目重放。手机新任务可由电脑确认排队后串行执行，重复请求保持同一任务，启动前失败和真实进程收束分别核验。长任务保留可回读的事实与来源，并在模型超窗后压缩请求继续；默认仍不限步数与总时长，保留停止操作。实现借鉴并移植了 [DeepSeek Harness 的计划机制](third_party/deepseek_harness/README.md)，沿用 Python/PySide6、nanobot 和 UI-TARS。详细范围与边界见 [Agent 说明](docs/ON_DEMAND_AGENT.md)和[可靠性验收](docs/AGENT_RELIABILITY.md)。源码启动的版本更新后须保存草稿、从系统托盘完整退出桌宠再启动；独立安装版须更新 Windows 安装包。
 
 R24 增加酒馆角色卡。打开“设置 → 角色 → 角色卡”，导入 PNG 或 JSON，预览后点击“应用角色”，也可恢复默认鲸鱼娘。兼容 V1、[V2](https://github.com/malfoyslastname/character-card-spec-v2/blob/main/spec_v2.md) 和 [V3](https://github.com/kwaroran/character-card-spec-v3/blob/main/SPEC_V3.md) 的基础人设，使用名称、背景、性格、场景、示例对话及角色指令构造提示。开场白与作者备注可在预览中查看。世界书、扩展和素材引用保留为卡片数据，界面会显示兼容范围。
 

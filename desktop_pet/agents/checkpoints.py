@@ -26,9 +26,10 @@ from agent_backend.nanobot.session_history import (
 )
 from agent_backend.nanobot.context_store import ObservationStore, namespace_for
 from agent_backend.nanobot.redaction import redact_text
+from agent_backend.nanobot.goal_history import GoalHistoryError, checked_goal_history, legacy_goal_history
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 MAX_FRONTIER_BYTES = 64_000
 STATUSES = frozenset({"running", "completed", "verified", "unverified", "partial",
                       "needs_user", "failed", "cancelled", "timeout", "interrupted",
@@ -244,7 +245,7 @@ class CheckpointStore:
                 connection.execute("PRAGMA foreign_keys=ON")
                 connection.execute("PRAGMA secure_delete=ON")
                 version = connection.execute("PRAGMA user_version").fetchone()[0]
-                if version not in (0, 1, SCHEMA_VERSION):
+                if version not in (0, 1, 2, SCHEMA_VERSION):
                     raise ValueError("unsupported checkpoint schema")
                 connection.execute("BEGIN IMMEDIATE")
                 connection.execute("""CREATE TABLE IF NOT EXISTS agent_checkpoints (
@@ -257,6 +258,7 @@ class CheckpointStore:
                     last_barrier INTEGER NOT NULL DEFAULT 0,
                     goal_verified INTEGER NOT NULL DEFAULT 0,
                     frontier_json TEXT NOT NULL DEFAULT '{}',
+                    goal_history_json TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL
                 )""")
                 connection.execute("""CREATE TABLE IF NOT EXISTS agent_task_checkpoints (
@@ -273,8 +275,11 @@ class CheckpointStore:
                 if "frontier_json" not in columns and version < 2:
                     connection.execute("ALTER TABLE agent_checkpoints ADD COLUMN frontier_json TEXT NOT NULL DEFAULT '{}'")
                     columns.add("frontier_json")
+                if "goal_history_json" not in columns and version < 3:
+                    connection.execute("ALTER TABLE agent_checkpoints ADD COLUMN goal_history_json TEXT NOT NULL DEFAULT '[]'")
+                    columns.add("goal_history_json")
                 if not {"conversation_id", "scope_hash", "history_json", "task_id", "status", "owner",
-                        "last_barrier", "goal_verified", "frontier_json", "updated_at"}.issubset(columns):
+                        "last_barrier", "goal_verified", "frontier_json", "goal_history_json", "updated_at"}.issubset(columns):
                     raise ValueError("invalid checkpoint schema")
                 if version < SCHEMA_VERSION:
                     connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
@@ -296,6 +301,10 @@ class CheckpointStore:
                         pass
                     # Any other unlink failure is fail-closed. Keeping an erase
                     # marker is safer than later restoring an erased session.
+            except GoalHistoryError:
+                if connection is not None:
+                    connection.rollback()
+                raise
             except (sqlite3.Error, OSError, ValueError, TypeError):
                 if connection is not None:
                     connection.rollback()
@@ -325,6 +334,7 @@ class CheckpointStore:
                 row = db.execute("SELECT * FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if row["scope_hash"] != scope_hash:
                 return {"history": [], "status": "scope_changed", "scope_matches": False,
+                        "goal_history": [],
                         "goal_verified": False, "recovered_running": False}
             try:
                 self._identity(conversation_id, row["scope_hash"], row["task_id"])
@@ -338,6 +348,11 @@ class CheckpointStore:
                     raise ValueError("invalid checkpoint row")
                 raw = json.loads(row["history_json"])
                 history = sanitized_history(raw, secrets, store=self.observation_store(conversation_id, scope_hash, secrets=secrets))
+                if not isinstance(row["goal_history_json"], str) or len(row["goal_history_json"]) > 700000:
+                    raise ValueError("invalid goal history")
+                goals = checked_goal_history(json.loads(row["goal_history_json"]))
+                if not goals:
+                    goals = legacy_goal_history(raw)
                 if len(row["frontier_json"].encode("utf-8")) > MAX_FRONTIER_BYTES:
                     raise ValueError("invalid frontier")
                 frontier = json.loads(row["frontier_json"])
@@ -351,6 +366,8 @@ class CheckpointStore:
                     # never turn untrusted SQLite fields into tool invocations.
                     pending = _project_records([{"role": "assistant", "content": "", "tool_calls": pending}], secrets)[0]["tool_calls"]
                     frontier["pending_calls"] = pending
+            except GoalHistoryError:
+                raise
             except (ValueError, TypeError, RecursionError):
                 raise CheckpointError() from None
             recovered = row["status"] == "running" and row["owner"] != self.owner
@@ -365,7 +382,7 @@ class CheckpointStore:
                            (json.dumps(history, ensure_ascii=False), status, _now(), conversation_id))
                 db.execute("UPDATE agent_task_checkpoints SET status='interrupted',goal_verified=0,updated_at=? WHERE task_id=? AND status='running'",
                            (_now(), row["task_id"]))
-            return {"history": history, "status": status, "scope_matches": True,
+            return {"history": history, "goal_history": goals, "status": status, "scope_matches": True,
                     "task_id": row["task_id"], "last_barrier": row["last_barrier"],
                     # Legacy "completed" describes control flow alone. Keep
                     # the explicit evidence bit, and never revive it for an
@@ -375,7 +392,7 @@ class CheckpointStore:
                     "updated_at": row["updated_at"], "recovered_running": recovered,
                     "pending_tool_count": len(pending), "history_omitted": bool(frontier.get("history_omitted"))}
 
-    def begin(self, conversation_id, scope_hash, task_id, history, *, secrets=()):
+    def begin(self, conversation_id, scope_hash, task_id, history, *, secrets=(), goal_history=None):
         self._identity(conversation_id, scope_hash, task_id)
         now = _now()
         with self._connect() as db:
@@ -384,18 +401,22 @@ class CheckpointStore:
             safe_history = sanitized_history(history, secrets, store=observations)
             encoded = json.dumps(safe_history, ensure_ascii=False)
             frontier = json.dumps(durable_frontier(history, safe_history, secrets), ensure_ascii=False)
+            goals = checked_goal_history(legacy_goal_history(_project_records(history, secrets))
+                                         if goal_history is None else goal_history)
+            goal_json = json.dumps([_IMAGE.sub("[Image payload not retained.]", redact_text(item, secrets, "[redacted]"))
+                                    for item in goals], ensure_ascii=False)
             previous = db.execute("SELECT scope_hash,task_id,status FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if previous is not None and previous["scope_hash"] != scope_hash:
                 db.execute("DELETE FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,))
             elif previous is not None and previous["status"] == "running":
                 db.execute("UPDATE agent_task_checkpoints SET status='interrupted',goal_verified=0,updated_at=? WHERE task_id=?",
                            (now, previous["task_id"]))
-            db.execute("""INSERT INTO agent_checkpoints(conversation_id,scope_hash,history_json,task_id,status,owner,last_barrier,goal_verified,frontier_json,updated_at)
-                VALUES(?,?,?,?,?,?,0,0,?,?) ON CONFLICT(conversation_id) DO UPDATE SET
+            db.execute("""INSERT INTO agent_checkpoints(conversation_id,scope_hash,history_json,task_id,status,owner,last_barrier,goal_verified,frontier_json,goal_history_json,updated_at)
+                VALUES(?,?,?,?,?,?,0,0,?,?,?) ON CONFLICT(conversation_id) DO UPDATE SET
                 scope_hash=excluded.scope_hash,history_json=excluded.history_json,task_id=excluded.task_id,
                 status=excluded.status,owner=excluded.owner,last_barrier=0,goal_verified=0,
-                frontier_json=excluded.frontier_json,updated_at=excluded.updated_at""",
-                       (conversation_id, scope_hash, encoded, task_id, "running", self.owner, frontier, now))
+                frontier_json=excluded.frontier_json,goal_history_json=excluded.goal_history_json,updated_at=excluded.updated_at""",
+                       (conversation_id, scope_hash, encoded, task_id, "running", self.owner, frontier, goal_json, now))
             db.execute("INSERT INTO agent_task_checkpoints(task_id,conversation_id,status,started_at,updated_at) VALUES(?,?,?,?,?)",
                        (task_id, conversation_id, "running", now, now))
             # Keep bounded metadata; full messages remain the separate chat DB.
@@ -403,7 +424,7 @@ class CheckpointStore:
                        (conversation_id, conversation_id))
 
     def save(self, conversation_id, scope_hash, task_id, history, *, status="running", barrier=None,
-             goal_verified=False, secrets=()):
+             goal_verified=False, secrets=(), goal_history=None):
         self._identity(conversation_id, scope_hash, task_id)
         if status not in STATUSES or type(goal_verified) is not bool:
             raise ValueError("invalid checkpoint status")
@@ -420,6 +441,9 @@ class CheckpointStore:
         if len(encoded.encode("utf-8")) > MAX_HISTORY_BYTES + 4096:
             raise ValueError("history too large")
         now = _now()
+        goal_json = None if goal_history is None else json.dumps(
+            [_IMAGE.sub("[Image payload not retained.]", redact_text(item, secrets, "[redacted]"))
+             for item in checked_goal_history(goal_history)], ensure_ascii=False)
         with self._connect() as db:
             row = db.execute("SELECT task_id,scope_hash,last_barrier,owner FROM agent_checkpoints WHERE conversation_id=?", (conversation_id,)).fetchone()
             if row is None or row["task_id"] != task_id or row["scope_hash"] != scope_hash or row["owner"] != self.owner:
@@ -427,8 +451,8 @@ class CheckpointStore:
             if barrier is not None and barrier <= row["last_barrier"]:
                 raise ValueError("non-monotonic barrier")
             sequence = row["last_barrier"] if barrier is None else barrier
-            db.execute("UPDATE agent_checkpoints SET history_json=?,frontier_json=?,status=?,last_barrier=?,goal_verified=?,updated_at=? WHERE conversation_id=?",
-                       (encoded, frontier, status, sequence, int(goal_verified), now, conversation_id))
+            db.execute("UPDATE agent_checkpoints SET history_json=?,frontier_json=?,goal_history_json=COALESCE(?,goal_history_json),status=?,last_barrier=?,goal_verified=?,updated_at=? WHERE conversation_id=?",
+                       (encoded, frontier, goal_json, status, sequence, int(goal_verified), now, conversation_id))
             db.execute("UPDATE agent_task_checkpoints SET status=?,last_barrier=?,goal_verified=?,updated_at=? WHERE task_id=?",
                        (status, sequence, int(goal_verified), now, task_id))
 

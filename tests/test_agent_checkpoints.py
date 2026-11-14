@@ -15,6 +15,7 @@ from uuid import uuid4
 from desktop_pet.agents import AgentError, AgentRequest, AgentService, AgentSettings
 from desktop_pet.agents import service as runtime
 from desktop_pet.agents.checkpoints import CheckpointError, CheckpointStore, SCHEMA_VERSION, sanitized_history, scope_fingerprint
+from agent_backend.nanobot.goal_history import GoalHistoryError
 
 
 KEY = "checkpoint-test-synthetic-secret"
@@ -62,6 +63,37 @@ class CheckpointStoreTests(unittest.TestCase):
         self.assertFalse(self.path.parent.exists())
         spawn.assert_not_called()
         start.assert_not_called()
+
+    def test_exact_goal_history_survives_native_replay_compaction_and_restart(self):
+        original = "请保留完整要求。" * 1400
+        self.assertLessEqual(len(original), 12000)
+        goals = [original, "继续", "只改格式，保留内容"]
+        replay = [{"role": "user", "content": "只改格式，保留内容"},
+                  {"role": "assistant", "content": "Earlier tool details compacted."}]
+        self.store.begin(self.cid, self.scope, self.task, replay, goal_history=goals)
+        self.store.save(self.cid, self.scope, self.task, replay, barrier=1)
+        loaded = CheckpointStore(self.path).load(self.cid, self.scope)
+        self.assertEqual(loaded["goal_history"], goals)
+        self.assertEqual(loaded["history"][0]["content"], "只改格式，保留内容")
+        self.assertEqual(self.store.load(self.cid, "b" * 64)["goal_history"], [])
+
+    def test_goal_history_is_redacted_and_rejects_invalid_durable_data(self):
+        self.store.begin(self.cid, self.scope, self.task, [{"role": "user", "content": "fixture"}],
+                         goal_history=["Use " + KEY], secrets=(KEY,))
+        self.assertNotIn(KEY.encode(), self.path.read_bytes())
+        self.assertEqual(self.store.load(self.cid, self.scope)["goal_history"], ["Use [redacted]"])
+        with database(self.path) as db:
+            db.execute("UPDATE agent_checkpoints SET goal_history_json=?", ('[123]',))
+        with self.assertRaises(GoalHistoryError):
+            self.store.load(self.cid, self.scope)
+
+    def test_legacy_feedback_requires_explicit_host_goals_before_new_checkpoint(self):
+        records = [{"role": "user", "content": "Create report.txt"},
+                   {"role": "user", "content": "HOST OUTCOME CHECK: retry the task"}]
+        with self.assertRaises(GoalHistoryError):
+            self.store.begin(self.cid, self.scope, self.task, records)
+        self.store.begin(self.cid, self.scope, self.task, records, goal_history=["Create report.txt"])
+        self.assertEqual(self.store.load(self.cid, self.scope)["goal_history"], ["Create report.txt"])
 
     def test_completed_history_and_task_metadata_survive_new_store(self):
         records = transcript()
@@ -123,7 +155,8 @@ class CheckpointStoreTests(unittest.TestCase):
         records[0]["content"] += " data:image/png;base64,QUJDREVGRw=="
         records.append({"role": "user", "content": [{"type": "text", "text": GUI_KEY},
                         {"type": "image_url", "image_url": {"url": "data:image/png;base64,UElYRUxT"}}]})
-        self.store.begin(self.cid, self.scope, self.task, records, secrets=(KEY, GUI_KEY))
+        self.store.begin(self.cid, self.scope, self.task, records, secrets=(KEY, GUI_KEY),
+                         goal_history=[records[0]["content"], GUI_KEY])
         data = self.path.read_bytes()
         for private in (KEY, GUI_KEY, "HIDDEN_REASONING_PRIVATE", "QUJDREVGRw==", "UElYRUxT"):
             self.assertNotIn(private.encode(), data)
@@ -174,7 +207,8 @@ class CheckpointStoreTests(unittest.TestCase):
         messages = []
         for number in range(20):
             messages += [{"role": "user", "content": f"turn {number}"}, {"role": "assistant", "content": "x" * 24000}]
-        self.store.begin(self.cid, self.scope, self.task, messages)
+        self.store.begin(self.cid, self.scope, self.task, messages,
+                         goal_history=[f"turn {number}" for number in range(20)])
         loaded = self.store.load(self.cid, self.scope)["history"]
         self.assertLessEqual(len(json.dumps(loaded).encode()), 260096)
         self.assertLessEqual(sum(r["role"] == "user" for r in loaded), 12)

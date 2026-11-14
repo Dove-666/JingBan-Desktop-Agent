@@ -82,7 +82,7 @@ private val AGENT_ACTIVITY_MESSAGES = setOf(
     "操作界面控件", "更新任务计划", "核对控件状态", "核算表格数据", "检查任务完成条件", "精确计算", "执行数据代码",
     "读取界面控件", "验收输出结果", "确认操作结果",
     "切换网页标签", "打开网页", "操作网页控件", "查看网页标签", "读取网页结构",
-    "分工阅读资料", "查看文档页面", "计算项目产物",
+    "分工阅读资料", "查看文档页面", "计算项目产物", "检查工具请求",
 )
 internal fun validAgentActivity(value: String?): String? = value?.takeIf { it in AGENT_ACTIVITY_MESSAGES }
 

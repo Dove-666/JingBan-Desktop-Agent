@@ -296,6 +296,41 @@ class MemoryServiceTests(unittest.TestCase):
             self.assertIn("关闭", str(outcome["error"]))
             self.assertEqual([], started)
 
+    def test_legacy_inventory_shares_the_original_operation_deadline(self):
+        self.configure(SimpleNamespace(base_url="http://127.0.0.1:1/v1"))
+        self.service.save_settings(replace(self.service.load_settings(), timeout_seconds=1.0))
+        vectors = self.service.data_dir / "qdrant"
+        vectors.mkdir()
+        (vectors / "synthetic-inventory-trigger").touch()
+        helpers = []
+        class SlowEmptyInventory(SimulatedMemoryHelper):
+            def communicate(self, input=None, timeout=None):
+                if input is not None:
+                    self.payload = json.loads(input)
+                    self.timeout = timeout
+                    time.sleep(.30)
+                    self.returncode = 0
+                return b'{"ok":true,"result":{"empty":true}}', b""
+        first, second = SlowEmptyInventory(), SimulatedMemoryHelper(expire=True)
+        original_start = subprocess.Popen
+        def launch(command, *args, **kwargs):
+            if isinstance(command, list) and "desktop_pet.memory.worker" in command:
+                helper = first if not helpers else second
+                helpers.append(helper)
+                return helper
+            return original_start(command, *args, **kwargs)
+        with patch("desktop_pet.memory.service.subprocess.Popen", side_effect=launch):
+            before = time.monotonic()
+            with self.queued_call(lambda: self.service.search("query")) as (_worker, outcome):
+                time.sleep(.55)
+            elapsed = time.monotonic() - before
+        self.assertIsInstance(outcome.get("error"), MemoryUnavailable)
+        self.assertLess(first.timeout, .65)
+        self.assertLess(elapsed, 1.4)
+        self.assertEqual(first.payload["operation"], "inspect_empty")
+        if second.payload is not None:
+            self.assertLess(second.timeout, .3)
+
     def test_disabled_by_default_and_identity_persists(self):
         first = self.service.load_settings()
         self.assertFalse(first.enabled)
@@ -502,7 +537,9 @@ class MemoryServiceTests(unittest.TestCase):
             for message in messages:
                 self.assertIn(message["content"], serialized)
             self.assertEqual([], self.service.list_memories())
-            self.assertFalse((self.path / "memory" / "embedding_identity.json").exists())
+            # An admitted mutating operation binds its space before invoking
+            # the SDK, even when the helper ultimately reports a budget error.
+            self.assertEqual(self.service._read_identity(), self.service._embedding_identity(self.service.load_settings()))
 
     @unittest.skipUnless(importlib.util.find_spec("mem0"), "optional mem0ai SDK not installed")
     def test_output_cap_reaches_real_sdk_http_for_ordinary_and_reasoning_models(self):

@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$compilerCache = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\artifacts\windows_release_20261107\tooling'))
+$compilerCache = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\artifacts\windows-build\tooling'))
 New-Item -ItemType Directory -Path $compilerCache -Force | Out-Null
 $source = 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_4/innosetup-6.7.4.exe'
 $download = Join-Path $compilerCache 'innosetup-6.7.4.exe'

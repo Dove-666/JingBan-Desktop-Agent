@@ -57,6 +57,26 @@ class LazyMemoryService:
     def __getattr__(self, name):
         return lambda *args, **kwargs: getattr(self._get(), name)(*args, **kwargs)
 
+    def cancel_request(self, cancelled):
+        # Stop may race with first-time lazy initialization. Mark the request
+        # immediately, without waiting for the factory lock on the GUI thread.
+        cancelled.set()
+        instance = self._instance
+        if instance is not None:
+            cancel = getattr(instance, "cancel_request", None)
+            if callable(cancel):
+                cancel(cancelled)
+
+    def search_for_request(self, query, limit=4, *, cancelled):
+        instance = self._get()
+        if cancelled.is_set():
+            from .memory.service import MemoryUnavailable
+            raise MemoryUnavailable("本次记忆检索已取消。")
+        search = getattr(instance, "search_for_request", None)
+        if callable(search):
+            return search(query, limit=limit, cancelled=cancelled)
+        return instance.search(query, limit=limit)
+
     def load_state_snapshot(self):
         instance = self._get()
         snapshot = getattr(instance, "load_state_snapshot", None)
@@ -242,6 +262,12 @@ class MemoryController(QObject):
     @property
     def automatic_enabled(self):
         return bool(self.settings.enabled and self.settings.automatic and not self.automatic_paused)
+
+    @property
+    def can_reset_memories(self):
+        # A failed first write may bind a model without producing a visible
+        # record. Keep a recovery path for that empty, protected store.
+        return bool(self.memory_total or self._configuration_status.get("vector_space_bound") is True)
 
     @property
     def automatic_requested(self):
@@ -547,6 +573,8 @@ class MemoryController(QObject):
             self.memory_has_more = False
             self.memory_preferred_id = None
             self.memory_list_stale = False
+            self._configuration_status = dict(self._configuration_status,
+                vector_space_bound=bool(isinstance(result, dict) and result.get("remaining_other_users")))
             self.memories_changed.emit()
             status = "当前用户的长期记忆已实际清空；聊天历史保留。"
             if isinstance(result, dict) and result.get("remaining_other_users"):

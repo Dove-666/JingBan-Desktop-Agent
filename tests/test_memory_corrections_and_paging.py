@@ -43,6 +43,9 @@ class MemoryCorrectionAndPagingTests(unittest.TestCase):
 
     def seed(self, records):
         from qdrant_client import QdrantClient, models
+        # This fixture owns its vectors and knows their configured model.
+        # Unmarked legacy stores have a separate preservation regression.
+        self.service._write_identity(self.service._embedding_identity(self.service.load_settings()))
         with closing(QdrantClient(path=str(self.service.data_dir / "qdrant"))) as client:
             client.create_collection("aura_memories", vectors_config=models.VectorParams(size=8, distance=models.Distance.COSINE))
             client.upsert("aura_memories", points=[models.PointStruct(id=identifier, vector=[1.0] + [0.0] * 7,

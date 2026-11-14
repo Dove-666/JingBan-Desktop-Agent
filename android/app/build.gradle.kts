@@ -16,8 +16,8 @@ android {
         applicationId = "com.aura.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = 26
-        versionName = "1.19.0"
+        versionCode = 27
+        versionName = "1.19.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }

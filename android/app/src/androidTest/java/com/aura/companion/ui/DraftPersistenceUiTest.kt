@@ -15,6 +15,9 @@ import android.view.inputmethod.InputMethodManager
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
 import org.junit.After
@@ -94,9 +97,12 @@ class DraftPersistenceUiTest {
         launch(PrivateDraftStore(file), actions)
         compose.onNodeWithContentDescription("消息内容").performTextInput("first owned draft")
         compose.onNodeWithContentDescription("发送消息").performClick()
+        compose.waitUntil(5000) { callback != null }
         compose.runOnIdle { requireNotNull(callback).invoke(false) }
         assertTrue(draft() == "first owned draft")
+        callback = null
         compose.onNodeWithContentDescription("发送消息").performClick()
+        compose.waitUntil(5000) { callback != null }
         compose.onNodeWithContentDescription("消息内容").performTextReplacement("new owned draft")
         compose.runOnIdle { requireNotNull(callback).invoke(true) }
         assertTrue(draft() == "new owned draft")
@@ -109,6 +115,7 @@ class DraftPersistenceUiTest {
         launch(PrivateDraftStore(file), actions)
         compose.onNodeWithContentDescription("消息内容").performTextInput("owned unacknowledged draft")
         compose.onNodeWithContentDescription("发送消息").performClick()
+        compose.waitUntil(5000) { calls == 1 }
         compose.runOnIdle { assertEquals(1, calls) }
         assertTrue(draft() == "owned unacknowledged draft")
     }
@@ -123,6 +130,7 @@ class DraftPersistenceUiTest {
         val complete = "owned unsaved material".repeat(450)
         compose.onNodeWithContentDescription("消息内容").performTextReplacement(complete)
         assertTrue(draft() == complete)
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("draft-storage-error").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("draft-storage-error").assertIsDisplayed()
         compose.onNodeWithContentDescription("发送消息").assertIsNotEnabled()
     }
@@ -131,21 +139,31 @@ class DraftPersistenceUiTest {
         val file = File(context.filesDir, "qa/draft-timing-${UUID.randomUUID()}/drafts.json")
         val store = PrivateDraftStore(file)
         val profiles = org.json.JSONArray()
+        val owners = ViewModelStore()
+        lateinit var drafts: ConversationDrafts
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            val drafts = ConversationDrafts(store)
+            val factory = object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = ConversationDrafts(store) as T
+            }
+            drafts = ViewModelProvider(owners, factory)[ConversationDrafts::class.java]
             drafts.edit("qa-other", "other".repeat(100))
+        }
+        try {
             for ((label, complete) in listOf("normal_1000" to "资料".repeat(500), "oversized_10500" to "合成资料\n".repeat(2100))) {
-                val elapsed = mutableListOf<Long>()
+              val elapsed = mutableListOf<Long>()
+              InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 repeat(12) { index ->
                     val start = System.nanoTime()
                     drafts.edit("qa-large-a", complete + index)
                     elapsed += (System.nanoTime() - start) / 1_000_000
                 }
-                assertTrue(PrivateDraftStore(file).load().entries["qa-large-a"]?.text == complete + "11")
-                profiles.put(JSONObject().put("profile", label).put("writes", elapsed.size)
+              }
+              compose.waitUntil(5000) { store.load().entries["qa-large-a"]?.text == complete + "11" }
+              profiles.put(JSONObject().put("profile", label).put("ui_edits", elapsed.size)
                     .put("draft_characters", complete.length + 2).put("average_ms", elapsed.average()).put("maximum_ms", elapsed.maxOrNull()))
             }
-        }
+        } finally { InstrumentationRegistry.getInstrumentation().runOnMainSync { owners.clear() } }
         val value = JSONObject().put("profiles", profiles).put("main_thread", true).put("other_cids", 1).put("real_api_calls", 0)
         File(context.filesDir, "qa/draft-write-timing.json").writeText(value.toString())
     }
@@ -163,7 +181,7 @@ class DraftPersistenceUiTest {
         compose.onNodeWithContentDescription("消息内容").performTextReplacement("normal owned draft")
         compose.onNodeWithContentDescription("发送消息").assertIsEnabled()
         assertTrue(draft() == "normal owned draft")
-        assertTrue(PrivateDraftStore(file).load().entries["qa-persist-a"]?.text == "normal owned draft")
+        compose.waitUntil(5000) { PrivateDraftStore(file).load().entries["qa-persist-a"]?.text == "normal owned draft" }
         compose.waitForIdle()
         val screenshot = requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
         try { File(context.filesDir, "qa/draft-ui-responsive.png").outputStream().use { screenshot.compress(Bitmap.CompressFormat.PNG, 100, it) } }
@@ -190,6 +208,11 @@ class DraftPersistenceUiTest {
         compose.onNodeWithContentDescription("消息内容").performTextInput("owned-B-unsent")
         compose.runOnIdle { state.value = state.value.copy(selectedConversationId = null) }
         compose.onNodeWithContentDescription("消息内容").performTextInput("owned-null-unsent")
+        compose.waitUntil(5000) {
+            val saved = PrivateDraftStore(file).load().entries
+            saved["qa-persist-a"]?.text == "owned-A-".repeat(1100) &&
+                saved["qa-persist-b"]?.text == "owned-B-unsent" && saved[null]?.text == "owned-null-unsent"
+        }
         File(file.parentFile, "seed.json").writeText(JSONObject().put("process_id", Process.myPid())
             .put("run", run).put("saved_to_private_disk", file.isFile).put("real_api_calls", 0).toString())
     }
@@ -202,6 +225,7 @@ class DraftPersistenceUiTest {
             override fun selectConversation(id: String) { state.value = state.value.copy(selectedConversationId = id) }
         }
         launch(PrivateDraftStore(file), actions)
+        compose.waitUntil(5000) { draft() == "owned-A-".repeat(1100) }
         assertTrue(draft() == "owned-A-".repeat(1100))
         compose.onNodeWithContentDescription("打开对话历史").performClick()
         compose.onNodeWithText("QA draft B").performClick()

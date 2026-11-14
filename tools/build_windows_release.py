@@ -19,7 +19,8 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-WORK = ROOT / "artifacts/windows_release_20261107"
+WORK = ROOT / "artifacts/windows-build"
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT))
 
 
@@ -270,6 +271,17 @@ def refresh_workers(payload):
     (payload/"PACKAGE-MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def stage_current_worker_sources():
+    """Keep reusable runtime dependencies, but always package the current source."""
+    from tools.packaging.worker_runtime import _copy_source
+    target = WORK / "worker_distribution"
+    if not (target / "runtime/manifest.json").is_file():
+        raise FileNotFoundError("Prepare the standalone worker runtime before building")
+    _copy_source(ROOT / "agent_backend", target / "agent_backend", {".py", ".mjs", ".js", ".ps1", ".json", ".txt"})
+    _copy_source(ROOT / "desktop_pet", target / "desktop_pet", {".py"})
+    copy(ROOT / "shared/reasoning/profiles.json", target / "shared/reasoning/profiles.json")
+
+
 def build_installer(payload, version):
     compiler = WORK/"tooling/inno/ISCC.exe"
     language = WORK/"tooling/ChineseSimplified.isl"
@@ -338,7 +350,9 @@ def publish(payload, version):
 
 
 def main():
+    global WORK
     parser = argparse.ArgumentParser()
+    parser.add_argument("--work-directory", type=Path, default=WORK)
     parser.add_argument("--skip-freeze", action="store_true")
     parser.add_argument("--assemble-only", action="store_true")
     parser.add_argument("--publish-only", action="store_true")
@@ -346,11 +360,15 @@ def main():
     parser.add_argument("--refresh-workers", action="store_true")
     parser.add_argument("--portable-only", action="store_true")
     args = parser.parse_args()
+    WORK = args.work_directory.resolve()
+    if WORK == ROOT or WORK == Path(WORK.anchor) or (WORK / "settings.ini").exists():
+        raise ValueError("Use a separate build directory")
     version = app_version()
     WORK.mkdir(parents=True, exist_ok=True)
     if args.publish_only or args.installer_only or args.refresh_workers or args.portable_only:
         payload = Path(json.loads((WORK/"candidate.json").read_text(encoding="utf-8"))["payload"])
     else:
+        stage_current_worker_sources()
         if not args.skip_freeze:
             environment = os.environ.copy()
             windows = Path(environment.get("SystemRoot", r"C:\Windows"))

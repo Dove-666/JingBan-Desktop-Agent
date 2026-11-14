@@ -16,6 +16,12 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SIMPLE_PACKAGE_ARCHITECTURES = {
+    "鲸伴.apk": "arm64-v8a",
+    "鲸伴通用.apk": "universal",
+    "鲸伴旧手机.apk": "armeabi-v7a",
+    "鲸伴-x86_64.apk": "x86_64",
+}
 
 
 def run(command: list[str], environment: dict[str, str]) -> str:
@@ -65,13 +71,37 @@ def _release_packages(directory: Path, version: str, product_name: str | None = 
     return matches[0]
 
 
+def _simple_release_packages(directory: Path, product_name: str | None = None):
+    """The canonical delivery directory has exactly four deliberately named APKs."""
+    if product_name not in (None, "鲸伴"):
+        raise RuntimeError("Simplified delivery filenames require product name 鲸伴")
+    packages = {path.name: path for path in directory.glob("*.apk") if path.is_file()}
+    if set(packages) != set(SIMPLE_PACKAGE_ARCHITECTURES):
+        raise RuntimeError("Expected exactly 鲸伴.apk, 鲸伴通用.apk, 鲸伴旧手机.apk and 鲸伴-x86_64.apk")
+    return "鲸伴", [packages[name] for name in SIMPLE_PACKAGE_ARCHITECTURES]
+
+
+def _expected_package_abis(package: Path, version: str, product: str, simplified: bool = False) -> list[str]:
+    architectures = SIMPLE_PACKAGE_ARCHITECTURES if simplified else {
+        f"{product}-{version}-{abi}.apk": abi for abi in ("arm64-v8a", "armeabi-v7a", "x86_64", "universal")
+    }
+    architecture = architectures.get(package.name)
+    if architecture is None:
+        raise RuntimeError(f"Unrecognized release APK filename: {package.name}")
+    return ["arm64-v8a", "armeabi-v7a", "x86_64"] if architecture == "universal" else [architecture]
+
+
 def _verify(args: argparse.Namespace) -> dict:
     build_tools = args.sdk / "build-tools/35.0.0"
     environment = dict(os.environ, JAVA_HOME=str(args.jdk))
     report_directory = ROOT / "artifacts/android/qa/apks"
     report_directory.mkdir(parents=True, exist_ok=True)
     reports = []
-    product_name, packages = _release_packages(ROOT / "android/deliverables", args.version, args.product_name)
+    delivery_directory = getattr(args, "delivery_directory", None)
+    if delivery_directory is None:
+        product_name, packages = _release_packages(ROOT / "android/deliverables", args.version, args.product_name)
+    else:
+        product_name, packages = _simple_release_packages(delivery_directory.resolve(), args.product_name)
     for package in packages:
         signature = run([str(args.jdk / "bin/java.exe"), "-jar", str(build_tools / "lib/apksigner.jar"),
                          "verify", "--verbose", "--print-certs", str(package)], environment)
@@ -80,6 +110,9 @@ def _verify(args: argparse.Namespace) -> dict:
         if "Android Debug" in signature:
             raise RuntimeError("A debug certificate cannot be delivered as a release")
         previous_signature = report_directory / "AURA-1.0.0-arm64-v8a-signature.txt"
+        retained_signature = ROOT / "artifacts/release-validation/android/original-signature.txt"
+        if retained_signature.is_file():
+            previous_signature = retained_signature
         same_signer = None
         if args.version != "1.0.0":
             if not previous_signature.is_file():
@@ -115,8 +148,7 @@ def _verify(args: argparse.Namespace) -> dict:
                 if name.startswith("lib/") and name.endswith(".so"):
                     native[name] = elf_load_segments(archive.read(name))
             abis = sorted({name.split("/")[1] for name in native})
-            expected_abis = ["arm64-v8a", "armeabi-v7a", "x86_64"] if "universal" in package.name else [
-                package.stem.removeprefix(f"{product_name}-{args.version}-")]
+            expected_abis = _expected_package_abis(package, args.version, product_name, delivery_directory is not None)
             if abis != expected_abis:
                 raise RuntimeError(f"Unexpected packaged ABIs in {package.name}: {abis}")
             for abi in abis:
@@ -132,7 +164,8 @@ def _verify(args: argparse.Namespace) -> dict:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 checksum.update(chunk)
             digest = checksum.hexdigest()
-        reports.append({"file": str(package.relative_to(ROOT)), "bytes": package.stat().st_size,
+        reported_path = package.relative_to(ROOT) if package.is_relative_to(ROOT) else package
+        reports.append({"file": str(reported_path), "bytes": package.stat().st_size,
                         "sha256": digest,
                         "same_signer_as_1_0_0": same_signer,
                         "abis": abis, "release_signature_verified": True, "zip_alignment_16k": True,
@@ -196,6 +229,8 @@ def main() -> None:
     parser.add_argument("--version-code", type=int)
     parser.add_argument("--product-name", choices=("鲸伴", "AURA"),
                         help="Product filename prefix; omitted selects the unique current or historical name")
+    parser.add_argument("--delivery-directory", type=Path,
+                        help="Verify the four simplified Whale APK filenames in this directory; omitted keeps historical lookup")
     args = parser.parse_args()
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
         parser.error("Expected a numeric three-part release version")
@@ -213,6 +248,7 @@ def main() -> None:
                 raise RuntimeError("Cannot start APK verification because the previous report could not be preserved") from error
         attempt = {"status": "running", "run_id": run_id, "version": args.version,
                    "requested_version_code": args.version_code,
+                   "delivery_directory": str(args.delivery_directory.resolve()) if args.delivery_directory else None,
                    "previous_report": previous.relative_to(ROOT).as_posix() if previous else None,
                    "packages": [], "unit_tests": [], "unit_tests_total": 0}
         try:

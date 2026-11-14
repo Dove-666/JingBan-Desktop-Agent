@@ -117,6 +117,29 @@ class PerceptionDeliveryBudgetTests(unittest.TestCase):
         self.assertEqual(len(self.replies), 1)
         self.assertEqual(len(self.controller.agent._speeches), 0)
 
+    def test_window_change_during_save_retains_archive_without_late_bubble(self):
+        for manual in (False, True):
+            with self.subTest(manual=manual):
+                reference = self.schedule(manual=manual)
+                self.scene.change(hwnd=self.scene.info.hwnd + 1, title="Another synthetic window")
+                self.chat.screen_comment_finished.emit(reference, "")
+                self.assertEqual(self.replies, [])
+                self.assertEqual(len(self.controller.agent._speeches), 0)
+                self.assertEqual(self.controller.history[-1]["原因"], "saved_only")
+
+    def test_invalid_analysis_does_not_clear_error_or_accept_frame(self):
+        observation = self.scene.observer().observe(self.controller.settings)
+        self.controller._record_analysis_error("Synthetic previous error")
+        self.controller._request_id += 1
+        self.controller._pending = (observation, "synthetic-app", "frame-1", False,
+            self.controller._chat_revision, self.chat.current_conversation_id, "2026-11-08T00:00:00+00:00")
+        self.controller._finished(self.controller._request_id, ContextEvent(valid=False), "")
+        self.assertTrue(self.controller.runtime_snapshot()["analysisError"])
+        self.assertIsNone(self.controller._last_successful_analysis_at)
+        self.assertTrue(self.controller.detector.evaluate(observation.image, "synthetic-app").changed)
+        self.assertEqual(self.replies, [])
+        self.assertEqual(self.chat.references, [])
+
     def test_pause_cancels_late_feedback_and_never_changes_saved_consent(self):
         reference = self.schedule()
         self.controller.set_paused(True)

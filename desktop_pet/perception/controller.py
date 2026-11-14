@@ -524,7 +524,7 @@ class PerceptionController(QObject):
             if current_code == "own_window" and not requested_comment:
                 # Keep the successful analysis as a handled frame without
                 # playing a stale action while the user is inspecting AURA.
-                if not error and isinstance(event, ContextEvent):
+                if not error and isinstance(event, ContextEvent) and event.valid:
                     self.detector.accept(observation.image, app_id)
                     self.deduplicator.remember("frame:" + fingerprint, self._clock())
                 reason = "当前前台为鲸伴，跳过观察；晚到分析未触发动作。"
@@ -541,7 +541,7 @@ class PerceptionController(QObject):
             self._record_analysis_error(error)
             self._set_status("屏幕分析未完成：" + error)
             return
-        if not isinstance(event, ContextEvent):
+        if not isinstance(event, ContextEvent) or not event.valid:
             message = "未得到有效的结构化情境，请检查模型是否支持图片与结构化输出后重试。"
             self._record_analysis_error(message)
             self._set_status(message)
@@ -591,7 +591,7 @@ class PerceptionController(QObject):
                 if reference:
                     self._saving_comment = reference["message_id"]
                     self._saving_comment_revision = self._chat_revision
-                    self._comment_commit = (decision, event.event_key, requested_comment, row)
+                    self._comment_commit = (decision, event.event_key, requested_comment, row, observation)
                     self.busy = True
                     saving = True
                     row["动作"] = "saving"
@@ -652,6 +652,13 @@ class PerceptionController(QObject):
         commit, self._comment_commit = self._comment_commit, None
         self.busy = False
         row = commit[3] if commit else None
+        # Disk persistence is asynchronous too. The original window/device
+        # must still be current when delivery happens, not merely when the
+        # model finished. Manual preview comments retain their own-window rule.
+        context_current = bool(commit and (
+            self._manual_context_allowed(commit[4]) if commit[2]
+            else self.observer.is_current(commit[4], self.settings)
+        ))
         if error:
             if row is not None:
                 row.update({"动作": "quiet", "原因": "save_failed", "状态": "保存失败，未消耗发言次数"})
@@ -659,7 +666,7 @@ class PerceptionController(QObject):
         elif (not self.paused and self.settings.enabled and self.settings.allow_remote and not self.chat.busy
               and self._saving_comment_revision == self._chat_revision
               and self.pet_controller.pet.animation.state != AnimationState.DRAGGING
-              and self.observer.current_blocked_code(self.settings) != "privacy"):
+              and context_current):
             self.pet_controller.respond(reference["content"], reference["emotion"], conversation_link=reference)
             if commit and not commit[2]:
                 self.agent.record(commit[0], self._clock())

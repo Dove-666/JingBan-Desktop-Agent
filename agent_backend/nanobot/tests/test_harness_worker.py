@@ -37,9 +37,28 @@ def last_observation(body, name):
     return json.loads(matching[-1]["content"])
 
 
+def repeat_after_outcome_feedback(owner, body):
+    """Opt-in negative fixtures may repeat their terminal claim after host checks.
+
+    Do not invent a repair or accept arbitrary extra planning/tool iterations.
+    Successful and positively scripted recovery cases remain exact scripts.
+    """
+    latest = body.get("messages", [{}])[-1]
+    if (not owner.allow_outcome_feedback or owner.repair_calls >= owner.outcome_feedback_limit
+            or not isinstance(owner.last_answer, str)
+            or latest.get("role") != "user"
+            or not str(latest.get("content", "")).startswith("HOST OUTCOME CHECK:")):
+        raise AssertionError("Model made an unexpected additional iteration")
+    owner.repair_calls += 1
+    return owner.last_answer
+
+
 class ScriptedModel:
-    def __init__(self, steps):
+    def __init__(self, steps, *, allow_outcome_feedback=False):
         self.steps = list(steps)
+        self.allow_outcome_feedback = allow_outcome_feedback
+        self.outcome_feedback_limit = 2
+        self.repair_calls, self.last_answer = 0, None
         self.calls, self.errors = [], []
         owner = self
 
@@ -58,8 +77,9 @@ class ScriptedModel:
                 owner.calls.append(body)
                 try:
                     if index >= len(owner.steps):
-                        raise AssertionError("Model made an unexpected additional iteration")
-                    step = owner.steps[index]
+                        step = repeat_after_outcome_feedback(owner, body)
+                    else:
+                        step = owner.steps[index]
                     step = step(body) if callable(step) else step
                     call = None
                     if isinstance(step, tuple):
@@ -67,6 +87,8 @@ class ScriptedModel:
                         call = {"id": "harness-call-" + str(index), "type": "function", "function": {
                             "name": name, "arguments": json.dumps(arguments, ensure_ascii=False)}}
                     message = {"role": "assistant", "content": None if call else str(step)}
+                    if not call:
+                        owner.last_answer = str(step)
                     if call:
                         message["tool_calls"] = [call]
                 except Exception as exc:
@@ -132,8 +154,8 @@ class HarnessWorkerTests(unittest.TestCase):
         self.assertTrue(target.is_relative_to((REPO / "agent_workspace").resolve()))
         shutil.rmtree(target)
 
-    def start(self, steps, *, checkpoint_required=False, worker_path=None, computer=False, tools=True, image=False, steps_limit=20, task=None):
-        model = ScriptedModel(steps)
+    def start(self, steps, *, checkpoint_required=False, worker_path=None, computer=False, tools=True, image=False, steps_limit=20, task=None, allow_outcome_feedback=False):
+        model = ScriptedModel(steps, allow_outcome_feedback=allow_outcome_feedback)
         self.models.append(model)
         client = Client(worker_path=worker_path)
         self.clients.append(client)

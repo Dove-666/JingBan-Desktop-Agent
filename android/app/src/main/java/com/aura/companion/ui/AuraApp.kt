@@ -36,6 +36,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
@@ -49,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 
 private enum class AppSheet { CONNECTION }
@@ -115,15 +122,26 @@ internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore?
             override fun <T : ViewModel> create(modelClass: Class<T>): T = ConversationDrafts(draftStore) as T
         } }
         val drafts: ConversationDrafts = viewModel(factory = draftFactory)
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner, drafts) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) drafts.requestFlush()
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer); drafts.requestFlush() }
+        }
         BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
         val draftCursor = rememberSaveable(saver = CurrentDraftCursor.saver(drafts)) {
             CurrentDraftCursor(drafts, state.selectedConversationId)
         }
         SideEffect { draftCursor.conversationId = state.selectedConversationId }
         val draft = drafts.read(state.selectedConversationId).text
+        val latestState by rememberUpdatedState(state)
+        var preparingSubmission by remember { mutableStateOf(false) }
         val desktopAssistance = state.desktopAgentMode
         var draftConversation by rememberSaveable { mutableStateOf(state.selectedConversationId) }
         LaunchedEffect(state.selectedConversationId) {
+            drafts.requestFlush()
             val selected = state.selectedConversationId
             if (draftConversation != selected) {
                 if (draftConversation == null && selected != null && drafts.preserveFirstConversation) {
@@ -149,7 +167,7 @@ internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore?
         val attachment = state.pendingAttachment?.takeIf { it.conversationId == state.selectedConversationId }
         val interaction = state.agentInteraction?.takeIf { it.conversationId == state.selectedConversationId }
         val preparingImage = state.preparingImage || attachment?.preparing == true
-        val canSend = drafts.persistenceError == null && draft.length <= 8000 && !preparingImage && !state.directChatBusy && !state.desktopTaskBusy && !state.agentInteractionBusy && if (desktopAssistance)
+        val canSend = drafts.loaded && !preparingSubmission && !drafts.clearingSubmittedDraft && drafts.persistenceError == null && draft.length <= 8000 && !preparingImage && !state.directChatBusy && !state.desktopTaskBusy && !state.agentInteractionBusy && if (desktopAssistance)
             if (state.desktopTaskRunning) state.canSteerDesktop && interaction == null && draft.isNotBlank() && attachment == null
             else state.desktopTaskAvailable && (draft.isNotBlank() || attachment != null)
             else state.directApi.available && (draft.isNotBlank() || attachment != null)
@@ -211,19 +229,27 @@ internal fun AuraApp(state: UiState, actions: UiActions, draftStore: DraftStore?
                             onAttach = ::pickChatImage,
                             onRemoveImage = actions::removePendingImage,
                             onSend = { if (canSend) {
-                                if (desktopAssistance) {
-                                    val origin = state.selectedConversationId
-                                    val submitted = draft
-                                    val ticket = drafts.beginSubmission(origin)
-                                    val submit: (String, (Boolean) -> Unit) -> Unit =
-                                        if (state.desktopTaskRunning) actions::steerDesktopTask else actions::sendDesktopMessage
-                                    submit(submitted.trim()) { accepted ->
-                                        drafts.acknowledge(ticket, accepted)
+                                if (!desktopAssistance) cancelDesktopDraftMigration()
+                                val origin = state.selectedConversationId
+                                val submitted = draft
+                                val ticket = drafts.beginSubmission(origin)
+                                val submit: (String, (Boolean) -> Unit) -> Unit = when {
+                                    !desktopAssistance -> actions::sendPhoneMessage
+                                    state.desktopTaskRunning -> actions::steerDesktopTask
+                                    else -> actions::sendDesktopMessage
+                                }
+                                preparingSubmission = true
+                                scope.launch {
+                                    try {
+                                        if (drafts.flush() && drafts.isCurrent(ticket) &&
+                                            latestState.selectedConversationId == origin &&
+                                            latestState.desktopAgentMode == desktopAssistance &&
+                                            latestState.pendingAttachment?.takeIf { it.conversationId == origin }?.id == attachment?.id) {
+                                            submit(submitted.trim()) { accepted -> drafts.acknowledge(ticket, accepted) }
+                                        } else drafts.acknowledge(ticket, false)
+                                    } finally {
+                                        preparingSubmission = false
                                     }
-                                } else {
-                                    cancelDesktopDraftMigration()
-                                    val ticket = drafts.beginSubmission(state.selectedConversationId)
-                                    actions.sendPhoneMessage(draft.trim()) { accepted -> drafts.acknowledge(ticket, accepted) }
                                 }
                             } })
                       }
@@ -323,24 +349,42 @@ private fun EmptyConversation(modifier: Modifier) {
 }
 
 @Composable
-private fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier, onRetry: (String) -> Unit,
+internal fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier, onRetry: (String) -> Unit,
                                  onOpenImage: (String) -> Unit, phoneAvailable: Boolean,
                                  interaction: UiAgentInteraction? = null, interactionBusy: Boolean = false,
                                  onAnswer: (String, UiAgentAnswer, (Boolean) -> Unit) -> Unit = { _, _, answer -> answer(false) },
                                  artifacts: List<UiAgentArtifact> = emptyList(), artifactDownloading: String? = null,
                                  onSaveArtifact: (String) -> Unit = {}) {
     val listState = rememberLazyListState()
-    var initiallyPositioned by remember { mutableStateOf(false) }
-    LaunchedEffect(messages.lastOrNull()?.id, messages.lastOrNull()?.content, messages.lastOrNull()?.status, interaction?.id, artifacts) {
-        val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-        if (!initiallyPositioned || lastVisible >= messages.size - 3 || listState.layoutInfo.totalItemsCount == 0) {
-            if (messages.isNotEmpty() || interaction != null || artifacts.isNotEmpty()) {
-                listState.scrollToItem(messages.size + artifacts.size + (if (interaction != null) 1 else 0) - 1)
-                initiallyPositioned = true
+    val scope = rememberCoroutineScope()
+    var followLatest by remember { mutableStateOf(true) }
+    val bottomTolerance = with(LocalDensity.current) { 24.dp.roundToPx() }
+    val scrollIntent = remember(listState, bottomTolerance) { object : NestedScrollConnection {
+        override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            if (source == NestedScrollSource.UserInput && available.y > 0f) followLatest = false
+            return Offset.Zero
+        }
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            if (consumed.y < 0f) {
+                val info = listState.layoutInfo
+                val last = info.visibleItemsInfo.lastOrNull()
+                followLatest = last != null && isNearConversationBottom(last.index, info.totalItemsCount,
+                    last.offset + last.size, info.viewportEndOffset, bottomTolerance)
             }
+            return Offset.Zero
+        }
+    } }
+    // A trailing anchor reaches the newest text even when the last reply is taller
+    // than the screen. Scrolling to the reply itself would reset it to its beginning.
+    val tailIndex = messages.size + artifacts.size + if (interaction != null) 1 else 0
+    LaunchedEffect(messages.lastOrNull()?.id, messages.lastOrNull()?.content, messages.lastOrNull()?.status, interaction?.id, artifacts) {
+        withFrameNanos { }
+        if (followLatest && !listState.isScrollInProgress) {
+            listState.scrollToItem(tailIndex)
         }
     }
-    LazyColumn(state = listState, modifier = modifier.widthIn(max = 800.dp).fillMaxWidth().testTag("conversation-messages"),
+    Box(modifier.widthIn(max = 800.dp).fillMaxWidth()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().nestedScroll(scrollIntent).testTag("conversation-messages"),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)) {
         items(messages, key = { it.id }) { MessageRow(it, onRetry, onOpenImage, phoneAvailable) }
@@ -348,8 +392,20 @@ private fun ConversationMessages(messages: List<UiMessage>, modifier: Modifier, 
         interaction?.let { pending -> item(key = "agent-question:${pending.id}") {
             AgentInteractionCard(pending, interactionBusy, onAnswer)
         } }
+        item(key = "conversation-tail") { Spacer(Modifier.fillMaxWidth().height(1.dp).testTag("conversation-tail")) }
+    }
+    if (!followLatest && listState.canScrollForward) {
+        FilledTonalIconButton(onClick = { followLatest = true; scope.launch { listState.scrollToItem(tailIndex) } },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).testTag("return-to-latest")) {
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "回到最新消息")
+        }
+    }
     }
 }
+
+internal fun isNearConversationBottom(lastVisibleIndex: Int, totalItems: Int, lastVisibleEnd: Int,
+    viewportEnd: Int, tolerancePixels: Int): Boolean = totalItems > 0 && lastVisibleIndex == totalItems - 1 &&
+    lastVisibleEnd - viewportEnd <= tolerancePixels
 
 @Composable
 private fun MessageComposer(draft: String, onDraft: (String) -> Unit, state: UiState,

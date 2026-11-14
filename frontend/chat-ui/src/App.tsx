@@ -385,6 +385,7 @@ export function App() {
   const draftSequences = useRef<Record<string, number>>({});
   const draftVersions = useRef<Record<string, number>>({});
   const [pending, setPending] = useState<PendingSend | null>(null);
+  const [steeringError, setSteeringError] = useState<{ conversationId: string; document: string; text: string } | null>(null);
   const [showLatest, setShowLatest] = useState(false);
   const editor = useRef<HTMLTextAreaElement>(null);
   const editorMeasure = useRef<HTMLTextAreaElement>(null);
@@ -530,7 +531,12 @@ export function App() {
     requestAnimationFrame(() => { readerScrollIntent.current = false; reconcileReadingPosition(); });
   }, [cancelPendingMessageFocus, reconcileReadingPosition]);
   const canSteer = state.canSteerAgent === true && state.requestInCurrent && !state.agentInteraction && !stagedImage;
-  const canSend = state.ready && (!state.busy || canSteer) && !state.historyLoading && !imagePreparing && !pending && Boolean(draft.trim() || stagedImage);
+  // Python counts Unicode code points, including emoji, rather than UTF-16 units.
+  const steeringLength = useMemo(() => Array.from(draft.trim()).length, [draft]);
+  const steeringTooLong = state.busy && canSteer && steeringLength > 8000;
+  const steeringRejected = steeringError?.conversationId === state.conversationId
+    && steeringError.document === state.draftDocument && steeringError.text === draft.trim();
+  const canSend = state.ready && (!state.busy || canSteer) && !steeringTooLong && !state.historyLoading && !imagePreparing && !pending && Boolean(draft.trim() || stagedImage);
   const findIds = useMemo(() => {
     const query = findQuery.trim().toLocaleLowerCase();
     return findOpen && query ? state.messages.filter((message) =>
@@ -673,10 +679,11 @@ export function App() {
 
   const submitMessage = useCallback(async (text: string) => {
     if ((!text && !stagedImage) || state.busy && !canSteer || state.historyLoading || imagePreparing
-        || imageInput.current?.preparingCurrent() || pending) return;
+        || imageInput.current?.preparingCurrent() || pending || state.busy && Array.from(text.trim()).length > 8000) return;
     const sequence = draftSequences.current[state.conversationId] || state.draftSequences[state.conversationId] || 0;
     const record = { conversationId: state.conversationId, text, draftSequence: sequence };
     setPending(record);
+    setSteeringError(null);
     cancelPendingMessageFocus();
     pendingReadingRestore.current = null;
     nearBottom.current = true;
@@ -689,6 +696,8 @@ export function App() {
         if (result.ok) setDrafts((value) => value[record.conversationId]?.trim() === text
           && (draftSequences.current[record.conversationId] || 0) === record.draftSequence
           ? { ...value, [record.conversationId]: '' } : value);
+        else if (state.busy) setSteeringError({ conversationId: record.conversationId,
+          document: state.draftDocument, text });
         setPending(null);
         resolve();
       });
@@ -1209,9 +1218,13 @@ export function App() {
                     onClick={() => dispatch('removeStagedImage', { conversationId: state.conversationId })}><X size={17} /></IconButton>}
                 </div>}
                 {(imageInputError || state.imageError) && <p className="composer-image-error" role="alert" data-testid="composer-image-error">{imageInputError || state.imageError}</p>}
+                {steeringTooLong ? <p id="steering-feedback" className="composer-image-error" role="alert" data-testid="steering-feedback">补充指令最多 8000 字，当前 {steeringLength} 字。请缩短后发送，草稿已保留。</p>
+                  : steeringRejected ? <p id="steering-feedback" className="composer-image-error" role="alert" data-testid="steering-feedback">补充指令未发送，请确认任务仍在运行后重试。草稿已保留。</p>
+                  : state.busy && canSteer && steeringLength >= 7600 ? <p id="steering-feedback" className="composer-image-error" role="status" data-testid="steering-feedback">{steeringLength} / 8000 字</p> : null}
                 <label htmlFor="message-input" className="sr-only">发送给鲸伴的消息</label>
-                <textarea id="message-input" data-testid="message-input" ref={editor} rows={1} value={draft} placeholder={state.historyLoading ? '正在读取对话…' : canSteer ? '补充当前任务…' : state.agentMode ? '告诉电脑 Agent 下一步…' : '发消息…'} disabled={!state.ready || state.historyLoading} onChange={(event) => {
+                <textarea id="message-input" data-testid="message-input" ref={editor} rows={1} value={draft} aria-invalid={steeringTooLong || undefined} aria-describedby={steeringTooLong || steeringRejected || state.busy && canSteer && steeringLength >= 7600 ? 'steering-feedback' : undefined} placeholder={state.historyLoading ? '正在读取对话…' : canSteer ? '补充当前任务…' : state.agentMode ? '告诉电脑 Agent 下一步…' : '发消息…'} disabled={!state.ready || state.historyLoading} onChange={(event) => {
                   const text = event.target.value;
+                  setSteeringError(null);
                   setDrafts((value) => ({ ...value, [state.conversationId]: text }));
                   const sequence = Math.max(draftSequences.current[state.conversationId] || 0,
                     state.draftSequences[state.conversationId] || 0) + 1;

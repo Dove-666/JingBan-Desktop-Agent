@@ -261,8 +261,13 @@ class RuntimeControlIntegrationTests(unittest.TestCase):
         self.assertFalse(self.service._file_grants)
 
     def test_running_steering_reaches_the_next_real_model_iteration_without_a_second_task(self):
+        self.check_running_steering("Only calculate; do not write or launch anything.")
+
+    def test_long_unicode_steering_keeps_full_goal_even_when_replay_is_clipped(self):
+        self.check_running_steering("Only calculate; do not write or launch anything. " + "🐳" * 7000)
+
+    def check_running_steering(self, correction):
         entered, release = threading.Event(), threading.Event()
-        correction = "Only calculate; do not write or launch anything."
         def pause_model(body):
             entered.set()
             self.assertTrue(release.wait(8))
@@ -280,7 +285,18 @@ class RuntimeControlIntegrationTests(unittest.TestCase):
         result = self.result(outcomes)
         self.assertEqual(result.status, "completed")
         self.assertEqual(len(model.calls), 3)
-        self.assertEqual(len([item for item in self.service._sessions[self.cid] if item.get("role") == "user" and item.get("content") == correction]), 1)
+        from agent_backend.nanobot.session_history import text_record
+        replay = text_record(text_record({"role": "user", "content": correction}))["content"]
+        self.assertEqual(len([item for item in self.service._sessions[self.cid] if item.get("role") == "user" and item.get("content") == replay]), 1)
+        self.assertEqual(self.service._session_goals[self.cid], [
+            "Complete the owned fixture task from real observations; only requested temporary outputs may be changed.",
+            correction])
+        from desktop_pet.agents.checkpoints import scope_fingerprint
+        from desktop_pet.agents.settings import shared_api_settings
+        api = self.context(model)["api"]
+        scope = scope_fingerprint(shared_api_settings(self.settings, api), api, secrets=(KEY,))
+        self.assertEqual(self.service._checkpoint_store.load(self.cid, scope)["goal_history"],
+                         self.service._session_goals[self.cid])
         self.assertFalse(self.service.steer(self.cid, correction))
         self.assertFalse(list(self.workspace.iterdir()))
 

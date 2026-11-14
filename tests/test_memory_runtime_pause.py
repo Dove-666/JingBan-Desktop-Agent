@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import replace
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import subprocess
 import tempfile
 import threading
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import QApplication
 from desktop_pet.chat_controller import ChatController
 from desktop_pet.memory import MemoryService, MemoryUnavailable
 from desktop_pet.memory_controller import LazyMemoryService, MemoryController
-from desktop_pet.settings_manager import ApiSettings, CredentialStore, SettingsManager
+from desktop_pet.settings_manager import ApiSettings, CredentialStore, SettingsError, SettingsManager
 from desktop_pet.ui.memory_panel import MemoryPanel
 from tests.mock_api import MockApiServer
 from tests.test_application import spin_until
@@ -141,6 +142,237 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
             conversation_id=str(uuid4()), trigger=trigger,
         )
 
+    def test_cancelled_search_releases_storage_for_next_request(self):
+        first, second = ControlledHelper(blocked=True), ControlledHelper()
+        pending = iter((first, second))
+        cancelled = threading.Event()
+        with self.helpers_from(lambda: next(pending)):
+            thread, outcome = self.background(lambda: self.service.search_for_request("first", cancelled=cancelled))
+            self.assertTrue(first.started.wait(1))
+            self.service.cancel_request(cancelled)
+            thread.join(1)
+            self.assertFalse(thread.is_alive(), "Cancelled search retained the storage lock")
+            self.assertTrue(first.terminated)
+            self.assertIsInstance(outcome.get("error"), MemoryUnavailable)
+            self.assertIn("取消", str(outcome["error"]))
+            self.assertEqual(self.service.search_for_request("second", cancelled=threading.Event()), [])
+        self.assertTrue(second.started.is_set())
+        self.assertFalse(second.terminated)
+        self.assertFalse(self.service._process_requests)
+
+    def test_cancelling_queued_request_does_not_terminate_another_owner(self):
+        first = ControlledHelper(blocked=True)
+        first_token, next_token = threading.Event(), threading.Event()
+        with self.helpers_from(lambda: first):
+            thread, outcome = self.background(lambda: self.service.search_for_request("owner", cancelled=first_token))
+            self.assertTrue(first.started.wait(1))
+            queued, queued_outcome = self.background(lambda: self.service.search_for_request("queued", cancelled=next_token))
+            self.service.cancel_request(next_token)
+            queued.join(0.6)
+            self.assertFalse(queued.is_alive())
+            self.assertIsInstance(queued_outcome.get("error"), MemoryUnavailable)
+            self.assertFalse(first.terminated)
+            self.assertFalse(first_token.is_set())
+            first.release.set()
+            thread.join(1)
+            self.assertEqual(outcome, {"result": []})
+
+    def test_cancel_during_process_launch_never_sends_query(self):
+        launching, release = threading.Event(), threading.Event()
+        token, helper = threading.Event(), ControlledHelper()
+        def factory():
+            launching.set()
+            self.assertTrue(release.wait(3))
+            return helper
+        with self.helpers_from(factory):
+            thread, outcome = self.background(lambda: self.service.search_for_request("private query", cancelled=token))
+            self.assertTrue(launching.wait(1))
+            self.service.cancel_request(token)
+            release.set()
+            thread.join(1)
+        self.assertFalse(thread.is_alive())
+        self.assertIsInstance(outcome.get("error"), MemoryUnavailable)
+        self.assertIsNone(helper.payload)
+        self.assertTrue(helper.terminated)
+
+    def test_lazy_cancel_does_not_wait_for_first_service_construction(self):
+        constructing, release = threading.Event(), threading.Event()
+        def factory():
+            constructing.set()
+            self.assertTrue(release.wait(3))
+            return self.service
+        lazy, token = LazyMemoryService(factory), threading.Event()
+        with self.helpers_from(lambda: self.fail("Cancelled lazy query launched a helper")):
+            thread, outcome = self.background(lambda: lazy.search_for_request("query", cancelled=token))
+            self.assertTrue(constructing.wait(1))
+            before = time.monotonic()
+            lazy.cancel_request(token)
+            self.assertLess(time.monotonic() - before, .2)
+            release.set()
+            thread.join(1)
+            self.assertFalse(thread.is_alive())
+            self.assertIsInstance(outcome.get("error"), MemoryUnavailable)
+
+    def test_partial_commit_timeout_keeps_model_identity_and_real_vectors(self):
+        from qdrant_client import QdrantClient, models
+        service = self.service
+        marker_seen = []
+        class PartialCommit(ControlledHelper):
+            def communicate(self, input=None, timeout=None):
+                if input is not None:
+                    marker_seen.append(service._read_identity())
+                    payload = json.loads(input)
+                    vector = payload["config"]["vector_store"]["config"]
+                    local = QdrantClient(path=vector["path"])
+                    try:
+                        local.create_collection(vector["collection_name"],
+                            vectors_config=models.VectorParams(size=8, distance=models.Distance.COSINE))
+                        local.upsert(vector["collection_name"], points=[models.PointStruct(id=1,
+                            vector=[1.] + [0.] * 7,
+                            payload={"user_id": service.load_settings().user_id, "data": "Synthetic preference"})])
+                    finally:
+                        local.close()
+                    raise subprocess.TimeoutExpired(self.args, timeout)
+                return b"", b""
+        helper = PartialCommit()
+        with self.helpers_from(lambda: helper), self.assertRaises(MemoryUnavailable):
+            self.extract(trigger="explicit")
+        self.assertEqual(marker_seen, [service._embedding_identity(service.load_settings())])
+        self.assertTrue(helper.killed)
+        self.assertEqual(service._read_identity(), marker_seen[0])
+        with self.assertRaises(SettingsError):
+            service.save_settings(replace(service.load_settings(), embedding_model="another-same-dimension-model"))
+        local = QdrantClient(path=str(service.data_dir / "qdrant"))
+        try:
+            self.assertEqual(local.count("aura_memories", exact=True).count, 1)
+        finally:
+            local.close()
+
+    def test_unknown_populated_vector_space_cannot_be_silently_rebound(self):
+        from qdrant_client import QdrantClient, models
+        local = QdrantClient(path=str(self.service.data_dir / "qdrant"))
+        try:
+            local.create_collection("aura_memories", vectors_config=models.VectorParams(size=8, distance=models.Distance.COSINE))
+            local.upsert("aura_memories", points=[models.PointStruct(id=1, vector=[1.] + [0.] * 7,
+                payload={"user_id": self.service.load_settings().user_id, "data": "Preserve legacy fact"})])
+        finally:
+            local.close()
+        before = self.service.config_path.read_bytes()
+        with self.assertRaises(MemoryUnavailable):
+            self.service.save_settings(replace(self.service.load_settings(), embedding_model="new-model"))
+        self.assertEqual(self.service.config_path.read_bytes(), before)
+        self.assertEqual(self.service._read_identity(), {"unverified_existing_store": True})
+        with self.assertRaises(MemoryUnavailable):
+            self.service.search("legacy")
+        self.assertEqual(len(self.service.list_memories()), 1)
+
+    def test_identity_save_failure_never_sends_mutating_payload(self):
+        helper = ControlledHelper()
+        with self.helpers_from(lambda: helper), \
+             patch.object(self.service, "_write_identity", side_effect=MemoryUnavailable("Synthetic identity write failure")), \
+             self.assertRaises(MemoryUnavailable):
+            self.extract(trigger="explicit")
+        self.assertIsNone(helper.payload)
+        self.assertTrue(helper.killed)
+
+    def test_cancellation_during_identity_commit_never_sends_mutating_payload(self):
+        helper, token = ControlledHelper(), threading.Event()
+        write_identity = self.service._write_identity
+        def commit_then_cancel(identity):
+            write_identity(identity)
+            self.service.cancel_request(token)
+        with self.helpers_from(lambda: helper), \
+             patch.object(self.service, "_write_identity", side_effect=commit_then_cancel), \
+             self.assertRaisesRegex(MemoryUnavailable, "取消"):
+            self.service._operation("extract", cancelled=token, trigger="explicit",
+                messages=[{"role": "user", "content": "请记住我喜欢简洁回复。"}], conversation_id=str(uuid4()))
+        self.assertIsNone(helper.payload)
+        self.assertTrue(helper.terminated)
+        self.assertEqual(self.service._read_identity(), self.service._embedding_identity(self.service.load_settings()))
+        self.assertFalse(self.service._process_requests)
+
+    def test_expired_identity_commit_never_gets_a_fresh_mutation_deadline(self):
+        self.service.save_settings(replace(self.service.load_settings(), timeout_seconds=1.0))
+        helper, ticks = ControlledHelper(), [100.0]
+        write_identity = self.service._write_identity
+        def commit_after_deadline(identity):
+            write_identity(identity)
+            ticks[0] += 2.0
+        with self.helpers_from(lambda: helper), \
+             patch("desktop_pet.memory.service.time", SimpleNamespace(monotonic=lambda: ticks[0])), \
+             patch.object(self.service, "_write_identity", side_effect=commit_after_deadline), \
+             self.assertRaisesRegex(MemoryUnavailable, "超时"):
+            self.extract(trigger="explicit")
+        self.assertIsNone(helper.payload)
+        self.assertTrue(helper.killed)
+        self.assertEqual(self.service._read_identity(), self.service._embedding_identity(self.service.load_settings()))
+        self.assertFalse(self.service._processes)
+
+    def test_empty_bound_store_can_be_reset_from_the_real_settings_panel(self):
+        helper = ControlledHelper()
+        with self.helpers_from(lambda: helper):
+            self.assertEqual(self.extract(trigger="explicit"), [])
+        self.assertTrue((self.service.data_dir / "embedding_identity.json").exists())
+        controller = MemoryController(self.service)
+        self.qt_objects.append(controller)
+        spin_until(lambda: not controller.busy)
+        panel = MemoryPanel(controller)
+        self.qt_objects.append(panel)
+        panel.show()
+        self.app.processEvents()
+        self.assertEqual(controller.memory_total, 0)
+        self.assertTrue(panel.clear_button.isEnabled())
+        self.assertFalse(panel.clear_button.isHidden())
+        from PySide6.QtWidgets import QMessageBox
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            panel.clear_button.click()
+        spin_until(lambda: not controller.busy)
+        self.assertEqual(controller.error, "")
+        self.assertFalse((self.service.data_dir / "embedding_identity.json").exists())
+        self.assertFalse(controller.can_reset_memories)
+        self.assertTrue(panel.clear_button.isHidden())
+        self.service.save_settings(replace(self.service.load_settings(), embedding_model="new-model-after-reset"))
+
+    def test_chat_stop_cancels_retrieval_before_next_chat_turn(self):
+        first, second = ControlledHelper(blocked=True), ControlledHelper()
+        pending = iter((first, second))
+        class ReplyClient:
+            def __init__(self):
+                self.calls = []
+            def complete(self, settings, key, messages):
+                from desktop_pet.api_client import ChatReply
+                self.calls.append(messages)
+                return ChatReply("Synthetic reply", "neutral")
+            def cancel_request(self, event):
+                event.set()
+            def shutdown(self):
+                pass
+        client = ReplyClient()
+        lazy = LazyMemoryService(lambda: self.service)
+        chat = ChatController(self.settings, client, memory_service=lazy, metadata_client_factory=lambda: None)
+        self.qt_objects.append(chat)
+        with self.helpers_from(lambda: next(pending)):
+            self.assertTrue(chat.send("first synthetic question"))
+            spin_until(lambda: first.started.is_set())
+            self.assertTrue(chat.stop_request())
+            self.assertTrue(chat.send("second synthetic question"))
+            spin_until(lambda: not chat.busy and len(client.calls) == 1)
+            self.assertTrue(first.terminated)
+            self.assertTrue(second.started.is_set())
+            self.assertEqual(sum(m["role"] == "assistant" for m in chat.messages), 1)
+
+    def test_chat_shutdown_cancels_retrieval_without_closing_shared_memory(self):
+        helper = ControlledHelper(blocked=True)
+        chat = ChatController(self.settings, memory_service=self.service, metadata_client_factory=lambda: None)
+        self.qt_objects.append(chat)
+        with self.helpers_from(lambda: helper):
+            self.assertTrue(chat.send("Synthetic shutdown question"))
+            spin_until(lambda: helper.started.is_set())
+            chat.shutdown()
+            spin_until(lambda: QThreadPool.globalInstance().activeThreadCount() == 0)
+            self.assertTrue(helper.terminated)
+            self.assertFalse(self.service._closed.is_set())
+
     def test_lazy_pause_before_use_does_not_construct_service_or_read_configuration(self):
         constructed = []
         lazy = LazyMemoryService(lambda: (constructed.append(True), self.service)[1])
@@ -258,6 +490,10 @@ class RuntimeMemoryPauseTests(unittest.TestCase):
             with self.subTest(operation=operation):
                 self.service.set_automatic_paused(False)
                 if operation == "prepare_model":
+                    # An admitted extraction now binds its model before any
+                    # possible writes, even if this fixture returns no facts.
+                    with self.helpers_from(lambda: ControlledHelper()):
+                        self.service.clear()
                     self.service.save_settings(replace(self.service.load_settings(), embedding_provider="fastembed"))
                 helper = ControlledHelper(blocked=True)
                 with self.helpers_from(lambda: helper):

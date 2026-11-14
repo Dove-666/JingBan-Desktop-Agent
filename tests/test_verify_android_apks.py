@@ -53,10 +53,12 @@ class AndroidApkVerificationTests(unittest.TestCase):
                     "minSdkVersion:'26'\ntargetSdkVersion:'35'\n" + self.extra_badging)
         return ""
 
-    def run_verifier(self, explicit_code=True):
+    def run_verifier(self, explicit_code=True, delivery_directory=None):
         arguments = ["verify_android_apks.py", "--version", "1.14.3"]
         if explicit_code:
             arguments.extend(["--version-code", "20"])
+        if delivery_directory is not None:
+            arguments.extend(["--delivery-directory", str(delivery_directory)])
         with patch.object(verifier, "ROOT", self.root), patch.object(verifier, "run", self.command_output), \
                 patch.object(verifier, "elf_load_segments", return_value=[{"alignment": 16384}]), \
                 patch("sys.argv", arguments), redirect_stdout(io.StringIO()):
@@ -68,6 +70,79 @@ class AndroidApkVerificationTests(unittest.TestCase):
 
     def test_existing_version_only_invocation_remains_supported(self):
         self.run_verifier(explicit_code=False)
+
+    def simple_delivery(self, directory=None):
+        directory = directory or self.delivery / "1.14.3"
+        directory.mkdir(parents=True, exist_ok=True)
+        for name, abi in {"鲸伴.apk": "arm64-v8a", "鲸伴旧手机.apk": "armeabi-v7a",
+                          "鲸伴-x86_64.apk": "x86_64", "鲸伴通用.apk": "universal"}.items():
+            (directory / name).write_bytes((self.delivery / f"AURA-1.14.3-{abi}.apk").read_bytes())
+        self.extra_badging = "application-label:'鲸伴'\n"
+        return directory
+
+    def test_explicit_simple_directory_checks_each_named_architecture(self):
+        directory = self.simple_delivery()
+        self.run_verifier(delivery_directory=directory)
+        report = json.loads(self.report_path.read_bytes())
+        self.assertEqual(report["delivery_directory"], str(directory.resolve()))
+        self.assertEqual({Path(row["file"]).name: row["abis"] for row in report["packages"]}, {
+            "鲸伴.apk": ["arm64-v8a"], "鲸伴旧手机.apk": ["armeabi-v7a"],
+            "鲸伴-x86_64.apk": ["x86_64"], "鲸伴通用.apk": ["arm64-v8a", "armeabi-v7a", "x86_64"],
+        })
+        self.assertTrue(all(Path(row["file"]).parent.name == "1.14.3" for row in report["packages"]))
+
+    def test_simple_directory_is_not_implicitly_selected_by_legacy_invocation(self):
+        self.simple_delivery()
+        self.run_verifier()
+        report = json.loads(self.report_path.read_bytes())
+        self.assertIsNone(report["delivery_directory"])
+        self.assertTrue(all(Path(row["file"]).name.startswith("AURA-1.14.3-") for row in report["packages"]))
+
+    def test_simple_delivery_rejects_wrong_contents_under_the_correct_filename(self):
+        directory = self.simple_delivery()
+        (directory / "鲸伴.apk").write_bytes((directory / "鲸伴旧手机.apk").read_bytes())
+        with self.assertRaisesRegex(RuntimeError, "Unexpected packaged ABIs"):
+            self.run_verifier(delivery_directory=directory)
+
+    def test_simple_delivery_rejects_missing_extra_or_misnamed_packages(self):
+        for alteration in ("missing", "extra", "misnamed"):
+            with self.subTest(alteration=alteration):
+                directory = self.simple_delivery(self.delivery / alteration)
+                if alteration == "missing":
+                    (directory / "鲸伴.apk").unlink()
+                elif alteration == "extra":
+                    (directory / "other.apk").write_bytes(b"not a release")
+                else:
+                    (directory / "鲸伴.apk").rename(directory / "鲸伴-arm64.apk")
+                with self.assertRaisesRegex(RuntimeError, "Expected exactly"):
+                    self.run_verifier(delivery_directory=directory)
+        self.assertEqual(self.sdk_calls, [])
+
+    def test_simple_delivery_can_be_verified_outside_the_checkout(self):
+        with tempfile.TemporaryDirectory() as external:
+            directory = self.simple_delivery(Path(external))
+            self.run_verifier(delivery_directory=directory)
+            report = json.loads(self.report_path.read_bytes())
+            self.assertTrue(all(Path(row["file"]).is_absolute() for row in report["packages"]))
+
+    def test_simple_names_cannot_be_used_with_a_different_product_identity(self):
+        directory = self.simple_delivery()
+        with self.assertRaisesRegex(RuntimeError, "product name"):
+            verifier._simple_release_packages(directory, "AURA")
+
+    def test_retained_original_signature_is_used_after_old_artifacts_are_removed(self):
+        retained = self.root / "artifacts/release-validation/android/original-signature.txt"
+        retained.parent.mkdir(parents=True)
+        retained.write_bytes(self.baseline.read_bytes())
+        self.baseline.unlink()
+        self.run_verifier(delivery_directory=self.simple_delivery())
+
+    def test_retained_original_signature_cannot_be_bypassed_using_a_different_old_baseline(self):
+        retained = self.root / "artifacts/release-validation/android/original-signature.txt"
+        retained.parent.mkdir(parents=True)
+        retained.write_text(f"Signer #1 certificate SHA-256 digest: {'b' * 64}\n")
+        with self.assertRaisesRegex(RuntimeError, "signing certificate"):
+            self.run_verifier(delivery_directory=self.simple_delivery())
 
     def test_renamed_release_retains_package_identity_and_checks_display_label(self):
         for package in self.delivery.glob("AURA-*.apk"):

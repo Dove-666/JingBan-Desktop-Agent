@@ -105,7 +105,7 @@ def install_optional_memory(target: Path) -> dict:
     marker = runtime / "Lib/EXTERNALLY-MANAGED"
     if marker.is_file():
         marker.unlink()
-    cache = PROJECT_ROOT / "artifacts/windows_release_20261107/build-cache"
+    cache = PROJECT_ROOT / "artifacts/windows-build/build-cache"
     temporary = cache / "temp"
     temporary.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()

@@ -53,6 +53,25 @@ class MemorySetupUiTests(unittest.TestCase):
         self.assertTrue(self.panel.status_label.isHidden())
         self.assertEqual(self.controller.calls, [])
 
+    def test_empty_failed_store_has_explicit_reset_but_fresh_empty_store_stays_simple(self):
+        self.controller.memories = []
+        self.controller.memory_total = 0
+        self.controller.can_reset_memories = False
+        self.controller.memories_changed.emit()
+        self.assertTrue(self.panel.clear_button.isHidden())
+        self.controller.can_reset_memories = True
+        self.controller.settings_changed.emit(self.controller.settings)
+        self.assertFalse(self.panel.clear_button.isHidden())
+        self.assertTrue(self.panel.clear_button.isEnabled())
+        self.assertEqual(self.panel.clear_button.text(), "重置记忆库")
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.No) as confirm:
+            self.panel.clear_button.click()
+        self.assertIn("模型绑定", confirm.call_args.args[2])
+        self.assertEqual(self.controller.calls, [])
+        with patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+            self.panel.clear_button.click()
+        self.assertIn(("clear",), self.controller.calls)
+
     def test_rejected_toggle_and_async_failure_restore_persisted_choice(self):
         self.controller.set_automatic_enabled = lambda enabled: False
         self.panel.automatic_checkbox.click()

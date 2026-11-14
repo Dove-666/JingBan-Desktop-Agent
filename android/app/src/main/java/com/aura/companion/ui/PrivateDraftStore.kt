@@ -26,9 +26,10 @@ internal interface DraftStore {
 /** Private app storage only. No credentials, API settings, network or draft logging. */
 internal class PrivateDraftStore(private val file: File,
     private val scopeLookup: (Set<String>) -> Map<String, DraftScope> = { emptyMap() }) : DraftStore {
-    private val changed = notifications.getOrPut(file.canonicalPath) { MutableStateFlow(0L) }
+    private val storeId = file.canonicalPath
+    private val changed = notifications.getOrPut(storeId) { MutableStateFlow(0L) }
     override val changes: StateFlow<Long> = changed
-    override val committed get() = commits[file.canonicalPath]
+    override val committed get() = commits[storeId]
 
     // Activity/ViewModel overlap can leave an old callback alive. Always read
     // the committed file inside the same process-wide transaction lock.
@@ -37,7 +38,7 @@ internal class PrivateDraftStore(private val file: File,
         val original = read()
         val next = reconcile(change(reconcile(original)))
         if (next != original) write(next)
-        else commits[file.canonicalPath] = next
+        else commits[storeId] = next
         next
     }
     override fun refreshScopes() { update { it } }
@@ -78,7 +79,7 @@ internal class PrivateDraftStore(private val file: File,
             val cid = if (row.isNull("conversation")) null else row.getString("conversation")
             require(cid == null || cid.isNotBlank() && cid.length <= 200)
             val version = row.getLong("revision"); require(version in 0..revision && !entries.containsKey(cid))
-            entries[cid] = DraftSnapshot(row.getString("text"), version)
+            entries[cid] = DraftSnapshot(row.getString("text"), version, row.optString("identity", ""))
         }
         val scopes = linkedMapOf<String, DraftScope>()
         val savedScopes = value.getJSONArray("scopes")
@@ -95,7 +96,8 @@ internal class PrivateDraftStore(private val file: File,
         require(file.parentFile!!.isDirectory || file.parentFile!!.mkdirs())
         val entries = JSONArray()
         value.entries.forEach { (cid, draft) -> entries.put(JSONObject()
-            .put("conversation", cid ?: JSONObject.NULL).put("text", draft.text).put("revision", draft.revision)) }
+            .put("conversation", cid ?: JSONObject.NULL).put("text", draft.text).put("revision", draft.revision)
+            .put("identity", draft.identity)) }
         val scopes = JSONArray()
         value.scopes.forEach { (cid, scope) -> scopes.put(JSONObject().put("conversation", cid)
             .put("generation", scope.generation ?: JSONObject.NULL).put("deleted", scope.deleted)) }
@@ -113,7 +115,7 @@ internal class PrivateDraftStore(private val file: File,
         // AtomicFile reports some rename/fsync failures only via platform logs.
         // Never notify the UI that a draft was saved unless its bytes committed.
         if (!atomic.readFully().contentEquals(bytes)) throw IOException("Private draft commit was not verified")
-        commits[file.canonicalPath] = value
+        commits[storeId] = value
         changed.value++
     }
 

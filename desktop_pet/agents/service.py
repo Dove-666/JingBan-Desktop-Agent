@@ -37,6 +37,7 @@ from agent_backend.nanobot.redaction import redact_text
 from agent_backend.nanobot.acceptance_report import checked_assessment
 from agent_backend.nanobot.partial_delivery import FAILURE_DIAGNOSTIC_CODES
 from agent_backend.nanobot.goal_judge import JUDGE_DIAGNOSTIC_CODES
+from agent_backend.nanobot.goal_history import GoalHistoryError, checked_goal_history, legacy_goal_history
 from agent_backend.nanobot.session_history import (
     bounded_history, close_interrupted_tools, conversation_uuid, current_image, text_record,
 )
@@ -110,6 +111,7 @@ _ERROR_MESSAGES = {
     "closed": "任务助手已关闭。",
     "busy": "上一项任务仍在运行或结束中，请稍后发送新任务；本次未启动任务助手。",
     "checkpoint_unavailable": "任务检查点无法可靠读写，本次任务已停止且未继续派发；聊天记录仍保留，请检查本地数据目录后重试。",
+    "goal_history_unavailable": "这段任务的完整要求无法继续恢复，请新建对话并重新说明当前目标；已完成的操作不会自动重放。",
     "context_store_unavailable": "任务资料暂时无法可靠保存，请检查本地数据目录后重试。",
     "provider_auth_failed": "模型服务未接受当前凭据，请检查模型 API 配置。",
     "provider_rate_limited": "模型服务暂时限流，请稍后继续；已完成的操作不会重复执行。",
@@ -322,6 +324,7 @@ class AgentService:
         # Production can opt into a separate bounded text checkpoint store;
         # construction does not create files, threads or SQLite connections.
         self._sessions = {}
+        self._session_goals = {}
         self._session_scopes = {}
         self._session_epoch = 0
         self._checkpoint_epoch = 0
@@ -558,8 +561,24 @@ class AgentService:
             if active is None or active["conversation_id"] != conversation_id or active["cancel"].is_set():
                 return False
             process, task_id = active["process"], active["task_id"]
+            goal_input = None
+            goal_inputs = active.get("goal_inputs")
+            if isinstance(goal_inputs, list):
+                projected = _redact(text.strip(), active.get("goal_secrets", ()))
+                try:
+                    checked_goal_history([*active["goal_history"],
+                                          *(item["text"] for item in goal_inputs), projected])
+                except GoalHistoryError:
+                    return False
+                # Record provenance before dispatch; a worker user-role frame
+                # must match this host input before it can amend the goal.
+                goal_input = {"text": projected,
+                              "replay": text_record({"role": "user", "content": projected},
+                                                    active.get("goal_secrets", ()))["content"]}
+                goal_inputs.append(goal_input)
         try:
-            self._write_control(process, {"type": "steer", "id": task_id, "text": text.strip()})
+            self._write_control(process, {"type": "steer", "id": task_id,
+                                          "text": goal_input["text"] if goal_input is not None else text.strip()})
             pending = self._interaction_broker.public(conversation_id)
             if pending is not None:
                 # Corrections may supersede a question, but never approve it.
@@ -570,6 +589,9 @@ class AgentService:
                         "interaction_id": pending["id"], "answer": reply["answer"]})
             return True
         except (OSError, ValueError, BrokenPipeError):
+            if goal_input is not None:
+                with self._lock:
+                    goal_inputs[:] = [item for item in goal_inputs if item is not goal_input]
             return False
 
     @property
@@ -616,7 +638,7 @@ class AgentService:
             return {"status": "unavailable", "goal_verified": False}
         if data is None:
             return None
-        return {key: value for key, value in data.items() if key != "history"}
+        return {key: value for key, value in data.items() if key not in {"history", "goal_history"}}
 
     def clear_session(self, conversation_id=None):
         """Invalidate replay when the host deletes or clears a conversation."""
@@ -627,10 +649,12 @@ class AgentService:
             self._checkpoint_epoch += 1
             if conversation_id is None:
                 self._sessions.clear()
+                self._session_goals.clear()
                 self._session_scopes.clear()
                 self._file_grants.clear()
             else:
                 self._sessions.pop(conversation_id, None)
+                self._session_goals.pop(conversation_id, None)
                 self._session_scopes.pop(conversation_id, None)
                 self._file_grants = {key: grants for key, grants in self._file_grants.items()
                                      if key[0] != conversation_id}
@@ -836,6 +860,7 @@ class AgentService:
             active = [(event, self._worker_handles[pid]) for pid, (event, tree) in self._processes.items()
                       if pid in self._worker_handles]
             self._sessions.clear()
+            self._session_goals.clear()
             self._session_scopes.clear()
             self._session_epoch += 1
         for event, handle in active:
@@ -1103,7 +1128,9 @@ class AgentService:
             checkpoint_epoch = self._checkpoint_epoch
             if session_id and self._session_scopes.get(session_id) not in (None, scope):
                 self._sessions.pop(session_id, None)
+                self._session_goals.pop(session_id, None)
             previous_history = list(self._sessions.get(session_id, [])) if session_id else []
+            previous_goals = list(self._session_goals.get(session_id, [])) if session_id else []
         if checkpoint_store is not None:
             self._flush_checkpoint_deletions()
             try:
@@ -1112,6 +1139,7 @@ class AgentService:
                         generation=context.get("conversation_generation", "")))
                 if saved is not None:
                     previous_history = saved["history"]
+                    previous_goals = saved["goal_history"]
                     with self._lock:
                         self._checkpoint_status = (
                             "模型、账户或权限已变更，旧工具记录未恢复；本次按当前请求重新开始。"
@@ -1119,18 +1147,30 @@ class AgentService:
                             "已恢复中断任务记录；需要先核对实际结果，再按本次请求继续。"
                             if saved["recovered_running"] else "已恢复当前会话的任务检查点。"
                         )
+                if not previous_goals:
+                    previous_goals = legacy_goal_history(previous_history)
                 checkpoint_store.begin(session_id, scope, task_id,
-                    previous_history + [text_record({"role": "user", "content": request.task}, secrets)], secrets=secrets)
+                    previous_history + [text_record({"role": "user", "content": request.task}, secrets)], secrets=secrets,
+                    goal_history=checked_goal_history([*previous_goals, _redact(request.task, secrets)]))
                 if saved is None:
                     with self._lock:
                         self._checkpoint_status = ""
+            except GoalHistoryError:
+                raise _error("goal_history_unavailable") from None
             except (CheckpointError, ValueError, TypeError):
                 self._checkpoint_warning()
                 raise _error("checkpoint_unavailable") from None
         payload = {"type": "run", "id": task_id, "task": _redact(request.task, secrets),
                    "kind": request.kind, "context": context_text, "config": config, "options": options}
         if session_id:
-            payload.update(conversation_id=session_id, session_history=previous_history)
+            try:
+                if not previous_goals:
+                    previous_goals = legacy_goal_history(previous_history)
+                checked_goal_history([*previous_goals, _redact(request.task, secrets)])
+            except GoalHistoryError:
+                raise _error("goal_history_unavailable") from None
+            payload.update(conversation_id=session_id, session_history=previous_history,
+                           goal_history=checked_goal_history(previous_goals))
             if config.get("project_execution", {}).get("enabled") is True:
                 payload["execution_authority"] = {"version": 1, "conversation_id": session_id,
                     "generation": context.get("conversation_generation") or str(uuid4()),
@@ -1151,6 +1191,9 @@ class AgentService:
                   if sys.platform == "win32" else {"start_new_session": True})
         process, tree, run_handle = None, None, None
         transcript = list(previous_history)
+        current_goals = checked_goal_history([*previous_goals, _redact(request.task, secrets)])
+        authorized_goal_inputs = []
+        received_user_task = False
         received_records = 0
         result = None
         gui_used = request.kind == "computer"
@@ -1213,6 +1256,7 @@ class AgentService:
             with self._lock:
                 self._processes[process.pid] = (event, tree)
                 self._active_control = {"process": process, "task_id": task_id,
+                    "goal_inputs": authorized_goal_inputs, "goal_history": current_goals, "goal_secrets": secrets,
                                         "conversation_id": session_id, "scope": scope, "cancel": event,
                                         "workspace": options["workspace"]}
             if self._journal is not None and session_id:
@@ -1338,6 +1382,20 @@ class AgentService:
                             raise _error("protocol")
                         try:
                             message = text_record(frame["message"], secrets)
+                            if message["role"] == "user":
+                                if not received_user_task:
+                                    # The original exact request was already
+                                    # persisted before launch. Its replay can
+                                    # be UTF-8 clipped or carry image markers.
+                                    received_user_task = True
+                                else:
+                                    with self._lock:
+                                        if (authorized_goal_inputs and frame["message"].get("content")
+                                                == authorized_goal_inputs[0]["replay"]):
+                                            # Transcript previews may be clipped; durable goals
+                                            # retain the exact host input, never its replay copy.
+                                            current_goals[:] = checked_goal_history([
+                                                *current_goals, authorized_goal_inputs.pop(0)["text"]])
                             transcript.append(message)
                             if self._journal is not None:
                                 self._journal.append(session_id, task_id, "message", message, secrets=secrets)
@@ -1350,10 +1408,12 @@ class AgentService:
                         with self._lock:
                             if session_epoch == self._session_epoch:
                                 self._sessions[session_id] = bounded_history(transcript)
+                                self._session_goals[session_id] = list(current_goals)
                                 self._session_scopes[session_id] = scope
                                 while len(self._sessions) > 64:
                                     removed = next(iter(self._sessions))
                                     self._sessions.pop(removed)
+                                    self._session_goals.pop(removed, None)
                                     self._session_scopes.pop(removed, None)
                     elif frame_type == "checkpoint":
                         if checkpoint_store is None or not session_id:
@@ -1367,7 +1427,7 @@ class AgentService:
                             raise _error("cancelled")
                         try:
                             checkpoint_store.save(session_id, scope, task_id, transcript,
-                                                  barrier=barrier, secrets=secrets)
+                                                  barrier=barrier, secrets=secrets, goal_history=current_goals)
                         except (CheckpointError, ValueError, TypeError):
                             self._checkpoint_warning()
                             result = None
@@ -1508,10 +1568,12 @@ class AgentService:
                 with self._lock:
                     if session_epoch == self._session_epoch:
                         self._sessions[session_id] = bounded_history(transcript)
+                        self._session_goals[session_id] = list(current_goals)
                         self._session_scopes[session_id] = scope
                         while len(self._sessions) > 64:
                             removed = next(iter(self._sessions))
                             self._sessions.pop(removed)
+                            self._session_goals.pop(removed, None)
                             self._session_scopes.pop(removed, None)
                 if checkpoint_store is not None:
                     with self._lock:
@@ -1521,7 +1583,8 @@ class AgentService:
                             checkpoint_store.save(session_id, scope, task_id, transcript,
                                 status=result.status if result is not None else
                                     terminal_error if terminal_error in {"cancelled", "timeout"} else "interrupted",
-                                goal_verified=result is not None and goal_verified, secrets=secrets)
+                                goal_verified=result is not None and goal_verified, secrets=secrets,
+                                goal_history=current_goals)
                         except (CheckpointError, ValueError, TypeError):
                             self._checkpoint_warning()
             if process is not None:

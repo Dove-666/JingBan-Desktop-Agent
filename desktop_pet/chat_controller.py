@@ -1984,6 +1984,9 @@ class ChatController(QObject):
         cancel = getattr(self._client, "cancel_request", None)
         if callable(cancel):
             cancel(request["cancel"])
+        cancel_memory = getattr(self._memory, "cancel_request", None)
+        if callable(cancel_memory):
+            cancel_memory(request["cancel"])
         self._agent_service.cancel_request(request["cancel"])
         def persist_cancelled():
             # Do not wait for an adapter's network response to preserve Stop.
@@ -2260,7 +2263,11 @@ class ChatController(QObject):
                         if memory_enabled:
                             request["phase"] = "retrieving_memory"
                             self._publish_request_phase(token, conversation_id, "retrieving_memory")
-                        memories = self._memory.search(user_message["content"], limit=3)
+                        search = getattr(self._memory, "search_for_request", None)
+                        if callable(search):
+                            memories = search(user_message["content"], limit=3, cancelled=request["cancel"])
+                        else:
+                            memories = self._memory.search(user_message["content"], limit=3)
                     except Exception:
                         memory_warning = "长期记忆检索暂不可用，本轮使用会话和屏幕情境继续。"
                 card = request["character_card"]
@@ -2876,6 +2883,10 @@ class ChatController(QObject):
         self._agent_queue_timer.stop()
         if self._agent_queue is not None: self._agent_queue.shutdown()
         self._stop.set()
+        cancel_memory = getattr(self._memory, "cancel_request", None)
+        if callable(cancel_memory):
+            for request in list(self._requests.values()):
+                cancel_memory(request["cancel"])
         self._agent_service.shutdown()
         self._request_id += 1
         cancel = getattr(self._client, "shutdown", None)

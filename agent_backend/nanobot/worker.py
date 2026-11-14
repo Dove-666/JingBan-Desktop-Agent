@@ -35,6 +35,7 @@ from goal_contract import GoalContract
 from goal_evidence import GoalEvidence
 from goal_judge import verify_goal
 from goal_revision import GoalTimeline, HostRevisionAuthority, GoalRevisionError, resolve_goal_revision
+from goal_history import checked_goal_history, legacy_goal_history
 from acceptance_report import project_assessment
 from partial_delivery import FailureDiagnostic, FailureRecorder, partial_delivery, stop_failure
 from data_tools import DataTools, DataToolError
@@ -356,6 +357,9 @@ def checked_request(raw: dict) -> dict:
         if not isinstance(history, list) or history and conversation_id is None:
             raise ValueError()
         history = [text_record(item, (config["api_key"], config.get("gui", {}).get("api_key"))) for item in history]
+        goal_history = checked_goal_history(raw["goal_history"] if "goal_history" in raw else legacy_goal_history(history))
+        if goal_history and conversation_id is None:
+            raise ValueError()
         image_url = current_image(raw.get("current_image_url"))
     except (ValueError, TypeError, AttributeError):
         raise InvalidRequest() from None
@@ -425,7 +429,7 @@ def checked_request(raw: dict) -> dict:
         gui["coordinate_profile"] = coordinate_profile
         config["gui"] = gui
     return {**raw, "kind": raw.get("kind", "tools"), "config": config, "image_catalog": image_catalog,
-            "context": context, "session_history": history, "current_image_url": image_url,
+            "context": context, "session_history": history, "goal_history": goal_history, "current_image_url": image_url,
             "options": {"max_steps": steps, "timeout_seconds": timeout, "workspace": str(workspace),
                         "include_activity": include_activity, "tools_enabled": tools_enabled,
                          "computer_enabled": computer_enabled, "checkpoint_required": checkpoint_required,
@@ -643,10 +647,27 @@ async def _run_agent_impl(request: dict) -> dict:
 
         class RestrictedRegistry(ToolRegistry):
             def prepare_call(self, name, params):
+                nonlocal activity_sequence, completion_seal
                 if not self.has(name):
-                    return None, params, ToolResult.error(
+                    prepared = None, params, ToolResult.error(
                         "TOOL_NOT_AVAILABLE: No action was executed. Choose an advertised tool with its exact name and valid arguments.")
-                return super().prepare_call(name, params)
+                    code = "TOOL_NOT_AVAILABLE"
+                else:
+                    prepared = super().prepare_call(name, params)
+                    code = "TOOL_ARGUMENTS_INVALID"
+                if prepared[2] is not None:
+                    # SDK rejections occur before ScopedTool.execute, but are
+                    # still attempts with no progress. They grant no effects.
+                    activity_sequence += 1
+                    completion_seal = None
+                    harness.record_failure(name, params if isinstance(params, dict) else {},
+                                           classification="exploratory", code=code)
+                    progress("diagnostic", data={"phase": "tool", "code": code})
+                    if options["include_activity"]:
+                        progress("activity", kind="tool" if name in CATALOG else "progress",
+                                 name=name if name in CATALOG else "tool_request",
+                                 event_id="tool-" + str(activity_sequence), status="failed")
+                return prepared
 
         registry = RestrictedRegistry()
         workspace = Path(options["workspace"])
@@ -657,8 +678,10 @@ async def _run_agent_impl(request: dict) -> dict:
             from host_office_runtime import HostOfficeRuntime
             office_runtime = HostOfficeRuntime(config["office_renderer"], files)
         revision_authority = HostRevisionAuthority()
-        initial_contract = GoalContract.from_task(request["task"])
-        timeline = GuardedGoalTimeline(request["task"], initial_requirements=initial_contract.requirements,
+        previous_goals = checked_goal_history(request["goal_history"] if "goal_history" in request else legacy_goal_history(history))
+        original_task = previous_goals[0] if previous_goals else request["task"]
+        initial_contract = GoalContract.from_task(original_task)
+        timeline = GuardedGoalTimeline(original_task, initial_requirements=initial_contract.requirements,
                                 authority=revision_authority)
         project = None
         if (options["tools_enabled"] and sys.platform == "win32"
@@ -704,6 +727,12 @@ async def _run_agent_impl(request: dict) -> dict:
         harness = TaskHarness(workspace, files=files, require_evidence=True,
             goal_contract=timeline.build_contract(),
             goal_evidence=GoalEvidence(secrets=(config["api_key"], config.get("gui", {}).get("api_key", ""))))
+        if previous_goals:
+            # Replay only host-authenticated user requirements. Native history
+            # may have been compacted and is not a durable goal contract.
+            for index, correction in enumerate([*previous_goals[1:], request["task"]]):
+                timeline.append(revision_authority.user_correction(correction,
+                    correction_id=f"host-prior-turn-{index}"))
         if requires_visible_desktop(request["task"]):
             harness.gui_required = True
         from context_store import ObservationStore
@@ -838,6 +867,16 @@ async def _run_agent_impl(request: dict) -> dict:
                         return result
                     if self.name == "verify_artifact" and not json.loads(result).get("passed"):
                         harness.record_failure(self.name, kwargs)
+                        activity("failed")
+                        return result
+                    if self.name == "finish_task" and not json.loads(result).get("accepted"):
+                        # A completed check can reject completion. Key retries
+                        # by the bound goal/evidence, not the planner's changing
+                        # prose, so only actual new evidence permits recovery.
+                        harness.record_failure(self.name, {
+                            "goal": harness.goal_contract.goal_id if harness.goal_contract else "",
+                            "progress": harness.completion_progress_id(),
+                        }, classification="exploratory", code="GOAL_CHECK_REJECTED")
                         activity("failed")
                         return result
                     if getattr(result, "is_error", False):
@@ -1148,6 +1187,14 @@ async def _run_agent_impl(request: dict) -> dict:
             async def _observed(self, method, messages, kwargs):
                 nonlocal planner_public_failure
                 research_ready()
+                if timeline.authorized_task != request["task"] and messages and messages[0].get("role") == "system":
+                    # Bind at the real model boundary: SDK compaction can keep
+                    # an older system-message copy despite hook mutations.
+                    # This is the same exact user provenance the judge sees.
+                    messages = [{**messages[0], "content": messages[0]["content"] +
+                        "\n\nHOST USER GOAL TIMELINE (latest user amendments prevail; inspect current state before continuation):\n" +
+                        timeline.authorized_task}, *messages[1:]]
+                    kwargs = self._fresh_context(kwargs)
                 sequence = failures.begin_model_request()
                 planner_public_failure = None
                 try:
@@ -1375,7 +1422,7 @@ async def _run_agent_impl(request: dict) -> dict:
                     partial = interrupted_delivery(stop_failure("stopped"))
                     if partial is not None:
                         return partial
-                    return {"reply": "同一操作连续失败，尚未取得有效结果。任务已停止，请补充材料或调整目标后继续；已完成的操作不会自动重放。",
+                    return {"reply": "操作反复失败，尚未取得新的有效结果。任务已停止，请补充材料或调整目标后继续；已完成的操作不会自动重放。",
                             "emotion": "neutral", "status": "needs_user", "tools_used": successful_tools}
                 # A later summarization request can fail after the GUI tool.
                 # Keep its first safe cause instead of masking it as AGENT_FAILED.
